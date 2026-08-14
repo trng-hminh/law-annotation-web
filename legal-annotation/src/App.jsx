@@ -1,10 +1,14 @@
-import React, { useState, useRef, useMemo, useCallback } from "react";
+import React, { useState, useRef, useMemo, useCallback, useEffect } from "react";
 import rawPrototypeCases from "./prototype_10_cases.json";
 import {
-  ChevronLeft, ChevronRight, Check, Plus, Pencil, Trash2, Link2,
+  ChevronLeft, ChevronRight, Plus, Pencil, Trash2, Link2,
   ZoomIn, ZoomOut, X, GripVertical, ScrollText, Gavel, ListChecks,
-  Scale, CircleCheck, Circle, ChevronDown, Upload, CheckCircle2
+  Scale, CircleCheck, Circle, UserRound, LogOut,
+  FolderOpen, Shield, Loader2, LayoutDashboard, RefreshCw,
+  Users
 } from "lucide-react";
+
+const API_BASE = "http://localhost:8000";
 
 /* ----------------------------------------------------------------------
    DESIGN TOKENS
@@ -663,123 +667,608 @@ const normalizeCasesPayload = (payload) => {
 
 const INITIAL_CASES = normalizeCasesPayload(rawPrototypeCases);
 
-/* ---------------------------- main app ---------------------------- */
+/* ============================================================================
+   LOGIN — hai vai trò: Annotator (tên + mã) và Admin (user + mật khẩu)
+   ============================================================================ */
+
+function LoginScreen({ onLogin, offline }) {
+  const [mode, setMode] = useState("annotator"); // "annotator" | "admin"
+  const [name, setName] = useState("");
+  const [passcode, setPasscode] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e) => {
+    if (e) e.preventDefault();
+    setError("");
+    if (mode === "annotator" && !name.trim()) { setError("Nhập tên annotator."); return; }
+    if (mode === "annotator" && !passcode) { setError("Nhập mã annotator."); return; }
+    if (mode === "admin" && (!username.trim() || !password)) { setError("Nhập tên đăng nhập và mật khẩu."); return; }
+    setBusy(true);
+    try {
+      await onLogin(
+        mode === "admin"
+          ? { mode, username: username.trim(), password }
+          : { mode, name: name.trim(), passcode }
+      );
+    } catch (err) {
+      setError(err.message || "Đăng nhập thất bại.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: T.paper }}>
+      <div style={{ width: 400, background: T.paperCard, borderRadius: 14, border: `1px solid ${T.line}`, padding: "26px 28px", boxShadow: "0 8px 30px rgba(28,38,36,0.10)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 6 }}>
+          <div style={{ width: 34, height: 34, borderRadius: 9, background: T.ink, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Gavel size={17} />
+          </div>
+          <h1 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>Legal Annotation</h1>
+        </div>
+        <p style={{ margin: "0 0 16px", fontSize: 12.5, color: T.inkSoft }}>
+          Hệ thống gán nhãn vụ án dân sự — dành cho admin và annotator.
+        </p>
+
+        <div style={{ display: "flex", gap: 4, marginBottom: 16, borderBottom: `1px solid ${T.line}` }}>
+          {[["annotator", "Annotator", UserRound], ["admin", "Admin", Shield]].map(([k, label, Icon]) => {
+            const active = mode === k;
+            return (
+              <button
+                key={k}
+                onClick={() => { setMode(k); setError(""); }}
+                style={{
+                  display: "flex", alignItems: "center", gap: 6, padding: "8px 12px",
+                  fontSize: 12.5, fontWeight: 600, border: "none", cursor: "pointer",
+                  background: "transparent", color: active ? T.ink : T.inkSoft,
+                  borderBottom: active ? `2px solid ${T.gold}` : "2px solid transparent",
+                }}
+              >
+                <Icon size={14} />
+                {label}
+              </button>
+            );
+          })}
+        </div>
+
+        {mode === "annotator" ? (
+          <>
+            <label style={labelStyle}>Tên annotator</label>
+            <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="VD: Luật sư Minh" style={{ ...inputStyle, marginBottom: 12 }} />
+            <label style={labelStyle}>Mã annotator (do admin cấp)</label>
+            <input value={passcode} onChange={(e) => setPasscode(e.target.value)} type="password" placeholder="Mã của bạn" style={{ ...inputStyle, marginBottom: 12 }} onKeyDown={(e) => { if (e.key === "Enter") submit(); }} />
+          </>
+        ) : (
+          <>
+            <label style={labelStyle}>Tên đăng nhập</label>
+            <input autoFocus value={username} onChange={(e) => setUsername(e.target.value)} placeholder="admin" style={{ ...inputStyle, marginBottom: 12 }} />
+            <label style={labelStyle}>Mật khẩu</label>
+            <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="••••••••" style={{ ...inputStyle, marginBottom: 12 }} onKeyDown={(e) => { if (e.key === "Enter") submit(); }} />
+          </>
+        )}
+
+        {error && <p style={{ color: T.danger, fontSize: 12, margin: "0 0 10px" }}>{error}</p>}
+        {offline && (
+          <p style={{ color: T.danger, fontSize: 12, margin: "0 0 10px" }}>
+            Không kết nối được backend tại {API_BASE}. Hãy khởi động backend trước.
+          </p>
+        )}
+
+        <button onClick={submit} disabled={busy} style={{ ...btnPrimaryStyle, width: "100%", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+          {busy ? <Loader2 size={14} className="spin" /> : null}
+          {busy ? "Đang đăng nhập…" : "Vào làm việc"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================================
+   DASHBOARD ANNOTATOR — chỉ thấy case được phân công, chưa hoàn thành
+   ============================================================================ */
+
+function AnnotatorDashboard({ cases, stats, onOpen, onRefresh, refreshing, flash }) {
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return cases.filter((c) => !q || c.case_id.toLowerCase().includes(q) || c.title.toLowerCase().includes(q));
+  }, [cases, search]);
+
+  const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage = Math.min(page, pages);
+  const visible = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+  return (
+    <div style={{ padding: "18px 22px", overflowY: "auto", height: "100%", boxSizing: "border-box" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>Case của tôi</h2>
+          <p style={{ margin: "3px 0 0", fontSize: 12.5, color: T.inkSoft }}>
+            Đã giao {stats.assigned} · Đã hoàn thành {stats.completed} · Còn lại {stats.remaining}
+          </p>
+        </div>
+        <button onClick={onRefresh} disabled={refreshing} style={{ ...btnGhostStyle, display: "inline-flex", alignItems: "center", gap: 5 }}>
+          {refreshing ? <Loader2 size={13} className="spin" /> : <RefreshCw size={13} />} Làm mới
+        </button>
+      </div>
+
+      {flash && (
+        <div style={{ marginBottom: 12, fontSize: 12.5, color: "#3D6944", background: "#E9F2E7", padding: "8px 12px", borderRadius: 8 }}>{flash}</div>
+      )}
+
+      <input
+        value={search}
+        onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+        placeholder="Tìm theo mã case hoặc tiêu đề…"
+        style={{ ...inputStyle, marginBottom: 14, maxWidth: 380 }}
+      />
+
+      {filtered.length === 0 && (
+        <p style={{ color: T.inkSoft, fontSize: 13 }}>
+          {stats.assigned === 0
+            ? "Bạn chưa được phân công case nào. Hãy liên hệ admin."
+            : "Không có case nào phù hợp."}
+        </p>
+      )}
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {visible.map((c) => (
+          <div key={c.case_id} style={{ background: T.paperCard, border: `1px solid ${T.line}`, borderRadius: 12, padding: "13px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+              <span style={{ fontFamily: "ui-monospace, Menlo, monospace", fontSize: 13, fontWeight: 700, background: T.paperDim, padding: "3px 8px", borderRadius: 6 }}>Case {c.case_id}</span>
+              <span style={{ fontSize: 12.5, color: T.inkSoft, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.title}</span>
+            </div>
+            <button onClick={() => onOpen(c.case_id)} style={{ ...btnPrimaryStyle, flexShrink: 0 }}>Mở case</button>
+          </div>
+        ))}
+      </div>
+
+      {pages > 1 && (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 16, justifyContent: "center" }}>
+          <button disabled={safePage <= 1} onClick={() => setPage(safePage - 1)} style={btnGhostStyle}><ChevronLeft size={14} /></button>
+          <span style={{ fontSize: 12.5, color: T.inkSoft }}>Trang {safePage} / {pages}</span>
+          <button disabled={safePage >= pages} onClick={() => setPage(safePage + 1)} style={btnGhostStyle}><ChevronRight size={14} /></button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ============================================================================
+   DASHBOARD ADMIN — quản lý annotator + case (phân công / mở lại / import)
+   ============================================================================ */
+
+function AdminDashboard({
+  overview, annotators, onOpenCase, onAssign, onReopen, onAutoAssign,
+  onImportFile, onImportPrototype, importMessage,
+  onCreateAnnotator, onResetPasscode, onDeleteAnnotator,
+  onRefresh, refreshing, flash,
+}) {
+  const [section, setSection] = useState("cases"); // "cases" | "annotators"
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("all"); // all | open | completed | unassigned
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
+
+  const [newName, setNewName] = useState("");
+  const [newPasscode, setNewPasscode] = useState("");
+  const [createMsg, setCreateMsg] = useState("");
+  const [resetPass, setResetPass] = useState({});
+  const importRef = useRef(null);
+
+  const nameOf = (id) => annotators.find((a) => a.id === id)?.name || id || "";
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return overview.filter((c) => {
+      if (q && !c.case_id.toLowerCase().includes(q) && !c.title.toLowerCase().includes(q)) return false;
+      if (filter === "open" && c.status !== "open") return false;
+      if (filter === "completed" && c.status !== "completed") return false;
+      if (filter === "unassigned" && c.assigned_to) return false;
+      return true;
+    });
+  }, [overview, search, filter]);
+
+  const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage = Math.min(page, pages);
+  const visible = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+  const openCount = overview.filter((c) => c.status === "open").length;
+  const completedCount = overview.length - openCount;
+  const unassignedCount = overview.filter((c) => c.status === "open" && !c.assigned_to).length;
+
+  const tabBase = {
+    display: "flex", alignItems: "center", gap: 6, padding: "8px 12px",
+    fontSize: 12.5, fontWeight: 600, border: "none", cursor: "pointer",
+    background: "transparent", color: T.inkSoft,
+    borderBottom: "2px solid transparent",
+  };
+
+  return (
+    <div style={{ padding: "18px 22px", overflowY: "auto", height: "100%", boxSizing: "border-box" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>Quản lý hệ thống</h2>
+          <p style={{ margin: "3px 0 0", fontSize: 12.5, color: T.inkSoft }}>
+            {overview.length} case · {openCount} mở · {completedCount} hoàn thành · {unassignedCount} chưa giao
+          </p>
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {section === "cases" && (
+            <>
+              <button onClick={onAutoAssign} style={btnPrimaryStyle}>Phân công tự động</button>
+              <button onClick={onImportPrototype} style={btnGhostStyle}>Nạp 10 case mẫu</button>
+              <button onClick={() => importRef.current?.click()} style={btnGhostStyle}>Import JSON</button>
+            </>
+          )}
+          <button onClick={onRefresh} disabled={refreshing} style={{ ...btnGhostStyle, display: "inline-flex", alignItems: "center", gap: 5 }}>
+            {refreshing ? <Loader2 size={13} className="spin" /> : <RefreshCw size={13} />} Làm mới
+          </button>
+        </div>
+      </div>
+      <input ref={importRef} type="file" accept=".json,application/json" style={{ display: "none" }} onChange={(e) => { onImportFile(e.target.files?.[0]); e.target.value = ""; }} />
+
+      {flash && (
+        <div style={{ marginBottom: 12, fontSize: 12.5, color: "#3D6944", background: "#E9F2E7", padding: "8px 12px", borderRadius: 8 }}>{flash}</div>
+      )}
+      {importMessage && (
+        <div style={{ marginBottom: 12, fontSize: 12.5, color: importMessage.startsWith("Không") || importMessage.includes("thất bại") ? T.danger : "#3D6944", background: T.paperDim, padding: "8px 12px", borderRadius: 8 }}>{importMessage}</div>
+      )}
+
+      <div style={{ display: "flex", gap: 4, marginBottom: 14, borderBottom: `1px solid ${T.line}` }}>
+        <button onClick={() => setSection("cases")} style={{ ...tabBase, color: section === "cases" ? T.ink : T.inkSoft, borderBottom: section === "cases" ? `2px solid ${T.gold}` : "2px solid transparent" }}>
+          <ListChecks size={14} /> Vụ án ({overview.length})
+        </button>
+        <button onClick={() => setSection("annotators")} style={{ ...tabBase, color: section === "annotators" ? T.ink : T.inkSoft, borderBottom: section === "annotators" ? `2px solid ${T.gold}` : "2px solid transparent" }}>
+          <Users size={14} /> Annotator ({annotators.length})
+        </button>
+      </div>
+
+      {section === "cases" && (
+        <>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
+            <input
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              placeholder="Tìm theo mã case hoặc tiêu đề…"
+              style={{ ...inputStyle, maxWidth: 340 }}
+            />
+            <select value={filter} onChange={(e) => { setFilter(e.target.value); setPage(1); }} style={{ ...inputStyle, width: 190 }}>
+              <option value="all">Tất cả</option>
+              <option value="open">Đang mở</option>
+              <option value="completed">Đã hoàn thành</option>
+              <option value="unassigned">Chưa phân công</option>
+            </select>
+          </div>
+
+          {filtered.length === 0 && <p style={{ color: T.inkSoft, fontSize: 13 }}>Không có case nào. Hãy import corpus trước.</p>}
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {visible.map((c) => (
+              <div key={c.case_id} style={{ background: T.paperCard, border: `1px solid ${T.line}`, borderRadius: 12, padding: "13px 16px" }}>
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <span style={{ fontFamily: "ui-monospace, Menlo, monospace", fontSize: 13, fontWeight: 700, background: T.paperDim, padding: "3px 8px", borderRadius: 6 }}>Case {c.case_id}</span>
+                      {c.status === "completed"
+                        ? <span style={{ fontSize: 11, fontWeight: 700, color: "#3D6944", background: "#E9F2E7", padding: "2px 8px", borderRadius: 20 }}>Đã hoàn thành{c.completed_by ? ` · ${nameOf(c.completed_by)}` : ""}</span>
+                        : <span style={{ fontSize: 11, fontWeight: 700, color: T.gold, background: T.goldTint, padding: "2px 8px", borderRadius: 20 }}>Mở</span>}
+                      <span style={{ fontSize: 12, color: T.inkSoft }}>{c.title}</span>
+                    </div>
+
+                    <div style={{ display: "flex", gap: 22, flexWrap: "wrap", marginTop: 8, fontSize: 12 }}>
+                      <div>
+                        <div style={{ fontSize: 10.5, fontWeight: 700, color: T.inkSoft, textTransform: "uppercase" }}>Phân công</div>
+                        <select
+                          value={c.assigned_to || ""}
+                          onChange={(e) => onAssign(c.case_id, e.target.value || null)}
+                          style={{ ...inputStyle, marginTop: 3, padding: "4px 8px", fontSize: 12, width: 190 }}
+                        >
+                          <option value="">— chưa giao —</option>
+                          {annotators.map((a) => (
+                            <option key={a.id} value={a.id}>{a.name} ({a.id})</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 10.5, fontWeight: 700, color: T.inkSoft, textTransform: "uppercase" }}>Đã gửi</div>
+                        <div style={{ marginTop: 3 }}>
+                          {c.submissions.length === 0
+                            ? <span style={{ color: T.inkSoft }}>Chưa có</span>
+                            : c.submissions.map((s) => s.annotator_name || nameOf(s.annotator_id)).join(", ")}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end", flexShrink: 0 }}>
+                    <button onClick={() => onOpenCase(c.case_id)} style={{ ...btnPrimaryStyle, padding: "5px 12px", fontSize: 12 }}>Mở case</button>
+                    {c.status === "completed" && (
+                      <button onClick={() => onReopen(c.case_id)} style={{ ...btnGhostStyle, padding: "4px 10px", fontSize: 11.5 }}>Mở lại</button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {pages > 1 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 16, justifyContent: "center" }}>
+              <button disabled={safePage <= 1} onClick={() => setPage(safePage - 1)} style={btnGhostStyle}><ChevronLeft size={14} /></button>
+              <span style={{ fontSize: 12.5, color: T.inkSoft }}>Trang {safePage} / {pages}</span>
+              <button disabled={safePage >= pages} onClick={() => setPage(safePage + 1)} style={btnGhostStyle}><ChevronRight size={14} /></button>
+            </div>
+          )}
+        </>
+      )}
+
+      {section === "annotators" && (
+        <>
+          <div style={{ background: T.paperCard, border: `1px solid ${T.line}`, borderRadius: 12, padding: "14px 16px", marginBottom: 14 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>Tạo annotator mới</div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
+              <div style={{ flex: 1, minWidth: 180 }}>
+                <label style={labelStyle}>Tên</label>
+                <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="VD: Luật sư Minh" style={inputStyle} />
+              </div>
+              <div style={{ flex: 1, minWidth: 180 }}>
+                <label style={labelStyle}>Mã đăng nhập (≥4 ký tự)</label>
+                <input value={newPasscode} onChange={(e) => setNewPasscode(e.target.value)} placeholder="VD: Minh@123" style={inputStyle} />
+              </div>
+              <button
+                onClick={async () => {
+                  try {
+                    const a = await onCreateAnnotator(newName.trim(), newPasscode);
+                    setCreateMsg(`Đã tạo ${a.name} — mã đăng nhập: ${a.passcode}. Gửi mã này cho luật sư.`);
+                    setNewName(""); setNewPasscode("");
+                  } catch (e) {
+                    setCreateMsg(e.message || "Tạo annotator thất bại.");
+                  }
+                }}
+                style={btnPrimaryStyle}
+              >
+                Tạo
+              </button>
+            </div>
+            {createMsg && (
+              <div style={{ marginTop: 8, fontSize: 12.5, color: "#3D6944", background: "#E9F2E7", padding: "8px 10px", borderRadius: 8 }}>{createMsg}</div>
+            )}
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {annotators.map((a) => (
+              <div key={a.id} style={{ background: T.paperCard, border: `1px solid ${T.line}`, borderRadius: 10, padding: "12px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <UserRound size={15} color={T.inkSoft} />
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>{a.name}</span>
+                  <span style={{ fontSize: 11.5, color: T.inkSoft }}>{a.id}</span>
+                </div>
+                <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                  <input
+                    placeholder="Mã mới"
+                    value={resetPass[a.id] || ""}
+                    onChange={(e) => setResetPass((p) => ({ ...p, [a.id]: e.target.value }))}
+                    style={{ ...inputStyle, width: 130, padding: "5px 8px", fontSize: 12 }}
+                  />
+                  <button
+                    onClick={() => {
+                      const code = (resetPass[a.id] || "").trim();
+                      if (!code) { setCreateMsg("Nhập mã mới trước."); return; }
+                      onResetPasscode(a.id, code);
+                      setResetPass((p) => ({ ...p, [a.id]: "" }));
+                    }}
+                    style={{ ...btnGhostStyle, padding: "5px 10px", fontSize: 11.5 }}
+                  >
+                    Đổi mã
+                  </button>
+                  <IconBtn tone="danger" title="Xoá annotator" onClick={() => { if (window.confirm(`Xoá ${a.name}? Phân công của họ sẽ được gỡ.`)) onDeleteAnnotator(a.id); }}>
+                    <Trash2 size={14} />
+                  </IconBtn>
+                </div>
+              </div>
+            ))}
+            {annotators.length === 0 && <p style={{ color: T.inkSoft, fontSize: 13 }}>Chưa có annotator nào. Hãy tạo annotator đầu tiên.</p>}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ============================================================================
+   APP CHÍNH
+   ============================================================================ */
 
 export default function LegalAnnotationApp() {
-  const [cases, setCases] = useState(INITIAL_CASES);
-  const [caseIdx, setCaseIdx] = useState(0);
+  const [auth, setAuth] = useState(() => {
+    try {
+      const saved = localStorage.getItem("legal-annotation-auth");
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [backendOk, setBackendOk] = useState(true);
+  const [view, setView] = useState("dashboard"); // "dashboard" | "annotation"
+
+  const [caseData, setCaseData] = useState(null);
   const [tab, setTab] = useState("units");
   const [leftWidth, setLeftWidth] = useState(50);
   const draggingRef = useRef(false);
   const containerRef = useRef(null);
 
-  const [addingType, setAddingType] = useState(null); // 'claim' | 'request' | 'reasoning' | 'decision' | null
+  const [addingType, setAddingType] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [modificationEditId, setModificationEditId] = useState(null);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
-  const [importMessage, setImportMessage] = useState("");
-  const importRef = useRef(null);
-
-  const caseData = cases[caseIdx];
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [submitMessage, setSubmitMessage] = useState("");
+  const [draftStatus, setDraftStatus] = useState("idle"); // idle | saving | saved | error
+  const [draftLoadedAt, setDraftLoadedAt] = useState(null);
+  const dirtyRef = useRef(false);
 
-const submitCase = async () => {
-  setSubmitting(true);
-  setSubmitError("");
+  const [flash, setFlash] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
 
-  try {
-    const payload = {
-      case_id: caseData.id,
-      title: caseData.title,
+  // annotator dashboard
+  const [myCases, setMyCases] = useState([]);
+  const [myStats, setMyStats] = useState({ assigned: 0, completed: 0, remaining: 0 });
 
-      parties: caseData.parties,
+  // admin dashboard
+  const [adminOverview, setAdminOverview] = useState([]);
+  const [adminAnnotators, setAdminAnnotators] = useState([]);
+  const [importMessage, setImportMessage] = useState("");
 
-      units: caseData.units,
-
-      reasoning: caseData.reasoning,
-
-      decisions: caseData.decisions,
-
-      submitted_at: new Date().toISOString(),
-    };
-
-    const response = await fetch(
-      "http://localhost:8000/api/submit",
-      {
-        method: "POST",
-
-        headers: {
-          "Content-Type": "application/json",
-        },
-
-        body: JSON.stringify(payload),
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error("Submit failed");
+  const api = async (path, { method = "GET", body } = {}) => {
+    const headers = { "Content-Type": "application/json" };
+    if (auth?.token) headers["Authorization"] = `Bearer ${auth.token}`;
+    const res = await fetch(`${API_BASE}${path}`, {
+      method,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+    if (!res.ok) {
+      let detail = "";
+      try { detail = (await res.json()).detail || ""; } catch { /* ignore */ }
+      const err = new Error(detail || `Lỗi HTTP ${res.status}`);
+      err.status = res.status;
+      throw err;
     }
+    return res.json();
+  };
 
-    const result = await response.json();
+  const expireSession = () => {
+    setAuth(null);
+    localStorage.removeItem("legal-annotation-auth");
+    setCaseData(null);
+    setView("dashboard");
+  };
 
-    console.log("Submitted:", result);
+  const loadAdminData = async () => {
+    try {
+      const [ov, ann] = await Promise.all([api("/api/cases"), api("/api/annotators")]);
+      setAdminOverview(ov);
+      setAdminAnnotators(ann);
+      setBackendOk(true);
+    } catch (e) {
+      setBackendOk(false);
+      if (e.status === 401) expireSession();
+    }
+  };
 
-    setSubmitted(true);
+  const loadMyCases = async () => {
+    try {
+      const res = await api("/api/annotator/cases");
+      setMyCases(res.cases);
+      setMyStats(res.stats);
+      setBackendOk(true);
+    } catch (e) {
+      setBackendOk(false);
+      if (e.status === 401) expireSession();
+    }
+  };
 
-  } catch (error) {
+  /* nạp dữ liệu dashboard sau khi đăng nhập (hoặc khi mở app với phiên đã lưu) */
+  useEffect(() => {
+    if (!auth) return;
+    setView("dashboard");
+    setCaseData(null);
+    dirtyRef.current = false;
+    if (auth.type === "admin") loadAdminData();
+    else loadMyCases();
+  }, [auth?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    console.error(error);
+  const handleLogin = async ({ mode, username, password, name, passcode }) => {
+    const path = mode === "admin" ? "/api/auth/admin" : "/api/auth/annotator";
+    const body = mode === "admin" ? { username, password } : { name, passcode };
+    const a = await api(path, { method: "POST", body });
+    setAuth(a);
+    localStorage.setItem("legal-annotation-auth", JSON.stringify(a));
+    setBackendOk(true);
+    return a;
+  };
 
-    setSubmitError(
-      "Không thể gửi kết quả. Vui lòng thử lại."
-    );
+  const handleLogout = () => {
+    expireSession();
+    setFlash("");
+    setSubmitMessage("");
+    setSubmitError("");
+  };
 
-  } finally {
+  const refresh = async () => {
+    setRefreshing(true);
+    try {
+      if (auth?.type === "admin") await loadAdminData();
+      else if (auth?.type === "annotator") await loadMyCases();
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
-    setSubmitting(false);
-  }
-};
+  const openCase = async (caseId) => {
+    try {
+      const doc = await api(`/api/cases/${caseId}/doc`);
+      setCaseData(doc);
+      setTab("units");
+      setEditingId(null);
+      setModificationEditId(null);
+      setAddingType(null);
+      setEditingTitle(false);
+      setTitleDraft("");
+      setSubmitted(false);
+      setSubmitError("");
+      setSubmitMessage("");
+      dirtyRef.current = false;
+      setDraftStatus("idle");
+      setDraftLoadedAt(null);
+      setView("annotation");
+      if (auth?.type === "annotator") {
+        try {
+          const d = await api(`/api/cases/${caseId}/draft`);
+          if (d?.saved_at) {
+            const { saved_at, ...clean } = d;
+            setCaseData(clean);
+            setDraftLoadedAt(saved_at);
+          }
+        } catch { /* chưa có nháp */ }
+      }
+    } catch (e) {
+      setFlash(e.message || "Không tải được case.");
+    }
+  };
 
+  const backToDashboard = () => {
+    setView("dashboard");
+    setCaseData(null);
+    dirtyRef.current = false;
+    if (auth?.type === "admin") loadAdminData();
+    else loadMyCases();
+  };
+
+  /* -------------------- annotation handlers (single case) -------------------- */
 
   const updateCase = useCallback((fn) => {
-    setCases((cs) => cs.map((c, i) => (i === caseIdx ? fn(c) : c)));
-  }, [caseIdx]);
+    setCaseData((c) => (c ? fn(c) : c));
+    dirtyRef.current = true;
+    setSubmitted(false);
+    setDraftStatus("idle");
+    setSubmitMessage("");
+  }, []);
 
-  const allTrackedUnits = useMemo(
-    () => [...caseData.units, ...caseData.reasoning, ...caseData.decisions],
-    [caseData]
-  );
-  const confirmedCount = allTrackedUnits.filter((u) => u.status === "confirmed").length;
-  const totalCount = allTrackedUnits.length;
-
-  const sortedUnits = useMemo(
-    () => [...caseData.units].sort((a, b) => a.order - b.order),
-    [caseData.units]
-  );
-
-  /* --- drag handle --- */
-  const onDividerDown = () => { draggingRef.current = true; };
-  const onMouseMove = (e) => {
-    if (!draggingRef.current || !containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    let pct = ((e.clientX - rect.left) / rect.width) * 100;
-    pct = Math.min(75, Math.max(28, pct));
-    setLeftWidth(pct);
-  };
-  const onMouseUp = () => { draggingRef.current = false; };
-
-  /* --- unit CRUD --- */
   const toggleConfirm = (id, group) => {
-    updateCase((c) => {
-      const key = group;
-      return {
-        ...c,
-        [key]: c[key].map((u) => u.id === id ? { ...u, status: u.status === "confirmed" ? "unconfirmed" : "confirmed" } : u),
-      };
-    });
+    updateCase((c) => ({
+      ...c,
+      [group]: c[group].map((u) => (u.id === id ? { ...u, status: u.status === "confirmed" ? "unconfirmed" : "confirmed" } : u)),
+    }));
   };
 
   const saveNewUnit = (data) => {
@@ -787,7 +1276,12 @@ const submitCase = async () => {
     const existingIds = caseData.units.filter((u) => u.id.startsWith(prefix)).map((u) => parseInt(u.id.slice(1)) || 0);
     const nextNum = (existingIds.length ? Math.max(...existingIds) : 0) + 1;
     const newUnit = { id: `${prefix}${nextNum}`, status: "unconfirmed", modification_spans: [], ...data };
-    if (data.type === "request") { newUnit.outcome = null; newUnit.linkedDecisions = []; newUnit.linkedReasoning = []; newUnit.linksConfirmed = false; }
+    if (data.type === "request") {
+      newUnit.outcome = null;
+      newUnit.linkedDecisions = [];
+      newUnit.linkedReasoning = [];
+      newUnit.linksConfirmed = false;
+    }
     updateCase((c) => ({ ...c, units: [...c.units, newUnit] }));
     setAddingType(null);
   };
@@ -802,15 +1296,13 @@ const submitCase = async () => {
   };
 
   const toggleModifications = (unitId) => {
-    setModificationEditId((id) => id === unitId ? null : unitId);
+    setModificationEditId((id) => (id === unitId ? null : unitId));
   };
 
   const addModification = (unitId, modification) => {
     updateCase((c) => ({
       ...c,
-      units: c.units.map((u) => u.id === unitId
-        ? { ...u, modification_spans: [...(u.modification_spans || []), modification] }
-        : u),
+      units: c.units.map((u) => (u.id === unitId ? { ...u, modification_spans: [...(u.modification_spans || []), modification] } : u)),
     }));
   };
 
@@ -829,9 +1321,7 @@ const submitCase = async () => {
   const removeModification = (unitId, idx) => {
     updateCase((c) => ({
       ...c,
-      units: c.units.map((u) => u.id === unitId
-        ? { ...u, modification_spans: (u.modification_spans || []).filter((_, i) => i !== idx) }
-        : u),
+      units: c.units.map((u) => (u.id === unitId ? { ...u, modification_spans: (u.modification_spans || []).filter((_, i) => i !== idx) } : u)),
     }));
   };
 
@@ -839,22 +1329,6 @@ const submitCase = async () => {
     const title = titleDraft.trim();
     if (title) updateCase((c) => ({ ...c, title }));
     setEditingTitle(false);
-  };
-
-  const importCases = async (file) => {
-    if (!file) return;
-    try {
-      const text = await file.text();
-      const imported = normalizeCasesPayload(JSON.parse(text));
-      setCases(imported);
-      setCaseIdx(0);
-      setTab("units");
-      setEditingId(null);
-      setModificationEditId(null);
-      setImportMessage(`Đã nạp ${imported.length} case.`);
-    } catch (err) {
-      setImportMessage(`Không thể nạp dữ liệu: ${err.message}`);
-    }
   };
 
   const saveNewSimple = (kind, data) => {
@@ -866,248 +1340,440 @@ const submitCase = async () => {
     updateCase((c) => ({ ...c, [kind]: [...c[kind], item] }));
     setAddingType(null);
   };
+
   const saveEditSimple = (kind, id, data) => {
     updateCase((c) => ({ ...c, [kind]: c[kind].map((u) => (u.id === id ? { ...u, ...data } : u)) }));
     setEditingId(null);
   };
+
   const deleteSimple = (kind, id) => {
     updateCase((c) => ({ ...c, [kind]: c[kind].filter((u) => u.id !== id) }));
   };
 
-  const TABS = [
+  /* -------------------- autosave nháp (annotator) -------------------- */
+
+  useEffect(() => {
+    if (!auth || auth.type !== "annotator" || view !== "annotation" || !caseData || submitted) return;
+    if (!dirtyRef.current) return;
+    const timer = setTimeout(async () => {
+      try {
+        setDraftStatus("saving");
+        const res = await api(`/api/cases/${caseData.id}/draft`, { method: "PUT", body: caseData });
+        dirtyRef.current = false;
+        setDraftStatus("saved");
+        setDraftLoadedAt(res.saved_at || new Date().toISOString());
+        setBackendOk(true);
+      } catch {
+        setDraftStatus("error");
+        setBackendOk(false);
+      }
+    }, 900);
+    return () => clearTimeout(timer);
+  }, [caseData, auth, view, submitted]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* -------------------- submit -------------------- */
+
+  const submitCase = async () => {
+    if (!caseData) return;
+    setSubmitting(true);
+    setSubmitError("");
+    setSubmitMessage("");
+    try {
+      const result = await api("/api/submit", {
+        method: "POST",
+        body: {
+          case_id: caseData.id,
+          title: caseData.title,
+          parties: caseData.parties,
+          units: caseData.units,
+          reasoning: caseData.reasoning,
+          decisions: caseData.decisions,
+          submitted_at: new Date().toISOString(),
+        },
+      });
+      dirtyRef.current = false;
+      setDraftStatus("idle");
+      setDraftLoadedAt(null);
+      setSubmitted(true);
+      setSubmitMessage(`Đã hoàn tất case ${caseData.id}. ${result.file}`);
+      if (auth?.type === "annotator") loadMyCases();
+      else loadAdminData();
+    } catch (e) {
+      setSubmitError(e.message || "Không thể gửi kết quả.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  /* -------------------- admin actions -------------------- */
+
+  const assignCase = async (caseId, annotatorId) => {
+    try {
+      await api(`/api/cases/${caseId}/assign`, { method: "POST", body: { annotator_id: annotatorId || null } });
+      loadAdminData();
+    } catch (e) {
+      setFlash(e.message || "Phân công thất bại.");
+    }
+  };
+
+  const reopenCase = async (caseId) => {
+    try {
+      await api(`/api/cases/${caseId}/reopen`, { method: "POST" });
+      loadAdminData();
+    } catch (e) {
+      setFlash(e.message || "Mở lại thất bại.");
+    }
+  };
+
+  const autoAssign = async () => {
+    try {
+      const res = await api("/api/cases/auto-assign", { method: "POST" });
+      setFlash(`Đã tự phân công ${res.assigned} case.`);
+      loadAdminData();
+    } catch (e) {
+      setFlash(e.message || "Phân công thất bại.");
+    }
+  };
+
+  const createAnnotator = async (name, passcode) => {
+    const a = await api("/api/annotators", { method: "POST", body: { name, passcode } });
+    loadAdminData();
+    return a;
+  };
+
+  const resetPasscode = async (annotatorId, newPasscode) => {
+    try {
+      const a = await api(`/api/annotators/${annotatorId}`, { method: "PUT", body: { passcode: newPasscode } });
+      setFlash(`Mã mới của ${a.name}: ${a.passcode} — hãy gửi cho luật sư.`);
+      loadAdminData();
+    } catch (e) {
+      setFlash(e.message || "Đổi mã thất bại.");
+    }
+  };
+
+  const deleteAnnotator = async (annotatorId) => {
+    try {
+      await api(`/api/annotators/${annotatorId}`, { method: "DELETE" });
+      loadAdminData();
+    } catch (e) {
+      setFlash(e.message || "Xoá thất bại.");
+    }
+  };
+
+  const importCorpus = async (cases) => {
+    try {
+      const res = await api("/api/cases", { method: "POST", body: { cases } });
+      setImportMessage(`Đã import ${res.imported} case (tổng ${res.total_cases}).`);
+      loadAdminData();
+      return true;
+    } catch (e) {
+      setImportMessage(`Import thất bại: ${e.message}`);
+      return false;
+    }
+  };
+
+  const importFromFile = async (file) => {
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const imported = normalizeCasesPayload(JSON.parse(text));
+      await importCorpus(imported);
+    } catch (err) {
+      setImportMessage(`Không đọc được file: ${err.message}`);
+    }
+  };
+
+  const importPrototype = async () => {
+    await importCorpus(INITIAL_CASES);
+  };
+
+  /* -------------------- derived values -------------------- */
+
+  const allTrackedUnits = useMemo(
+    () => caseData ? [...caseData.units, ...caseData.reasoning, ...caseData.decisions] : [],
+    [caseData]
+  );
+  const confirmedCount = allTrackedUnits.filter((u) => u.status === "confirmed").length;
+  const totalCount = allTrackedUnits.length;
+
+  const sortedUnits = useMemo(
+    () => caseData ? [...caseData.units].sort((a, b) => a.order - b.order) : [],
+    [caseData]
+  );
+
+  const onDividerDown = () => { draggingRef.current = true; };
+  const onMouseMove = (e) => {
+    if (!draggingRef.current || !containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    let pct = ((e.clientX - rect.left) / rect.width) * 100;
+    pct = Math.min(75, Math.max(28, pct));
+    setLeftWidth(pct);
+  };
+  const onMouseUp = () => { draggingRef.current = false; };
+
+  const TABS = caseData ? [
     { key: "units", label: "Claims & Requests", count: caseData.units.length, icon: ListChecks },
     { key: "reasoning", label: "Reasoning", count: caseData.reasoning.length, icon: Scale },
     { key: "decisions", label: "Decisions", count: caseData.decisions.length, icon: Gavel },
-    { key: "links", label: "Links", count: caseData.units.filter(u => u.type === "request" && ((u.linkedDecisions?.length||0)+(u.linkedReasoning?.length||0) > 0)).length, icon: Link2 },
-  ];
+    { key: "links", label: "Links", count: caseData.units.filter((u) => u.type === "request" && ((u.linkedDecisions?.length || 0) + (u.linkedReasoning?.length || 0) > 0)).length, icon: Link2 },
+  ] : [];
 
-  return (
-    <div
-      onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}
-      style={{
-        width: "100%",
-        height: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        fontFamily: "-apple-system, 'Segoe UI', Roboto, sans-serif",
-        background: T.paper,
-        color: T.ink,
-        overflow: "hidden",
-      }}
-    >
-      {/* header */}
-      <div style={{ padding: "12px 18px", borderBottom: `1px solid ${T.line}`, background: T.paperCard }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <IconBtn size={26} title="Case trước" onClick={() => setCaseIdx((i) => Math.max(0, i - 1))}><ChevronLeft size={16} /></IconBtn>
-            <div>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                <span style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 700 }}>Case {caseData.id}</span>
-                {editingTitle ? (
-                  <input
-                    autoFocus
-                    value={titleDraft}
-                    onChange={(e) => setTitleDraft(e.target.value)}
-                    onBlur={commitTitle}
-                    onKeyDown={(e) => { if (e.key === "Enter") commitTitle(); if (e.key === "Escape") setEditingTitle(false); }}
-                    style={{ ...inputStyle, width: 260, padding: "4px 7px", fontSize: 12 }}
-                  />
-                ) : (
-                  <>
-                    <span style={{ fontSize: 12, color: T.inkSoft }}>{caseData.title}</span>
-                    <IconBtn size={23} title="Sửa tên case" onClick={() => { setTitleDraft(caseData.title || `Case ${caseData.id}`); setEditingTitle(true); }}>
-                      <Pencil size={12} />
-                    </IconBtn>
-                  </>
-                )}
-              </div>
-              <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
-                {caseData.parties.map((p) => <PartyTag key={p.id} id={p.id} parties={caseData.parties} size="sm" />)}
-              </div>
-            </div>
-            <IconBtn size={26} title="Case sau" onClick={() => setCaseIdx((i) => Math.min(cases.length - 1, i + 1))}><ChevronRight size={16} /></IconBtn>
-          </div>
+  const identityChip = (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 20, border: `1px solid ${T.lineStrong}`, background: T.paperDim, fontSize: 12, fontWeight: 600 }}>
+      {auth?.type === "admin" ? <Shield size={12} color={T.gold} /> : <UserRound size={12} />}
+      {auth?.name}
+      <span style={{ color: T.inkSoft, fontWeight: 500 }}>· {auth?.id}</span>
+    </span>
+  );
 
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ width: 110, height: 6, background: T.paperDim, borderRadius: 4, overflow: "hidden" }}>
-                <div style={{ width: `${totalCount ? (confirmedCount/totalCount)*100 : 0}%`, height: "100%", background: T.gold, transition: "width 200ms ease" }} />
-              </div>
-              <span style={{ fontSize: 12, color: T.inkSoft, fontWeight: 600 }}>{confirmedCount}/{totalCount} đã xác nhận</span>
-            </div>
-            <input
-              ref={importRef}
-              type="file"
-              accept=".json,application/json"
-              style={{ display: "none" }}
-              onChange={(e) => { importCases(e.target.files?.[0]); e.target.value = ""; }}
-            />
-            <button
-              onClick={() => importRef.current?.click()}
-              style={{ ...btnGhostStyle, display: "inline-flex", alignItems: "center", gap: 5 }}
-              title="Nhập một hoặc nhiều case từ JSON"
-            >
-              <Upload size={13} /> Nhập JSON
-            </button>
-            <button
-              onClick={submitCase}
-              disabled={submitting || submitted}
-              style={btnPrimaryStyle}
-            >
-              {submitting
-                ? "Đang gửi..."
-                : submitted
-                  ? "Đã gửi ✓"
-                  : "Hoàn tất case"}
-            </button>
-          </div>
-        </div>
-        {importMessage && (
-          <div style={{ marginTop: 8, fontSize: 11.5, color: importMessage.startsWith("Không") ? T.danger : "#3D6944" }}>
-            {importMessage}
-          </div>
-        )}
-      </div>
+  /* -------------------- screens -------------------- */
 
-      {/* split body */}
+  if (!auth) {
+    return <LoginScreen onLogin={handleLogin} offline={!backendOk} />;
+  }
+
+  if (view === "annotation" && caseData) {
+    return (
       <div
-        ref={containerRef}
+        onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}
         style={{
-          display: "flex",
-          flex: "1 1 0",
-          minHeight: 0,
-          minWidth: 0,
-          width: "100%",
-          position: "relative",
-          overflow: "hidden",
-          userSelect: draggingRef.current ? "none" : "auto",
+          width: "100%", height: "100vh", display: "flex", flexDirection: "column",
+          fontFamily: "-apple-system, 'Segoe UI', Roboto, sans-serif",
+          background: T.paper, color: T.ink, overflow: "hidden",
         }}
       >
-        <div style={{ width: `${leftWidth}%`, overflowY: "auto", padding: "16px 16px 40px" }}>
-          <div style={{ display: "flex", gap: 4, marginBottom: 14, borderBottom: `1px solid ${T.line}`, paddingBottom: 2 }}>
-            {TABS.map((t) => {
-              const Icon = t.icon;
-              const active = tab === t.key;
-              return (
-                <button
-                  key={t.key} onClick={() => setTab(t.key)}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 6, padding: "7px 11px",
-                    fontSize: 12.5, fontWeight: 600, border: "none", cursor: "pointer",
-                    background: "transparent", color: active ? T.ink : T.inkSoft,
-                    borderBottom: active ? `2px solid ${T.gold}` : "2px solid transparent",
-                    borderRadius: 0,
-                  }}
-                >
-                  <Icon size={14} />
-                  {t.label}
-                  <span style={{
-                    fontSize: 10.5, fontWeight: 700, background: active ? T.goldTint : T.paperDim,
-                    color: active ? T.gold : T.inkSoft, padding: "1px 6px", borderRadius: 10,
-                  }}>{t.count}</span>
-                </button>
-              );
-            })}
+        <div style={{ padding: "12px 18px", borderBottom: `1px solid ${T.line}`, background: T.paperCard }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <IconBtn size={26} title="Về danh sách" onClick={backToDashboard}><LayoutDashboard size={15} /></IconBtn>
+              <div>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                  <span style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 700 }}>Case {caseData.id}</span>
+                  {editingTitle ? (
+                    <input
+                      autoFocus
+                      value={titleDraft}
+                      onChange={(e) => setTitleDraft(e.target.value)}
+                      onBlur={commitTitle}
+                      onKeyDown={(e) => { if (e.key === "Enter") commitTitle(); if (e.key === "Escape") setEditingTitle(false); }}
+                      style={{ ...inputStyle, width: 260, padding: "4px 7px", fontSize: 12 }}
+                    />
+                  ) : (
+                    <>
+                      <span style={{ fontSize: 12, color: T.inkSoft }}>{caseData.title}</span>
+                      <IconBtn size={23} title="Sửa tên case" onClick={() => { setTitleDraft(caseData.title || `Case ${caseData.id}`); setEditingTitle(true); }}>
+                        <Pencil size={12} />
+                      </IconBtn>
+                    </>
+                  )}
+                </div>
+                <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+                  {(caseData.parties || []).map((p) => <PartyTag key={p.id} id={p.id} parties={caseData.parties || []} size="sm" />)}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ width: 110, height: 6, background: T.paperDim, borderRadius: 4, overflow: "hidden" }}>
+                  <div style={{ width: `${totalCount ? (confirmedCount / totalCount) * 100 : 0}%`, height: "100%", background: T.gold }} />
+                </div>
+                <span style={{ fontSize: 12, color: T.inkSoft, fontWeight: 600 }}>{confirmedCount}/{totalCount} đã xác nhận</span>
+              </div>
+
+              {auth?.type === "annotator" && (
+                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, fontWeight: 600, color: T.inkSoft }}>
+                  {draftStatus === "saving" && <><Loader2 size={13} className="spin" /> Đang lưu nháp…</>}
+                  {draftStatus === "saved" && <><CircleCheck size={13} color="#3D6944" /> Đã lưu nháp</>}
+                  {draftStatus === "error" && <span style={{ color: T.danger }}>Lỗi lưu nháp</span>}
+                  {draftStatus === "idle" && draftLoadedAt && <><FolderOpen size={13} color={T.gold} /> Tiếp tục từ nháp</>}
+                </div>
+              )}
+
+              {identityChip}
+              <IconBtn title="Đăng xuất" onClick={handleLogout}><LogOut size={14} /></IconBtn>
+
+              <button onClick={submitCase} disabled={submitting || submitted} style={btnPrimaryStyle}>
+                {submitting ? "Đang gửi…" : submitted ? "Đã gửi ✓" : "Hoàn tất case"}
+              </button>
+            </div>
+          </div>
+          {submitError && <div style={{ marginTop: 8, fontSize: 11.5, color: T.danger }}>{submitError}</div>}
+          {submitMessage && <div style={{ marginTop: 8, fontSize: 11.5, color: "#3D6944" }}>{submitMessage}</div>}
+        </div>
+
+        <div
+          ref={containerRef}
+          style={{
+            display: "flex", flex: "1 1 0", minHeight: 0, minWidth: 0, width: "100%",
+            position: "relative", overflow: "hidden",
+            userSelect: draggingRef.current ? "none" : "auto",
+          }}
+        >
+          <div style={{ width: `${leftWidth}%`, overflowY: "auto", padding: "16px 16px 40px" }}>
+            <div style={{ display: "flex", gap: 4, marginBottom: 14, borderBottom: `1px solid ${T.line}`, paddingBottom: 2 }}>
+              {TABS.map((t) => {
+                const Icon = t.icon;
+                const active = tab === t.key;
+                return (
+                  <button
+                    key={t.key} onClick={() => setTab(t.key)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 6, padding: "7px 11px",
+                      fontSize: 12.5, fontWeight: 600, border: "none", cursor: "pointer",
+                      background: "transparent", color: active ? T.ink : T.inkSoft,
+                      borderBottom: active ? `2px solid ${T.gold}` : "2px solid transparent",
+                      borderRadius: 0,
+                    }}
+                  >
+                    <Icon size={14} />
+                    {t.label}
+                    <span style={{
+                      fontSize: 10.5, fontWeight: 700, background: active ? T.goldTint : T.paperDim,
+                      color: active ? T.gold : T.inkSoft, padding: "1px 6px", borderRadius: 10,
+                    }}>{t.count}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {tab === "units" && (
+              <div>
+                <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                  <button onClick={() => setAddingType("claim")} style={{ ...btnGhostStyle, display: "inline-flex", alignItems: "center", gap: 5 }}><Plus size={13} /> Thêm claim</button>
+                  <button onClick={() => setAddingType("request")} style={{ ...btnGhostStyle, display: "inline-flex", alignItems: "center", gap: 5 }}><Plus size={13} /> Thêm request</button>
+                </div>
+                {addingType === "claim" && (
+                  <UnitForm parties={caseData.parties || []} initial={{ type: "claim", order: sortedUnits.length + 1 }} onSave={saveNewUnit} onCancel={() => setAddingType(null)} />
+                )}
+                {addingType === "request" && (
+                  <UnitForm parties={caseData.parties || []} initial={{ type: "request", order: sortedUnits.length + 1 }} onSave={saveNewUnit} onCancel={() => setAddingType(null)} />
+                )}
+                {sortedUnits.map((u) => (
+                  <UnitCard
+                    key={u.id}
+                    unit={u}
+                    parties={caseData.parties || []}
+                    editing={editingId === u.id}
+                    modificationEditing={modificationEditId === u.id}
+                    onConfirm={() => toggleConfirm(u.id, "units")}
+                    onEditStart={() => setEditingId(u.id)}
+                    onEditSave={(data) => saveEditUnit(u.id, data)}
+                    onEditCancel={() => setEditingId(null)}
+                    onDelete={() => deleteUnit(u.id)}
+                    onModificationToggle={() => toggleModifications(u.id)}
+                    onAddModification={(m) => addModification(u.id, m)}
+                    onUpdateModification={(idx, m) => updateModification(u.id, idx, m)}
+                    onRemoveModification={(idx) => removeModification(u.id, idx)}
+                  />
+                ))}
+              </div>
+            )}
+
+            {tab === "reasoning" && (
+              <div>
+                <button onClick={() => setAddingType("reasoning")} style={{ ...btnGhostStyle, display: "inline-flex", alignItems: "center", gap: 5, marginBottom: 12 }}><Plus size={13} /> Thêm reasoning</button>
+                {addingType === "reasoning" && (
+                  <ReasonDecisionForm kind="reasoning" initial={{ order: (caseData.reasoning || []).length + 1 }} onSave={(d) => saveNewSimple("reasoning", d)} onCancel={() => setAddingType(null)} />
+                )}
+                {[...(caseData.reasoning || [])].sort((a, b) => a.order - b.order).map((r) => (
+                  <SimpleCard key={r.id} item={r} kind="reasoning"
+                    editing={editingId === r.id}
+                    onConfirm={() => toggleConfirm(r.id, "reasoning")}
+                    onEditStart={() => setEditingId(r.id)}
+                    onEditSave={(d) => saveEditSimple("reasoning", r.id, d)}
+                    onEditCancel={() => setEditingId(null)}
+                    onDelete={() => deleteSimple("reasoning", r.id)}
+                  />
+                ))}
+              </div>
+            )}
+
+            {tab === "decisions" && (
+              <div>
+                <button onClick={() => setAddingType("decision")} style={{ ...btnGhostStyle, display: "inline-flex", alignItems: "center", gap: 5, marginBottom: 12 }}><Plus size={13} /> Thêm decision</button>
+                {addingType === "decision" && (
+                  <ReasonDecisionForm kind="decision" initial={{ order: (caseData.decisions || []).length + 1 }} onSave={(d) => saveNewSimple("decisions", d)} onCancel={() => setAddingType(null)} />
+                )}
+                {[...(caseData.decisions || [])].sort((a, b) => a.order - b.order).map((d) => (
+                  <SimpleCard key={d.id} item={d} kind="decision"
+                    editing={editingId === d.id}
+                    onConfirm={() => toggleConfirm(d.id, "decisions")}
+                    onEditStart={() => setEditingId(d.id)}
+                    onEditSave={(data) => saveEditSimple("decisions", d.id, data)}
+                    onEditCancel={() => setEditingId(null)}
+                    onDelete={() => deleteSimple("decisions", d.id)}
+                  />
+                ))}
+              </div>
+            )}
+
+            {tab === "links" && <LinksTab caseData={caseData} updateCase={updateCase} />}
           </div>
 
-          {tab === "units" && (
-            <div>
-              <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-                <button onClick={() => setAddingType("claim")} style={{ ...btnGhostStyle, display: "inline-flex", alignItems: "center", gap: 5 }}><Plus size={13} /> Thêm claim</button>
-                <button onClick={() => setAddingType("request")} style={{ ...btnGhostStyle, display: "inline-flex", alignItems: "center", gap: 5 }}><Plus size={13} /> Thêm request</button>
-              </div>
-              {addingType === "claim" && (
-                <UnitForm parties={caseData.parties} initial={{ type: "claim", order: sortedUnits.length + 1 }} onSave={saveNewUnit} onCancel={() => setAddingType(null)} />
-              )}
-              {addingType === "request" && (
-                <UnitForm parties={caseData.parties} initial={{ type: "request", order: sortedUnits.length + 1 }} onSave={saveNewUnit} onCancel={() => setAddingType(null)} />
-              )}
-              {sortedUnits.map((u) => (
-                <UnitCard
-                  key={u.id}
-                  unit={u}
-                  parties={caseData.parties}
-                  editing={editingId === u.id}
-                  modificationEditing={modificationEditId === u.id}
-                  onConfirm={() => toggleConfirm(u.id, "units")}
-                  onEditStart={() => setEditingId(u.id)}
-                  onEditSave={(data) => saveEditUnit(u.id, data)}
-                  onEditCancel={() => setEditingId(null)}
-                  onDelete={() => deleteUnit(u.id)}
-                  onModificationToggle={() => toggleModifications(u.id)}
-                  onAddModification={(m) => addModification(u.id, m)}
-                  onUpdateModification={(idx, m) => updateModification(u.id, idx, m)}
-                  onRemoveModification={(idx) => removeModification(u.id, idx)}
-                />
-              ))}
-            </div>
-          )}
+          <div
+            onMouseDown={onDividerDown}
+            style={{
+              width: 8, cursor: "col-resize", background: T.paperDim, flexShrink: 0,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              borderLeft: `1px solid ${T.line}`, borderRight: `1px solid ${T.line}`,
+            }}
+          >
+            <GripVertical size={13} color={T.lineStrong} />
+          </div>
 
-          {tab === "reasoning" && (
-            <div>
-              <button onClick={() => setAddingType("reasoning")} style={{ ...btnGhostStyle, display: "inline-flex", alignItems: "center", gap: 5, marginBottom: 12 }}><Plus size={13} /> Thêm reasoning</button>
-              {addingType === "reasoning" && (
-                <ReasonDecisionForm kind="reasoning" initial={{ order: caseData.reasoning.length + 1 }} onSave={(d) => saveNewSimple("reasoning", d)} onCancel={() => setAddingType(null)} />
-              )}
-              {[...caseData.reasoning].sort((a,b)=>a.order-b.order).map((r) => (
-                <SimpleCard key={r.id} item={r} kind="reasoning"
-                  editing={editingId === r.id}
-                  onConfirm={() => toggleConfirm(r.id, "reasoning")}
-                  onEditStart={() => setEditingId(r.id)}
-                  onEditSave={(d) => saveEditSimple("reasoning", r.id, d)}
-                  onEditCancel={() => setEditingId(null)}
-                  onDelete={() => deleteSimple("reasoning", r.id)}
-                />
-              ))}
-            </div>
-          )}
-
-          {tab === "decisions" && (
-            <div>
-              <button onClick={() => setAddingType("decision")} style={{ ...btnGhostStyle, display: "inline-flex", alignItems: "center", gap: 5, marginBottom: 12 }}><Plus size={13} /> Thêm decision</button>
-              {addingType === "decision" && (
-                <ReasonDecisionForm kind="decision" initial={{ order: caseData.decisions.length + 1 }} onSave={(d) => saveNewSimple("decisions", d)} onCancel={() => setAddingType(null)} />
-              )}
-              {[...caseData.decisions].sort((a,b)=>a.order-b.order).map((d) => (
-                <SimpleCard key={d.id} item={d} kind="decision"
-                  editing={editingId === d.id}
-                  onConfirm={() => toggleConfirm(d.id, "decisions")}
-                  onEditStart={() => setEditingId(d.id)}
-                  onEditSave={(data) => saveEditSimple("decisions", d.id, data)}
-                  onEditCancel={() => setEditingId(null)}
-                  onDelete={() => deleteSimple("decisions", d.id)}
-                />
-              ))}
-            </div>
-          )}
-
-          {tab === "links" && <LinksTab caseData={caseData} updateCase={updateCase} />}
+          <div style={{ flex: `0 0 ${100 - leftWidth}%`, minWidth: 0, minHeight: 0, height: "100%", overflow: "hidden" }}>
+            <DocumentPanel caseData={caseData} />
+          </div>
         </div>
+      </div>
+    );
+  }
 
-        {/* divider */}
-        <div
-          onMouseDown={onDividerDown}
-          style={{
-            width: 8, cursor: "col-resize", background: T.paperDim, flexShrink: 0,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            borderLeft: `1px solid ${T.line}`, borderRight: `1px solid ${T.line}`,
-          }}
-        >
-          <GripVertical size={13} color={T.lineStrong} />
+  /* dashboard */
+  return (
+    <div style={{ width: "100%", height: "100vh", display: "flex", flexDirection: "column", fontFamily: "-apple-system, 'Segoe UI', Roboto, sans-serif", background: T.paper, color: T.ink, overflow: "hidden" }}>
+      <div style={{ padding: "12px 18px", borderBottom: `1px solid ${T.line}`, background: T.paperCard, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 30, height: 30, borderRadius: 8, background: T.ink, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Gavel size={15} />
+          </div>
+          <span style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 700 }}>Legal Annotation</span>
+          {!backendOk && <span style={{ fontSize: 11.5, color: T.danger, background: "#F6E4E0", padding: "2px 8px", borderRadius: 20 }}>Không kết nối được backend</span>}
         </div>
-
-        <div
-        style={{
-            flex: `0 0 ${100 - leftWidth}%`,
-            minWidth: 0,
-            minHeight: 0,
-            height: "100%",
-            overflow: "hidden",
-          }}
-        >
-        <DocumentPanel caseData={caseData} />
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {identityChip}
+          <IconBtn title="Đăng xuất" onClick={handleLogout}><LogOut size={14} /></IconBtn>
+        </div>
       </div>
-      </div>
+      {auth?.type === "admin" ? (
+        <AdminDashboard
+          overview={adminOverview}
+          annotators={adminAnnotators}
+          onOpenCase={openCase}
+          onAssign={assignCase}
+          onReopen={reopenCase}
+          onAutoAssign={autoAssign}
+          onImportFile={importFromFile}
+          onImportPrototype={importPrototype}
+          importMessage={importMessage}
+          onCreateAnnotator={createAnnotator}
+          onResetPasscode={resetPasscode}
+          onDeleteAnnotator={deleteAnnotator}
+          onRefresh={refresh}
+          refreshing={refreshing}
+          flash={flash}
+        />
+      ) : (
+        <AnnotatorDashboard
+          cases={myCases}
+          stats={myStats}
+          onOpen={openCase}
+          onRefresh={refresh}
+          refreshing={refreshing}
+          flash={flash}
+        />
+      )}
     </div>
   );
 }
