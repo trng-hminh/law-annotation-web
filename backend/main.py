@@ -190,6 +190,16 @@ class FileStorage:
                 out.append(data)
         return out
 
+    def delete_submissions(self, case_id):
+        """Xoá toàn bộ submission của một case."""
+        removed = 0
+        for f in list(self.submissions_dir.glob(f"case_{case_id}_*.json")):
+            f.unlink()
+            removed += 1
+        if removed and self.index_file.exists():
+            self.index_file.unlink()  # index tự dựng lại từ disk lần đọc sau
+        return removed
+
     def read_config(self):
         return _read_json_file(self.config_file, {})
 
@@ -294,6 +304,11 @@ class MongoStorage:
     def list_submissions(self):
         """Toàn bộ submission đầy đủ (phục vụ export)."""
         return list(self.db.submissions.find({}))
+
+    def delete_submissions(self, case_id):
+        """Xoá toàn bộ submission của một case."""
+        res = self.db.submissions.delete_many({"case_id": str(case_id)})
+        return res.deleted_count
 
     def read_config(self):
         doc = self.db.config.find_one({"_id": "admin"})
@@ -497,6 +512,7 @@ def root():
             "POST /api/cases/auto-assign (admin)",
             "GET/PUT/DELETE /api/cases/{id}/draft (annotator)",
             "POST /api/submit",
+            "DELETE /api/cases/{id}/submissions (admin)",
         ],
     }
 
@@ -1040,6 +1056,17 @@ def export_submissions_csv(request: Request):
         media_type="text/csv; charset=utf-8",
         headers={"Content-Disposition": 'attachment; filename="submissions.csv"'},
     )
+
+
+@app.delete("/api/cases/{case_id}/submissions")
+def delete_case_submissions(case_id: str, request: Request):
+    """Admin xoá toàn bộ bài gửi của một case và mở lại case đó."""
+    _require_admin(request)
+    case_id = _safe_id(case_id)
+    removed = storage.delete_submissions(case_id)
+    # hết bài gửi -> case quay lại trạng thái mở
+    _set_case_status(case_id, "open")
+    return {"success": True, "case_id": case_id, "deleted": removed, "status": "open"}
 
 
 def _safe_id(value):

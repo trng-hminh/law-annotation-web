@@ -850,6 +850,7 @@ function AdminDashboard({
   onImportFile, onImportPrototype, importMessage,
   onCreateAnnotator, onResetPasscode, onDeleteAnnotator,
   onCreateAdmin, onResetAdminPassword, onDeleteAdmin,
+  onDeleteSubmissions,
   onRefresh, refreshing, flash, onExport,
 }) {
   const [section, setSection] = useState("cases"); // "cases" | "annotators"
@@ -1006,6 +1007,14 @@ function AdminDashboard({
                     <button onClick={() => onOpenCase(c.case_id)} style={{ ...btnPrimaryStyle, padding: "5px 12px", fontSize: 12 }}>Mở case</button>
                     {c.status === "completed" && (
                       <button onClick={() => onReopen(c.case_id)} style={{ ...btnGhostStyle, padding: "4px 10px", fontSize: 11.5 }}>Mở lại</button>
+                    )}
+                    {c.submissions.length > 0 && (
+                      <button
+                        onClick={() => { if (window.confirm(`Xoá ${c.submissions.length} bài gửi của case ${c.case_id}? Case sẽ mở lại.`)) onDeleteSubmissions(c.case_id); }}
+                        style={{ ...btnGhostStyle, padding: "4px 10px", fontSize: 11.5, color: T.danger, borderColor: T.danger + "66" }}
+                      >
+                        Xoá bài gửi
+                      </button>
                     )}
                   </div>
                 </div>
@@ -1520,6 +1529,16 @@ export default function LegalAnnotationApp() {
     }
   };
 
+  const deleteCaseSubmissions = async (caseId) => {
+    try {
+      const res = await api(`/api/cases/${caseId}/submissions`, { method: "DELETE" });
+      setFlash(`Đã xoá ${res.deleted} bài gửi của case ${caseId} (case đã mở lại).`);
+      loadAdminData();
+    } catch (e) {
+      setFlash(e.message || "Xoá bài gửi thất bại.");
+    }
+  };
+
   const autoAssign = async () => {
     try {
       const res = await api("/api/cases/auto-assign", { method: "POST" });
@@ -1912,6 +1931,7 @@ export default function LegalAnnotationApp() {
           onOpenCase={openCase}
           onAssign={assignCase}
           onReopen={reopenCase}
+          onDeleteSubmissions={deleteCaseSubmissions}
           onAutoAssign={autoAssign}
           onImportFile={importFromFile}
           onImportPrototype={importPrototype}
