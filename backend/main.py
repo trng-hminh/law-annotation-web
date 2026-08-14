@@ -86,6 +86,7 @@ class FileStorage:
         for d in (self.submissions_dir, self.data_dir, self.case_docs_dir, self.drafts_dir):
             d.mkdir(parents=True, exist_ok=True)
         self.annotators_file = self.data_dir / "annotators.json"
+        self.admins_file = self.data_dir / "admins.json"
         self.cases_file = self.data_dir / "cases.json"
         self.assignments_file = self.data_dir / "assignments.json"
         self.index_file = self.data_dir / "submissions_index.json"
@@ -97,6 +98,12 @@ class FileStorage:
 
     def save_annotators(self, annotators):
         _write_json_file(self.annotators_file, annotators)
+
+    def list_admins(self):
+        return _read_json_file(self.admins_file, [])
+
+    def save_admins(self, admins):
+        _write_json_file(self.admins_file, admins)
 
     def read_cases(self):
         return _read_json_file(self.cases_file, [])
@@ -209,6 +216,14 @@ class MongoStorage:
         self.db.annotators.delete_many({})
         if annotators:
             self.db.annotators.insert_many(annotators)
+
+    def list_admins(self):
+        return [a for a in self.db.admins.find({})]
+
+    def save_admins(self, admins):
+        self.db.admins.delete_many({})
+        if admins:
+            self.db.admins.insert_many(admins)
 
     def read_cases(self):
         return [c for c in self.db.cases.find({})]
@@ -336,16 +351,34 @@ def _hash_password(password, salt=None):
     return salt, dk.hex()
 
 
-def _ensure_admin_password():
+def _ensure_admins():
+    """Tạo danh sách admin. Nếu đã có thì giữ nguyên.
+    Hỗ trợ migrate từ bản cũ (config) để mật khẩu admin hiện tại vẫn dùng được."""
+    admins = storage.list_admins()
+    if admins:
+        return
     cfg = storage.read_config()
     if cfg.get("admin_password_hash"):
+        # bản cũ lưu hash trong config -> chuyển sang danh sách admin
+        admins.append({
+            "username": cfg.get("admin_username", "admin"),
+            "name": cfg.get("admin_username", "admin"),
+            "password_salt": cfg.get("admin_password_salt", ""),
+            "password_hash": cfg.get("admin_password_hash", ""),
+            "created_at": datetime.now().isoformat(),
+        })
+        storage.save_admins(admins)
         return
     password = ENV_ADMIN_PASSWORD or "admin123"
     salt, hashed = _hash_password(password)
-    cfg["admin_username"] = ENV_ADMIN_USERNAME
-    cfg["admin_password_salt"] = salt
-    cfg["admin_password_hash"] = hashed
-    storage.save_config(cfg)
+    admins.append({
+        "username": ENV_ADMIN_USERNAME,
+        "name": "Admin",
+        "password_salt": salt,
+        "password_hash": hashed,
+        "created_at": datetime.now().isoformat(),
+    })
+    storage.save_admins(admins)
     if not ENV_ADMIN_PASSWORD:
         print(
             "WARNING: ADMIN_PASSWORD env var not set; using default 'admin123'. "
@@ -411,6 +444,13 @@ def _annotator_name(annotator_id):
     return annotator_id
 
 
+def _admin_name(username):
+    for a in storage.list_admins():
+        if a["username"] == username:
+            return a.get("name") or a["username"]
+    return username
+
+
 def _registry_by_id():
     return {c["case_id"]: c for c in storage.read_cases()}
 
@@ -430,7 +470,7 @@ def _set_case_status(case_id, status, completed_by=None):
     storage.save_cases(registry)
 
 
-_ensure_admin_password()
+_ensure_admins()
 
 
 # ------------------------------ public ------------------------------
@@ -444,6 +484,8 @@ def root():
             "POST /api/auth/admin",
             "POST /api/auth/annotator",
             "POST /api/auth/admin/change-password",
+            "GET/POST /api/admins (admin)",
+            "PUT/DELETE /api/admins/{username} (admin)",
             "GET/POST /api/annotators (admin)",
             "PUT/DELETE /api/annotators/{id} (admin)",
             "POST /api/cases (admin, import corpus)",
@@ -463,22 +505,20 @@ def root():
 
 @app.post("/api/auth/admin")
 def admin_login(payload: dict):
-    cfg = storage.read_config()
-    username = str(payload.get("username", ""))
+    username = str(payload.get("username", "")).strip().lower()
     password = str(payload.get("password", ""))
-    expected_user = cfg.get("admin_username", "admin")
-    expected_hash = cfg.get("admin_password_hash", "")
-    salt = cfg.get("admin_password_salt", "")
-    if username != expected_user or not expected_hash:
+    admins = storage.list_admins()
+    found = next((a for a in admins if a["username"].lower() == username), None)
+    if not found:
         raise HTTPException(status_code=401, detail="Sai tên đăng nhập hoặc mật khẩu.")
-    _, hashed = _hash_password(password, salt)
-    if not hmac.compare_digest(hashed, expected_hash):
+    _, hashed = _hash_password(password, found.get("password_salt", ""))
+    if not hmac.compare_digest(hashed, found.get("password_hash", "")):
         raise HTTPException(status_code=401, detail="Sai tên đăng nhập hoặc mật khẩu.")
     return {
         "type": "admin",
-        "id": "admin",
-        "name": expected_user,
-        "token": _make_token("admin", "admin", hours=12),
+        "id": found["username"],
+        "name": found.get("name") or found["username"],
+        "token": _make_token("admin", found["username"], hours=12),
     }
 
 
@@ -503,16 +543,100 @@ def annotator_login(payload: dict):
 
 @app.post("/api/auth/admin/change-password")
 def change_admin_password(payload: dict, request: Request):
-    _require_admin(request)
+    auth = _require_admin(request)
+    current_password = str(payload.get("current_password", ""))
     new_password = str(payload.get("new_password", ""))
     if len(new_password) < 6:
         raise HTTPException(status_code=400, detail="Mật khẩu mới phải có ít nhất 6 ký tự.")
-    cfg = storage.read_config()
-    salt, hashed = _hash_password(new_password)
-    cfg["admin_password_salt"] = salt
-    cfg["admin_password_hash"] = hashed
-    storage.save_config(cfg)
-    return {"success": True, "message": "Đã đổi mật khẩu admin."}
+    admins = storage.list_admins()
+    found = next((a for a in admins if a["username"] == auth["id"]), None)
+    if not found:
+        raise HTTPException(status_code=404, detail="Không tìm thấy tài khoản admin.")
+    _, hashed = _hash_password(current_password, found.get("password_salt", ""))
+    if not hmac.compare_digest(hashed, found.get("password_hash", "")):
+        raise HTTPException(status_code=401, detail="Mật khẩu hiện tại không đúng.")
+    salt, h = _hash_password(new_password)
+    found["password_salt"] = salt
+    found["password_hash"] = h
+    storage.save_admins(admins)
+    return {"success": True, "message": "Đã đổi mật khẩu."}
+
+
+# ------------------------------ admin management (admin) ------------------------------
+
+def _sanitize_admin(admin):
+    return {
+        "username": admin["username"],
+        "name": admin.get("name", ""),
+        "created_at": admin.get("created_at"),
+    }
+
+
+@app.get("/api/admins")
+def list_admins(request: Request):
+    _require_admin(request)
+    return [_sanitize_admin(a) for a in storage.list_admins()]
+
+
+@app.post("/api/admins")
+def create_admin(payload: dict, request: Request):
+    _require_admin(request)
+    username = str(payload.get("username", "")).strip().lower()
+    password = str(payload.get("password", ""))
+    name = str(payload.get("name", "")).strip() or username
+    if not re.match(r"^[a-z0-9_\-]+$", username):
+        raise HTTPException(status_code=400, detail="Username chỉ gồm chữ thường, số, gạch dưới, gạch ngang.")
+    if len(password) < 6:
+        raise HTTPException(status_code=400, detail="Mật khẩu phải có ít nhất 6 ký tự.")
+    admins = storage.list_admins()
+    if any(a["username"] == username for a in admins):
+        raise HTTPException(status_code=409, detail="Username admin đã tồn tại.")
+    salt, hashed = _hash_password(password)
+    admins.append({
+        "username": username,
+        "name": name,
+        "password_salt": salt,
+        "password_hash": hashed,
+        "created_at": datetime.now().isoformat(),
+    })
+    storage.save_admins(admins)
+    return _sanitize_admin(admins[-1])
+
+
+@app.put("/api/admins/{username}")
+def update_admin(username: str, payload: dict, request: Request):
+    _require_admin(request)
+    username = _safe_id(username).lower()
+    admins = storage.list_admins()
+    found = next((a for a in admins if a["username"] == username), None)
+    if not found:
+        raise HTTPException(status_code=404, detail="Không tìm thấy admin.")
+    new_name = str(payload.get("name", "")).strip()
+    if new_name:
+        found["name"] = new_name
+    new_password = str(payload.get("password", ""))
+    if new_password:
+        if len(new_password) < 6:
+            raise HTTPException(status_code=400, detail="Mật khẩu phải có ít nhất 6 ký tự.")
+        salt, hashed = _hash_password(new_password)
+        found["password_salt"] = salt
+        found["password_hash"] = hashed
+    storage.save_admins(admins)
+    return _sanitize_admin(found)
+
+
+@app.delete("/api/admins/{username}")
+def delete_admin(username: str, request: Request):
+    auth = _require_admin(request)
+    username = _safe_id(username).lower()
+    admins = storage.list_admins()
+    if auth["id"] == username:
+        raise HTTPException(status_code=400, detail="Không thể xoá chính mình.")
+    if len(admins) <= 1:
+        raise HTTPException(status_code=400, detail="Không thể xoá admin cuối cùng.")
+    admins = [a for a in admins if a["username"] != username]
+    storage.save_admins(admins)
+    return {"success": True}
 
 
 # ------------------------------ annotator management (admin) ------------------------------
@@ -833,7 +957,7 @@ def submit_case(payload: dict, request: Request):
             raise HTTPException(status_code=403, detail="Case này không được phân công cho bạn.")
 
     annotator_id = auth["id"]
-    annotator_name = "admin" if auth["type"] == "admin" else _annotator_name(auth["id"])
+    annotator_name = _admin_name(auth["id"]) if auth["type"] == "admin" else _annotator_name(auth["id"])
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"case_{case_id}_{timestamp}.json"

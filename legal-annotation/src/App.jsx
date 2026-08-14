@@ -845,9 +845,11 @@ function AnnotatorDashboard({ cases, stats, onOpen, onRefresh, refreshing, flash
    ============================================================================ */
 
 function AdminDashboard({
-  overview, annotators, onOpenCase, onAssign, onReopen, onAutoAssign,
+  overview, annotators, admins, currentUsername,
+  onOpenCase, onAssign, onReopen, onAutoAssign,
   onImportFile, onImportPrototype, importMessage,
   onCreateAnnotator, onResetPasscode, onDeleteAnnotator,
+  onCreateAdmin, onResetAdminPassword, onDeleteAdmin,
   onRefresh, refreshing, flash, onExport,
 }) {
   const [section, setSection] = useState("cases"); // "cases" | "annotators"
@@ -860,6 +862,10 @@ function AdminDashboard({
   const [newPasscode, setNewPasscode] = useState("");
   const [createMsg, setCreateMsg] = useState("");
   const [resetPass, setResetPass] = useState({});
+  const [adminUsername, setAdminUsername] = useState("");
+  const [adminName, setAdminName] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
+  const [adminResetPass, setAdminResetPass] = useState({});
   const importRef = useRef(null);
 
   const nameOf = (id) => annotators.find((a) => a.id === id)?.name || id || "";
@@ -933,6 +939,9 @@ function AdminDashboard({
         </button>
         <button onClick={() => setSection("annotators")} style={{ ...tabBase, color: section === "annotators" ? T.ink : T.inkSoft, borderBottom: section === "annotators" ? `2px solid ${T.gold}` : "2px solid transparent" }}>
           <Users size={14} /> Annotator ({annotators.length})
+        </button>
+        <button onClick={() => setSection("admins")} style={{ ...tabBase, color: section === "admins" ? T.ink : T.inkSoft, borderBottom: section === "admins" ? `2px solid ${T.gold}` : "2px solid transparent" }}>
+          <Shield size={14} /> Admin ({admins.length})
         </button>
       </div>
 
@@ -1083,6 +1092,84 @@ function AdminDashboard({
           </div>
         </>
       )}
+
+      {section === "admins" && (
+        <>
+          <div style={{ background: T.paperCard, border: `1px solid ${T.line}`, borderRadius: 12, padding: "14px 16px", marginBottom: 14 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>Tạo admin mới</div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
+              <div style={{ flex: 1, minWidth: 140 }}>
+                <label style={labelStyle}>Username</label>
+                <input value={adminUsername} onChange={(e) => setAdminUsername(e.target.value)} placeholder="VD: boss" style={inputStyle} />
+              </div>
+              <div style={{ flex: 1, minWidth: 160 }}>
+                <label style={labelStyle}>Tên hiển thị</label>
+                <input value={adminName} onChange={(e) => setAdminName(e.target.value)} placeholder="VD: Quản lý chính" style={inputStyle} />
+              </div>
+              <div style={{ flex: 1, minWidth: 160 }}>
+                <label style={labelStyle}>Mật khẩu (≥6 ký tự)</label>
+                <input value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} type="password" placeholder="••••••••" style={inputStyle} />
+              </div>
+              <button
+                onClick={async () => {
+                  try {
+                    const a = await onCreateAdmin(adminUsername.trim(), adminPassword, adminName.trim());
+                    setCreateMsg(`Đã tạo admin "${a.username}" (${a.name}).`);
+                    setAdminUsername(""); setAdminPassword(""); setAdminName("");
+                  } catch (e) {
+                    setCreateMsg(e.message || "Tạo admin thất bại.");
+                  }
+                }}
+                style={btnPrimaryStyle}
+              >
+                Tạo admin
+              </button>
+            </div>
+            {createMsg && (
+              <div style={{ marginTop: 8, fontSize: 12.5, color: "#3D6944", background: "#E9F2E7", padding: "8px 10px", borderRadius: 8 }}>{createMsg}</div>
+            )}
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {admins.map((a) => {
+              const isSelf = currentUsername === a.username;
+              return (
+                <div key={a.username} style={{ background: T.paperCard, border: `1px solid ${T.line}`, borderRadius: 10, padding: "12px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <Shield size={15} color={T.gold} />
+                    <span style={{ fontSize: 13, fontWeight: 600 }}>{a.name || a.username}</span>
+                    <span style={{ fontSize: 11.5, color: T.inkSoft }}>{a.username}{isSelf ? " (bạn)" : ""}</span>
+                  </div>
+                  <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                    <input
+                      placeholder="Mật khẩu mới"
+                      type="password"
+                      value={adminResetPass[a.username] || ""}
+                      onChange={(e) => setAdminResetPass((p) => ({ ...p, [a.username]: e.target.value }))}
+                      style={{ ...inputStyle, width: 150, padding: "5px 8px", fontSize: 12 }}
+                    />
+                    <button
+                      onClick={() => {
+                        const pw = (adminResetPass[a.username] || "").trim();
+                        if (!pw) { setCreateMsg("Nhập mật khẩu mới trước."); return; }
+                        onResetAdminPassword(a.username, pw);
+                        setAdminResetPass((p) => ({ ...p, [a.username]: "" }));
+                      }}
+                      style={{ ...btnGhostStyle, padding: "5px 10px", fontSize: 11.5 }}
+                    >
+                      Đổi mật khẩu
+                    </button>
+                    <IconBtn tone="danger" title="Xoá admin" onClick={() => { if (window.confirm(`Xoá admin "${a.username}"?`)) onDeleteAdmin(a.username); }}>
+                      <Trash2 size={14} />
+                    </IconBtn>
+                  </div>
+                </div>
+              );
+            })}
+            {admins.length === 0 && <p style={{ color: T.inkSoft, fontSize: 13 }}>Chưa có admin nào.</p>}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -1132,6 +1219,7 @@ export default function LegalAnnotationApp() {
   // admin dashboard
   const [adminOverview, setAdminOverview] = useState([]);
   const [adminAnnotators, setAdminAnnotators] = useState([]);
+  const [adminAdmins, setAdminAdmins] = useState([]);
   const [importMessage, setImportMessage] = useState("");
 
   const api = async (path, { method = "GET", body } = {}) => {
@@ -1161,9 +1249,10 @@ export default function LegalAnnotationApp() {
 
   const loadAdminData = async () => {
     try {
-      const [ov, ann] = await Promise.all([api("/api/cases"), api("/api/annotators")]);
+      const [ov, ann, adm] = await Promise.all([api("/api/cases"), api("/api/annotators"), api("/api/admins")]);
       setAdminOverview(ov);
       setAdminAnnotators(ann);
+      setAdminAdmins(adm);
       setBackendOk(true);
     } catch (e) {
       setBackendOk(false);
@@ -1463,6 +1552,30 @@ export default function LegalAnnotationApp() {
       loadAdminData();
     } catch (e) {
       setFlash(e.message || "Xoá thất bại.");
+    }
+  };
+
+  const createAdmin = async (username, password, name) => {
+    const a = await api("/api/admins", { method: "POST", body: { username, password, name } });
+    loadAdminData();
+    return a;
+  };
+
+  const resetAdminPassword = async (username, newPassword) => {
+    try {
+      await api(`/api/admins/${username}`, { method: "PUT", body: { password: newPassword } });
+      loadAdminData();
+    } catch (e) {
+      setFlash(e.message || "Đổi mật khẩu thất bại.");
+    }
+  };
+
+  const deleteAdmin = async (username) => {
+    try {
+      await api(`/api/admins/${username}`, { method: "DELETE" });
+      loadAdminData();
+    } catch (e) {
+      setFlash(e.message || "Xoá admin thất bại.");
     }
   };
 
@@ -1794,6 +1907,8 @@ export default function LegalAnnotationApp() {
         <AdminDashboard
           overview={adminOverview}
           annotators={adminAnnotators}
+          admins={adminAdmins}
+          currentUsername={auth?.id}
           onOpenCase={openCase}
           onAssign={assignCase}
           onReopen={reopenCase}
@@ -1805,6 +1920,9 @@ export default function LegalAnnotationApp() {
           onCreateAnnotator={createAnnotator}
           onResetPasscode={resetPasscode}
           onDeleteAnnotator={deleteAnnotator}
+          onCreateAdmin={createAdmin}
+          onResetAdminPassword={resetAdminPassword}
+          onDeleteAdmin={deleteAdmin}
           onRefresh={refresh}
           refreshing={refreshing}
           flash={flash}
