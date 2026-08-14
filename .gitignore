@@ -1,0 +1,21 @@
+# macOS
+.DS_Store
+
+# Môi trường / bí mật (không bao giờ commit)
+.env
+.env.*
+*.env
+backend/data/
+backend/submissions/
+
+# Python
+backend/.venv/
+backend/__pycache__/
+*.pyc
+
+# Node / build
+legal-annotation/node_modules/
+legal-annotation/dist/
+
+# Logs
+*.log

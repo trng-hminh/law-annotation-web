@@ -1,35 +1,30 @@
-"""Legal annotation backend — secure, isolated, scale-ready.
+"""Legal annotation backend — secure, isolated, scale-ready, deploy-ready.
+
+Two storage backends, chosen automatically:
+  * MONGODB_URI env set  -> persistent MongoDB storage (production/deploy)
+  * otherwise            -> local JSON files under backend/data (local dev)
+
+Configuration (env vars, safe for Render/Fly/Koyeb):
+  MONGODB_URI       connection string (e.g. mongodb+srv://...)
+  MONGODB_DB        database name (default: from URI, else "legal_annotation")
+  ADMIN_PASSWORD    admin password (default: "admin123" + warning)
+  ADMIN_USERNAME    admin username (default: "admin")
+  SECRET_KEY        token-signing secret (default: random, persisted)
+  ALLOWED_ORIGINS   comma-separated CORS origins (default: http://localhost:5173)
 
 Security model
 --------------
-* Admin is a single protected account (username + password, PBKDF2-hashed).
-  The password comes from the ADMIN_PASSWORD env var; if unset, a default
-  ("admin123") is used and a warning is printed at startup.
-* Annotator accounts are created by the admin (name + passcode). Passcodes are
-  PBKDF2-hashed. Annotators can never list or see other annotators.
-* Every protected endpoint requires a signed Bearer token (HMAC-SHA256 over
-  the server secret). Tokens encode the identity type and id, so an annotator
-  cannot impersonate another annotator or the admin.
+* Single protected admin account (username + password, PBKDF2-hashed).
+* Annotator accounts are created by the admin (name + passcode), hashed.
+* Every protected endpoint requires a signed Bearer token (HMAC-SHA256).
+* Annotators can never list or see other annotators or other annotators' data.
 
 Case lifecycle
 --------------
-* Admin imports the case corpus (POST /api/cases). Case content is stored in
-  data/case_docs/<case_id>.json and served on demand — an annotator only ever
-  downloads the single case they are working on (scales to thousands of cases).
+* Admin imports the case corpus; case content is served on demand.
 * Each open case is assigned to ONE annotator (fair auto-assignment included).
-* Submitting a case marks it "completed" -> it disappears from annotators'
-  lists. The admin can reopen it to put it back in rotation.
-
-Storage (all under backend/, absolute paths):
-  submissions/case_<id>_<ts>.json              final submissions
-  data/secret.key                              server secret (auto-generated)
-  data/config.json                             admin password hash/salt
-  data/annotators.json                         annotator accounts
-  data/cases.json                              case registry (id/title/status)
-  data/assignments.json                        case_id -> annotator_id
-  data/case_docs/<case_id>.json                case documents
-  data/submissions_index.json                  case_id -> submissions (fast reads)
-  data/drafts/<annotator_id>/case_<case_id>.json
+* Submitting marks a case "completed" -> it disappears from annotators' lists.
+  The admin can reopen it to put it back in rotation.
 """
 
 import hashlib
@@ -46,38 +41,25 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 
-app = FastAPI()
-
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-# ------------------------------ paths & helpers ------------------------------
+# ------------------------------ env configuration ------------------------------
 
 BASE_DIR = Path(__file__).resolve().parent
-SUBMISSIONS_DIR = BASE_DIR / "submissions"
-DATA_DIR = BASE_DIR / "data"
-CASE_DOCS_DIR = DATA_DIR / "case_docs"
-DRAFTS_DIR = DATA_DIR / "drafts"
 
-SECRET_FILE = DATA_DIR / "secret.key"
-CONFIG_FILE = DATA_DIR / "config.json"
-ANNOTATORS_FILE = DATA_DIR / "annotators.json"
-CASES_FILE = DATA_DIR / "cases.json"
-ASSIGNMENTS_FILE = DATA_DIR / "assignments.json"
-SUBMISSIONS_INDEX_FILE = DATA_DIR / "submissions_index.json"
-
-for _dir in (SUBMISSIONS_DIR, DATA_DIR, CASE_DOCS_DIR, DRAFTS_DIR):
-    _dir.mkdir(parents=True, exist_ok=True)
+MONGODB_URI = os.environ.get("MONGODB_URI", "").strip()
+MONGODB_DB = os.environ.get("MONGODB_DB", "").strip()
+ALLOWED_ORIGINS = [
+    o.strip()
+    for o in os.environ.get("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
+    if o.strip()
+]
+ENV_SECRET = os.environ.get("SECRET_KEY", "").strip()
+ENV_ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "").strip()
+ENV_ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin").strip()
 
 
-def _read_json(path, default):
+# ------------------------------ storage abstraction ------------------------------
+
+def _read_json_file(path, default):
     try:
         if not path.exists():
             return default
@@ -86,14 +68,246 @@ def _read_json(path, default):
         return default
 
 
-def _write_json(path, data):
+def _write_json_file(path, data):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def _safe_id(value):
-    """Sanitise ids coming from URLs to prevent path traversal."""
-    return re.sub(r"[^A-Za-z0-9_\-]", "", str(value))
+class FileStorage:
+    """Local JSON-file storage (no MongoDB required)."""
+
+    def __init__(self, base_dir):
+        self.base = Path(base_dir)
+        self.data_dir = self.base / "data"
+        self.case_docs_dir = self.data_dir / "case_docs"
+        self.drafts_dir = self.data_dir / "drafts"
+        self.submissions_dir = self.base / "submissions"
+        for d in (self.submissions_dir, self.data_dir, self.case_docs_dir, self.drafts_dir):
+            d.mkdir(parents=True, exist_ok=True)
+        self.annotators_file = self.data_dir / "annotators.json"
+        self.cases_file = self.data_dir / "cases.json"
+        self.assignments_file = self.data_dir / "assignments.json"
+        self.index_file = self.data_dir / "submissions_index.json"
+        self.config_file = self.data_dir / "config.json"
+        self.secret_file = self.data_dir / "secret.key"
+
+    def list_annotators(self):
+        return _read_json_file(self.annotators_file, [])
+
+    def save_annotators(self, annotators):
+        _write_json_file(self.annotators_file, annotators)
+
+    def read_cases(self):
+        return _read_json_file(self.cases_file, [])
+
+    def save_cases(self, cases):
+        _write_json_file(self.cases_file, cases)
+
+    def read_assignments(self):
+        return _read_json_file(self.assignments_file, {})
+
+    def save_assignments(self, assignments):
+        _write_json_file(self.assignments_file, assignments)
+
+    def get_case_doc(self, case_id):
+        path = self.case_docs_dir / f"{case_id}.json"
+        return _read_json_file(path, None) if path.exists() else None
+
+    def save_case_doc(self, case_id, doc):
+        _write_json_file(self.case_docs_dir / f"{case_id}.json", doc)
+
+    def get_draft(self, annotator_id, case_id):
+        path = self.drafts_dir / annotator_id / f"case_{case_id}.json"
+        return _read_json_file(path, None) if path.exists() else None
+
+    def save_draft(self, annotator_id, case_id, payload):
+        payload = dict(payload)
+        payload["saved_at"] = datetime.now().isoformat()
+        _write_json_file(self.drafts_dir / annotator_id / f"case_{case_id}.json", payload)
+        return payload["saved_at"]
+
+    def delete_draft(self, annotator_id, case_id):
+        path = self.drafts_dir / annotator_id / f"case_{case_id}.json"
+        if path.exists():
+            path.unlink()
+
+    def list_drafts(self):
+        out = []
+        for f in self.drafts_dir.glob("*/case_*.json"):
+            out.append({
+                "annotator_id": f.parent.name,
+                "case_id": f.name.replace("case_", "").replace(".json", ""),
+                "updated_at": datetime.fromtimestamp(f.stat().st_mtime).isoformat(),
+            })
+        return out
+
+    def submissions_index(self):
+        if self.index_file.exists():
+            return _read_json_file(self.index_file, {})
+        index = {}
+        for sub_file in sorted(self.submissions_dir.glob("case_*.json")):
+            data = _read_json_file(sub_file, {})
+            cid = data.get("case_id") or sub_file.name.split("_")[1]
+            index.setdefault(str(cid), []).append({
+                "annotator_id": data.get("annotator_id"),
+                "annotator_name": data.get("annotator_name"),
+                "submitted_at": data.get("submitted_at"),
+                "file": sub_file.name,
+            })
+        _write_json_file(self.index_file, index)
+        return index
+
+    def record_submission(self, case_id, summary, full_data):
+        data = dict(full_data)
+        data["annotator_id"] = summary["annotator_id"]
+        data["annotator_name"] = summary["annotator_name"]
+        data["submitted_at"] = summary["submitted_at"]
+        data["received_at"] = datetime.now().isoformat()
+        _write_json_file(self.submissions_dir / summary["file"], data)
+        index = self.submissions_index()
+        index.setdefault(str(case_id), []).append({
+            "annotator_id": summary["annotator_id"],
+            "annotator_name": summary["annotator_name"],
+            "submitted_at": summary["submitted_at"],
+            "file": summary["file"],
+        })
+        _write_json_file(self.index_file, index)
+
+    def read_config(self):
+        return _read_json_file(self.config_file, {})
+
+    def save_config(self, cfg):
+        _write_json_file(self.config_file, cfg)
+
+    def get_secret(self):
+        return self.secret_file.read_text(encoding="utf-8").strip() if self.secret_file.exists() else None
+
+    def set_secret(self, value):
+        _write_json_file(self.secret_file, value)
+
+
+class MongoStorage:
+    """Persistent MongoDB storage for production deployment."""
+
+    def __init__(self, db):
+        self.db = db
+
+    def list_annotators(self):
+        return [a for a in self.db.annotators.find({})]
+
+    def save_annotators(self, annotators):
+        self.db.annotators.delete_many({})
+        if annotators:
+            self.db.annotators.insert_many(annotators)
+
+    def read_cases(self):
+        return [c for c in self.db.cases.find({})]
+
+    def save_cases(self, cases):
+        self.db.cases.delete_many({})
+        if cases:
+            self.db.cases.insert_many(cases)
+
+    def read_assignments(self):
+        doc = self.db.assignments.find_one({"_id": "map"})
+        return (doc or {}).get("data", {})
+
+    def save_assignments(self, assignments):
+        self.db.assignments.replace_one({"_id": "map"}, {"_id": "map", "data": assignments}, upsert=True)
+
+    def get_case_doc(self, case_id):
+        doc = self.db.case_docs.find_one({"_id": case_id})
+        return doc if doc else None
+
+    def save_case_doc(self, case_id, doc):
+        self.db.case_docs.replace_one({"_id": case_id}, dict(doc, _id=case_id), upsert=True)
+
+    def get_draft(self, annotator_id, case_id):
+        doc = self.db.drafts.find_one({"_id": f"{annotator_id}:{case_id}"})
+        return doc.get("data") if doc else None
+
+    def save_draft(self, annotator_id, case_id, payload):
+        payload = dict(payload)
+        payload["saved_at"] = datetime.now().isoformat()
+        self.db.drafts.replace_one(
+            {"_id": f"{annotator_id}:{case_id}"},
+            {"_id": f"{annotator_id}:{case_id}", "annotator_id": annotator_id,
+             "case_id": case_id, "saved_at": payload["saved_at"], "data": payload},
+            upsert=True,
+        )
+        return payload["saved_at"]
+
+    def delete_draft(self, annotator_id, case_id):
+        self.db.drafts.delete_one({"_id": f"{annotator_id}:{case_id}"})
+
+    def list_drafts(self):
+        return [
+            {"annotator_id": d["annotator_id"], "case_id": d["case_id"], "updated_at": d["saved_at"]}
+            for d in self.db.drafts.find({})
+        ]
+
+    def submissions_index(self):
+        index = {}
+        for s in self.db.submissions.find({}):
+            index.setdefault(s["case_id"], []).append({
+                "annotator_id": s.get("annotator_id"),
+                "annotator_name": s.get("annotator_name"),
+                "submitted_at": s.get("submitted_at"),
+                "file": s.get("file"),
+            })
+        return index
+
+    def record_submission(self, case_id, summary, full_data):
+        data = dict(full_data)
+        data["annotator_id"] = summary["annotator_id"]
+        data["annotator_name"] = summary["annotator_name"]
+        data["submitted_at"] = summary["submitted_at"]
+        data["received_at"] = datetime.now().isoformat()
+        doc = dict(data, _id=summary["file"], case_id=str(case_id), file=summary["file"])
+        self.db.submissions.replace_one({"_id": summary["file"]}, doc, upsert=True)
+
+    def read_config(self):
+        doc = self.db.config.find_one({"_id": "admin"})
+        return {k: v for k, v in (doc or {}).items() if k != "_id"}
+
+    def save_config(self, cfg):
+        self.db.config.replace_one({"_id": "admin"}, dict(cfg, _id="admin"), upsert=True)
+
+    def get_secret(self):
+        doc = self.db.secrets.find_one({"_id": "token"})
+        return doc.get("value") if doc else None
+
+    def set_secret(self, value):
+        self.db.secrets.replace_one({"_id": "token"}, {"_id": "token", "value": value}, upsert=True)
+
+
+# choose backend
+if MONGODB_URI:
+    from pymongo import MongoClient
+
+    _client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=8000)
+    _client.admin.command("ping")  # fail fast if the DB is unreachable
+    try:
+        _db = _client.get_default_database()
+    except Exception:
+        _db = _client[MONGODB_DB or "legal_annotation"]
+    storage = MongoStorage(_db)
+    _STORAGE_NAME = "mongodb"
+else:
+    storage = FileStorage(BASE_DIR)
+    _STORAGE_NAME = "files"
+
+
+app = FastAPI()
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # ------------------------------ password / secret ------------------------------
@@ -106,27 +320,30 @@ def _hash_password(password, salt=None):
 
 
 def _ensure_admin_password():
-    cfg = _read_json(CONFIG_FILE, {})
+    cfg = storage.read_config()
     if cfg.get("admin_password_hash"):
         return
-    password = os.environ.get("ADMIN_PASSWORD", "admin123")
+    password = ENV_ADMIN_PASSWORD or "admin123"
     salt, hashed = _hash_password(password)
-    cfg["admin_username"] = os.environ.get("ADMIN_USERNAME", "admin")
+    cfg["admin_username"] = ENV_ADMIN_USERNAME
     cfg["admin_password_salt"] = salt
     cfg["admin_password_hash"] = hashed
-    _write_json(CONFIG_FILE, cfg)
-    if "ADMIN_PASSWORD" not in os.environ:
+    storage.save_config(cfg)
+    if not ENV_ADMIN_PASSWORD:
         print(
             "WARNING: ADMIN_PASSWORD env var not set; using default 'admin123'. "
-            "Set ADMIN_PASSWORD before starting uvicorn in production."
+            "Set ADMIN_PASSWORD in production."
         )
 
 
 def _secret():
-    if SECRET_FILE.exists():
-        return SECRET_FILE.read_text(encoding="utf-8").strip()
+    if ENV_SECRET:
+        return ENV_SECRET
+    existing = storage.get_secret()
+    if existing:
+        return existing
     secret = secrets.token_hex(32)
-    SECRET_FILE.write_text(secret, encoding="utf-8")
+    storage.set_secret(secret)
     return secret
 
 
@@ -171,18 +388,18 @@ def _require_annotator(request: Request):
 
 
 def _annotator_name(annotator_id):
-    for a in _read_json(ANNOTATORS_FILE, []):
+    for a in storage.list_annotators():
         if a["id"] == annotator_id:
             return a["name"]
     return annotator_id
 
 
 def _registry_by_id():
-    return {c["case_id"]: c for c in _read_json(CASES_FILE, [])}
+    return {c["case_id"]: c for c in storage.read_cases()}
 
 
 def _set_case_status(case_id, status, completed_by=None):
-    registry = _read_json(CASES_FILE, [])
+    registry = storage.read_cases()
     for c in registry:
         if c["case_id"] == case_id:
             c["status"] = status
@@ -193,25 +410,7 @@ def _set_case_status(case_id, status, completed_by=None):
                 c.pop("completed_at", None)
                 c.pop("completed_by", None)
             break
-    _write_json(CASES_FILE, registry)
-
-
-def _submissions_index():
-    """case_id -> [submission summary, ...]; rebuilt lazily from disk."""
-    if SUBMISSIONS_INDEX_FILE.exists():
-        return _read_json(SUBMISSIONS_INDEX_FILE, {})
-    index = {}
-    for sub_file in sorted(SUBMISSIONS_DIR.glob("case_*.json")):
-        data = _read_json(sub_file, {})
-        cid = data.get("case_id") or sub_file.name.split("_")[1]
-        index.setdefault(str(cid), []).append({
-            "annotator_id": data.get("annotator_id"),
-            "annotator_name": data.get("annotator_name"),
-            "submitted_at": data.get("submitted_at"),
-            "file": sub_file.name,
-        })
-    _write_json(SUBMISSIONS_INDEX_FILE, index)
-    return index
+    storage.save_cases(registry)
 
 
 _ensure_admin_password()
@@ -223,6 +422,7 @@ _ensure_admin_password()
 def root():
     return {
         "message": "Legal annotation backend is running",
+        "storage": _STORAGE_NAME,
         "endpoints": [
             "POST /api/auth/admin",
             "POST /api/auth/annotator",
@@ -246,7 +446,7 @@ def root():
 
 @app.post("/api/auth/admin")
 def admin_login(payload: dict):
-    cfg = _read_json(CONFIG_FILE, {})
+    cfg = storage.read_config()
     username = str(payload.get("username", ""))
     password = str(payload.get("password", ""))
     expected_user = cfg.get("admin_username", "admin")
@@ -269,7 +469,7 @@ def admin_login(payload: dict):
 def annotator_login(payload: dict):
     name = str(payload.get("name", "")).strip()
     passcode = str(payload.get("passcode", ""))
-    annotators = _read_json(ANNOTATORS_FILE, [])
+    annotators = storage.list_annotators()
     found = next((a for a in annotators if a["name"].lower() == name.lower()), None)
     if not found:
         raise HTTPException(status_code=401, detail="Sai tên hoặc mã annotator.")
@@ -290,11 +490,11 @@ def change_admin_password(payload: dict, request: Request):
     new_password = str(payload.get("new_password", ""))
     if len(new_password) < 6:
         raise HTTPException(status_code=400, detail="Mật khẩu mới phải có ít nhất 6 ký tự.")
-    cfg = _read_json(CONFIG_FILE, {})
+    cfg = storage.read_config()
     salt, hashed = _hash_password(new_password)
     cfg["admin_password_salt"] = salt
     cfg["admin_password_hash"] = hashed
-    _write_json(CONFIG_FILE, cfg)
+    storage.save_config(cfg)
     return {"success": True, "message": "Đã đổi mật khẩu admin."}
 
 
@@ -314,7 +514,7 @@ def _sanitize_annotator(annotator, with_passcode=False):
 @app.get("/api/annotators")
 def list_annotators(request: Request):
     _require_admin(request)
-    return [_sanitize_annotator(a) for a in _read_json(ANNOTATORS_FILE, [])]
+    return [_sanitize_annotator(a) for a in storage.list_annotators()]
 
 
 @app.post("/api/annotators")
@@ -326,7 +526,7 @@ def create_annotator(payload: dict, request: Request):
         raise HTTPException(status_code=400, detail="Cần nhập tên annotator.")
     if len(passcode) < 4:
         raise HTTPException(status_code=400, detail="Mã annotator phải có ít nhất 4 ký tự.")
-    annotators = _read_json(ANNOTATORS_FILE, [])
+    annotators = storage.list_annotators()
     if any(a["name"].lower() == name.lower() for a in annotators):
         raise HTTPException(status_code=409, detail="Tên annotator đã tồn tại.")
     ids = [int(a["id"][1:]) for a in annotators if a["id"].startswith("A")]
@@ -341,7 +541,7 @@ def create_annotator(payload: dict, request: Request):
         "_passcode_plain": passcode,
     }
     annotators.append(annotator)
-    _write_json(ANNOTATORS_FILE, annotators)
+    storage.save_annotators(annotators)
     return _sanitize_annotator(annotator, with_passcode=True)
 
 
@@ -349,7 +549,7 @@ def create_annotator(payload: dict, request: Request):
 def update_annotator(annotator_id: str, payload: dict, request: Request):
     _require_admin(request)
     annotator_id = _safe_id(annotator_id)
-    annotators = _read_json(ANNOTATORS_FILE, [])
+    annotators = storage.list_annotators()
     found = next((a for a in annotators if a["id"] == annotator_id), None)
     if not found:
         raise HTTPException(status_code=404, detail="Không tìm thấy annotator.")
@@ -366,7 +566,7 @@ def update_annotator(annotator_id: str, payload: dict, request: Request):
         found["passcode_salt"] = salt
         found["passcode_hash"] = hashed
         found["_passcode_plain"] = new_passcode
-    _write_json(ANNOTATORS_FILE, annotators)
+    storage.save_annotators(annotators)
     return _sanitize_annotator(found, with_passcode=bool(new_passcode))
 
 
@@ -374,25 +574,20 @@ def update_annotator(annotator_id: str, payload: dict, request: Request):
 def delete_annotator(annotator_id: str, request: Request):
     _require_admin(request)
     annotator_id = _safe_id(annotator_id)
-    annotators = _read_json(ANNOTATORS_FILE, [])
+    annotators = storage.list_annotators()
     annotators = [a for a in annotators if a["id"] != annotator_id]
-    _write_json(ANNOTATORS_FILE, annotators)
-    assignments = _read_json(ASSIGNMENTS_FILE, {})
+    storage.save_annotators(annotators)
+    assignments = storage.read_assignments()
     changed = False
     for cid, aid in list(assignments.items()):
         if aid == annotator_id:
             del assignments[cid]
             changed = True
     if changed:
-        _write_json(ASSIGNMENTS_FILE, assignments)
-    draft_dir = DRAFTS_DIR / annotator_id
-    if draft_dir.exists():
-        for f in draft_dir.glob("*.json"):
-            f.unlink()
-        try:
-            draft_dir.rmdir()
-        except OSError:
-            pass
+        storage.save_assignments(assignments)
+    for d in storage.list_drafts():
+        if d["annotator_id"] == annotator_id:
+            storage.delete_draft(annotator_id, d["case_id"])
     return {"success": True}
 
 
@@ -402,14 +597,14 @@ def delete_annotator(annotator_id: str, request: Request):
 def import_cases(payload: dict, request: Request):
     _require_admin(request)
     docs = payload.get("cases", []) or []
-    registry = _read_json(CASES_FILE, [])
+    registry = storage.read_cases()
     by_id = {c["case_id"]: c for c in registry}
     imported = 0
     for doc in docs:
         cid = _safe_id(doc.get("id") or doc.get("case_id") or "")
         if not cid:
             continue
-        _write_json(CASE_DOCS_DIR / f"{cid}.json", doc)
+        storage.save_case_doc(cid, doc)
         existing = by_id.get(cid, {})
         by_id[cid] = {
             "case_id": cid,
@@ -421,7 +616,7 @@ def import_cases(payload: dict, request: Request):
             by_id[cid]["completed_by"] = existing.get("completed_by")
         imported += 1
     result = sorted(by_id.values(), key=lambda x: x["case_id"])
-    _write_json(CASES_FILE, result)
+    storage.save_cases(result)
     return {"imported": imported, "total_cases": len(result)}
 
 
@@ -432,15 +627,15 @@ def assign_case(case_id: str, payload: dict, request: Request):
     _require_admin(request)
     case_id = _safe_id(case_id)
     annotator_id = payload.get("annotator_id")
-    assignments = _read_json(ASSIGNMENTS_FILE, {})
+    assignments = storage.read_assignments()
     if annotator_id:
         annotator_id = _safe_id(str(annotator_id))
-        if not any(a["id"] == annotator_id for a in _read_json(ANNOTATORS_FILE, [])):
+        if not any(a["id"] == annotator_id for a in storage.list_annotators()):
             raise HTTPException(status_code=400, detail="Annotator không tồn tại.")
         assignments[case_id] = annotator_id
     else:
         assignments.pop(case_id, None)
-    _write_json(ASSIGNMENTS_FILE, assignments)
+    storage.save_assignments(assignments)
     return {"case_id": case_id, "annotator_id": assignments.get(case_id)}
 
 
@@ -448,7 +643,7 @@ def assign_case(case_id: str, payload: dict, request: Request):
 def reopen_case(case_id: str, request: Request):
     _require_admin(request)
     case_id = _safe_id(case_id)
-    registry = _read_json(CASES_FILE, [])
+    registry = storage.read_cases()
     found = False
     for c in registry:
         if c["case_id"] == case_id:
@@ -459,7 +654,7 @@ def reopen_case(case_id: str, request: Request):
             break
     if not found:
         raise HTTPException(status_code=404, detail="Không tìm thấy case.")
-    _write_json(CASES_FILE, registry)
+    storage.save_cases(registry)
     return {"success": True, "case_id": case_id, "status": "open"}
 
 
@@ -468,11 +663,11 @@ def auto_assign(request: Request):
     """Evenly distribute open, unassigned cases across annotators,
     favouring annotators with the lightest current workload."""
     _require_admin(request)
-    annotators = _read_json(ANNOTATORS_FILE, [])
+    annotators = storage.list_annotators()
     if not annotators:
         raise HTTPException(status_code=400, detail="Chưa có annotator nào. Hãy tạo annotator trước.")
-    registry = _read_json(CASES_FILE, [])
-    assignments = _read_json(ASSIGNMENTS_FILE, {})
+    registry = storage.read_cases()
+    assignments = storage.read_assignments()
 
     open_ids = {c["case_id"] for c in registry if c.get("status") != "completed"}
     pending = sorted(open_ids - set(assignments.keys()))
@@ -489,7 +684,7 @@ def auto_assign(request: Request):
         workload[aid] += 1
         assigned += 1
 
-    _write_json(ASSIGNMENTS_FILE, assignments)
+    storage.save_assignments(assignments)
     return {"assigned": assigned, "pending": len(pending) - assigned}
 
 
@@ -499,7 +694,7 @@ def auto_assign(request: Request):
 def annotator_cases(request: Request):
     """Annotator's own open cases only — no visibility into other annotators."""
     auth = _require_annotator(request)
-    assignments = _read_json(ASSIGNMENTS_FILE, {})
+    assignments = storage.read_assignments()
     registry = _registry_by_id()
 
     open_cases = []
@@ -533,16 +728,16 @@ def annotator_cases(request: Request):
 @app.get("/api/cases")
 def admin_overview(request: Request):
     _require_admin(request)
-    registry = _read_json(CASES_FILE, [])
-    assignments = _read_json(ASSIGNMENTS_FILE, {})
-    submissions_index = _submissions_index()
+    registry = storage.read_cases()
+    assignments = storage.read_assignments()
+    submissions_index = storage.submissions_index()
+    drafts = storage.list_drafts()
 
     drafts_by_case = {}
-    for draft_file in DRAFTS_DIR.glob("*/case_*.json"):
-        cid = draft_file.name.replace("case_", "").replace(".json", "")
-        drafts_by_case.setdefault(cid, []).append({
-            "annotator_id": draft_file.parent.name,
-            "updated_at": datetime.fromtimestamp(draft_file.stat().st_mtime).isoformat(),
+    for d in drafts:
+        drafts_by_case.setdefault(d["case_id"], []).append({
+            "annotator_id": d["annotator_id"],
+            "updated_at": d["updated_at"],
         })
 
     result = []
@@ -565,14 +760,14 @@ def admin_overview(request: Request):
 def get_case_doc(case_id: str, request: Request):
     auth = _require_auth(request)
     case_id = _safe_id(case_id)
-    path = CASE_DOCS_DIR / f"{case_id}.json"
-    if not path.exists():
+    doc = storage.get_case_doc(case_id)
+    if doc is None:
         raise HTTPException(status_code=404, detail="Không tìm thấy case.")
     if auth["type"] == "annotator":
-        assignments = _read_json(ASSIGNMENTS_FILE, {})
+        assignments = storage.read_assignments()
         if assignments.get(case_id) != auth["id"]:
             raise HTTPException(status_code=403, detail="Case này không được phân công cho bạn.")
-    return _read_json(path, {})
+    return doc
 
 
 # ------------------------------ drafts (annotator only) ------------------------------
@@ -581,29 +776,25 @@ def get_case_doc(case_id: str, request: Request):
 def get_draft(case_id: str, request: Request):
     auth = _require_annotator(request)
     case_id = _safe_id(case_id)
-    path = DRAFTS_DIR / auth["id"] / f"case_{case_id}.json"
-    if not path.exists():
+    draft = storage.get_draft(auth["id"], case_id)
+    if draft is None:
         raise HTTPException(status_code=404, detail="Chưa có nháp.")
-    return _read_json(path, {})
+    return draft
 
 
 @app.put("/api/cases/{case_id}/draft")
 def save_draft(case_id: str, payload: dict, request: Request):
     auth = _require_annotator(request)
     case_id = _safe_id(case_id)
-    path = DRAFTS_DIR / auth["id"] / f"case_{case_id}.json"
-    payload["saved_at"] = datetime.now().isoformat()
-    _write_json(path, payload)
-    return {"success": True, "case_id": case_id, "saved_at": payload["saved_at"]}
+    saved_at = storage.save_draft(auth["id"], case_id, payload)
+    return {"success": True, "case_id": case_id, "saved_at": saved_at}
 
 
 @app.delete("/api/cases/{case_id}/draft")
 def delete_draft(case_id: str, request: Request):
     auth = _require_annotator(request)
     case_id = _safe_id(case_id)
-    path = DRAFTS_DIR / auth["id"] / f"case_{case_id}.json"
-    if path.exists():
-        path.unlink()
+    storage.delete_draft(auth["id"], case_id)
     return {"success": True}
 
 
@@ -615,12 +806,12 @@ def submit_case(payload: dict, request: Request):
     case_id = _safe_id(str(payload.get("case_id", "")))
     if not case_id:
         raise HTTPException(status_code=400, detail="Thiếu case_id.")
-    if not (CASE_DOCS_DIR / f"{case_id}.json").exists():
+    if storage.get_case_doc(case_id) is None:
         raise HTTPException(status_code=404, detail="Không tìm thấy case.")
 
     # annotators may only submit cases assigned to them; admin may submit any
     if auth["type"] == "annotator":
-        assignments = _read_json(ASSIGNMENTS_FILE, {})
+        assignments = storage.read_assignments()
         if assignments.get(case_id) != auth["id"]:
             raise HTTPException(status_code=403, detail="Case này không được phân công cho bạn.")
 
@@ -628,33 +819,27 @@ def submit_case(payload: dict, request: Request):
     annotator_name = "admin" if auth["type"] == "admin" else _annotator_name(auth["id"])
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    data = dict(payload)
-    data["annotator_id"] = annotator_id
-    data["annotator_name"] = annotator_name
-    data["received_at"] = datetime.now().isoformat()
-    filename = SUBMISSIONS_DIR / f"case_{case_id}_{timestamp}.json"
-    _write_json(filename, data)
-
-    index = _submissions_index()
-    index.setdefault(case_id, []).append({
+    filename = f"case_{case_id}_{timestamp}.json"
+    summary = {
         "annotator_id": annotator_id,
         "annotator_name": annotator_name,
-        "submitted_at": data.get("submitted_at"),
-        "file": filename.name,
-    })
-    _write_json(SUBMISSIONS_INDEX_FILE, index)
-
+        "submitted_at": payload.get("submitted_at"),
+        "file": filename,
+    }
+    storage.record_submission(case_id, summary, payload)
     _set_case_status(case_id, "completed", completed_by=annotator_id)
-
-    draft = DRAFTS_DIR / annotator_id / f"case_{case_id}.json"
-    if draft.exists():
-        draft.unlink()
+    storage.delete_draft(annotator_id, case_id)
 
     return {
         "success": True,
         "case_id": case_id,
         "annotator_id": annotator_id,
         "annotator_name": annotator_name,
-        "file": filename.name,
+        "file": filename,
         "status": "completed",
     }
+
+
+def _safe_id(value):
+    """Sanitise ids coming from URLs to prevent path traversal."""
+    return re.sub(r"[^A-Za-z0-9_\-]", "", str(value))
