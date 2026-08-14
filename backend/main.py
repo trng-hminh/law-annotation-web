@@ -283,9 +283,12 @@ class MongoStorage:
 
 # choose backend
 if MONGODB_URI:
+    import certifi
     from pymongo import MongoClient
 
-    _client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=8000)
+    # certifi.wheres() ships a trusted CA bundle that works on macOS, Linux and
+    # container runtimes alike, avoiding "CERTIFICATE_VERIFY_FAILED" on macOS.
+    _client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=8000, tlsCAFile=certifi.where())
     _client.admin.command("ping")  # fail fast if the DB is unreachable
     try:
         _db = _client.get_default_database()
