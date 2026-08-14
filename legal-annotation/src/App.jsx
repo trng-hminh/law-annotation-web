@@ -33,91 +33,6 @@ const PARTY_STYLE = {
 };
 const sideOf = (id) => (id?.[0] === "P" ? "P" : "D");
 
-/* ----------------------------------------------------------------------
-   MOCK DATA — reconstructed from the Case 20889 excerpt (hợp đồng mua
-   bán lúa). Reasoning entries are illustrative placeholders standing in
-   for the 6 reasoning units the source screenshot counts but doesn't
-   show; everything else mirrors the provided claim/request text.
-------------------------------------------------------------------------- */
-const seedCase = {
-  id: "20889",
-  title: "Tranh chấp hợp đồng mua bán tài sản",
-  sourceFile: "ban_20889.pdf",
-  totalPages: 8,
-  parties: [
-    { id: "P1", name: "Huỳnh Trang T", role: "Nguyên đơn" },
-    { id: "D1", name: "Nguyễn Thành P", role: "Bị đơn" },
-  ],
-  units: [
-    {
-      id: "C1", type: "claim", order: 1, assertedBy: ["P1"],
-      text: "Vào ngày 10/11/2018, bà với ông P có thỏa thuận ký hợp đồng bao tiêu (mua bán) lúa nếp loại giống OM4625, với số lượng là 21 ha, với giá là 5.200đ/kg.",
-      status: "confirmed", spans: [{ start: 78, end: 86, note: "số lượng" }],
-    },
-    {
-      id: "C2", type: "claim", order: 2, assertedBy: ["P1"],
-      text: "Sau khi 2 bên ký hợp đồng mua bán, bà có đưa trước cho ông P số tiền là 267.000.000đ, hẹn đến ngày 09/01/2019 thu hoạch lúa, ông P sẽ giao lúa cho bà theo số lượng và giá cả do hai bên ký kết.",
-      status: "unconfirmed", spans: [],
-    },
-    {
-      id: "C3", type: "claim", order: 3, assertedBy: ["P1"],
-      text: "Tuy nhiên, sau khi thu hoạch lúa xong, ông P không giao đủ số lượng lúa mà hai bên đã ký kết hợp đồng.",
-      status: "unconfirmed", spans: [],
-    },
-    {
-      id: "C4", type: "claim", order: 4, assertedBy: ["P1"],
-      text: "Ngày 09/02/2019, giữa bà với ông P có đối chiếu lại số lượng lúa mà ông P giao cho bà theo hợp đồng mà 2 bên đã ký kết, thì ông P còn nợ lại bà số tiền mua lúa là 155.000.000đ, hẹn sau 15 ngày sẽ trả đủ số tiền trên cho bà, nhưng từ khi ông P làm biên nhận nợ cho đến nay, ông P không trả số tiền trên cho bà.",
-      status: "unconfirmed", spans: [],
-    },
-    {
-      id: "R1", type: "request", order: 5, assertedBy: ["P1"],
-      text: "Nay bà khởi kiện yêu cầu ông Nguyễn Thành P có trách nhiệm trả lại cho bà số tiền mua lúa còn thiếu là 155.000.000đ và tiền lãi từ ngày ông P làm cam kết trả nợ cho bà, cho đến khi giải quyết xong vụ án với mức lãi suất là 1%/tháng.",
-      status: "unconfirmed", spans: [],
-      outcome: "accepted", linkedDecisions: ["DE1"], linkedReasoning: ["RE1", "RE2"],
-      linksConfirmed: false,
-    },
-  ],
-  reasoning: [
-    { id: "RE1", order: 1, status: "confirmed", text: "Xét thấy hợp đồng bao tiêu lúa giữa hai bên được xác lập bằng văn bản, có chữ ký của cả nguyên đơn và bị đơn, phù hợp quy định về hình thức hợp đồng mua bán tài sản." },
-    { id: "RE2", order: 2, status: "confirmed", text: "Xét thấy biên bản đối chiếu công nợ ngày 09/02/2019 do chính bị đơn lập và ký xác nhận số tiền còn nợ là 155.000.000đ, đây là chứng cứ trực tiếp thể hiện nghĩa vụ trả nợ." },
-    { id: "RE3", order: 3, status: "unconfirmed", text: "Xét thấy bị đơn không xuất trình được chứng cứ chứng minh đã thực hiện nghĩa vụ giao đủ lúa hoặc đã thanh toán số tiền còn thiếu." },
-    { id: "RE4", order: 4, status: "unconfirmed", text: "Xét thấy yêu cầu tính lãi suất 1%/tháng của nguyên đơn là phù hợp với thỏa thuận ghi nhận trong biên bản đối chiếu công nợ." },
-    { id: "RE5", order: 5, status: "unconfirmed", text: "Xét thấy quan hệ tranh chấp giữa các bên là quan hệ hợp đồng mua bán tài sản, thuộc thẩm quyền giải quyết của Tòa án theo thủ tục sơ thẩm." },
-    { id: "RE6", order: 6, status: "unconfirmed", text: "Xét thấy các bên đã được triệu tập hợp lệ để hòa giải nhưng không thành, đủ điều kiện đưa vụ án ra xét xử." },
-  ],
-  decisions: [
-    { id: "DE1", order: 1, status: "unconfirmed", text: "Chấp nhận yêu cầu khởi kiện của bà Huỳnh Trang T. Buộc ông Nguyễn Thành P trả cho bà Huỳnh Trang T số tiền 155.000.000đ và tiền lãi tính theo mức 1%/tháng kể từ ngày lập biên nhận nợ cho đến khi thi hành án xong." },
-  ],
-  pages: {
-    1: "TÒA ÁN NHÂN DÂN ...\n\nBẢN ÁN\nV/v: Tranh chấp hợp đồng mua bán tài sản",
-    2: "NỘI DUNG VỤ ÁN\n\nTại đơn khởi kiện ngày 06/7/2020; biên bản lấy lời khai ngày 01/4/2021; biên bản không tiến hành hòa giải được ngày 01/4/2021 bà Huỳnh Trang T trình bày:\n\nVào ngày 10/11/2018, bà với ông P có thỏa thuận ký hợp đồng bao tiêu (mua bán) lúa nếp loại giống OM4625, với số lượng là 21 ha, với giá là 5.200đ/kg.\n\nSau khi 2 bên ký hợp đồng mua bán, bà có đưa trước cho ông P số tiền là 267.000.000đ, hẹn đến ngày 09/01/2019 thu hoạch lúa, ông P sẽ giao lúa cho bà theo số lượng và giá cả do hai bên ký kết.\n\nTuy nhiên, sau khi thu hoạch lúa xong, ông P không giao đủ số lượng lúa mà hai bên đã ký kết hợp đồng.\n\nNgày 09/02/2019, giữa bà với ông P có đối chiếu lại số lượng lúa mà ông P giao cho bà theo hợp đồng mà 2 bên đã ký kết, thì ông P còn nợ lại bà số tiền mua lúa là 155.000.000đ, hẹn sau 15 ngày sẽ trả đủ số tiền trên cho bà, nhưng từ khi ông P làm biên nhận nợ cho đến nay, ông P không trả số tiền trên cho bà.\n\nNay bà khởi kiện yêu cầu ông Nguyễn Thành P có trách nhiệm trả lại cho bà số tiền mua lúa còn thiếu là 155.000.000đ và tiền lãi từ ngày ông P làm cam kết trả nợ cho bà, cho đến khi giải quyết xong vụ án với mức lãi suất là 1%/tháng.",
-    3: "Bị đơn ông Nguyễn Thành P trình bày: ...",
-    4: "Tại phiên tòa, ... ",
-    5: "NHẬN ĐỊNH CỦA TÒA ÁN\n\n[1] Về hình thức hợp đồng...\n[2] Về nghĩa vụ giao lúa...",
-    6: "[3] Về số tiền còn nợ...\n[4] Về lãi suất...",
-    7: "QUYẾT ĐỊNH\n\nChấp nhận yêu cầu khởi kiện của bà Huỳnh Trang T...",
-    8: "Bản án có hiệu lực pháp luật kể từ ngày hết thời hạn kháng cáo, kháng nghị.",
-  },
-};
-
-const seedCase2 = {
-  id: "20890",
-  title: "Tranh chấp hợp đồng vay tài sản",
-  sourceFile: "ban_20890.pdf",
-  totalPages: 6,
-  parties: [
-    { id: "P1", name: "Lê Văn K", role: "Nguyên đơn" },
-    { id: "D1", name: "Trần Thị H", role: "Bị đơn" },
-  ],
-  units: [
-    { id: "C1", type: "claim", order: 1, assertedBy: ["P1"], text: "Ngày 02/3/2020, ông K cho bà H vay số tiền 80.000.000đ, có giấy vay tay, không tính lãi.", status: "unconfirmed", spans: [] },
-    { id: "R1", type: "request", order: 2, assertedBy: ["P1"], text: "Ông K yêu cầu bà H trả lại số tiền vay 80.000.000đ.", status: "unconfirmed", spans: [], outcome: null, linkedDecisions: [], linkedReasoning: [], linksConfirmed: false },
-  ],
-  reasoning: [],
-  decisions: [],
-  pages: { 1: "TÒA ÁN NHÂN DÂN ...\n\nBẢN ÁN\nV/v: Tranh chấp hợp đồng vay tài sản" },
-};
-
 const OUTCOME_LABEL = {
   accepted: "Chấp nhận",
   rejected: "Không chấp nhận",
@@ -1111,15 +1026,16 @@ export default function LegalAnnotationApp() {
         </div>
 
         <div
-          style={{
-            width: `${100 - leftWidth}%`,
-            flexShrink: 0,
-            minHeight: 0,
-            overflow: "hidden",
-          }}
-        >
-          <DocumentPanel caseData={caseData} />
-        </div>
+        style={{
+          flex: `0 0 ${100 - leftWidth}%`,
+          minWidth: 0,
+          minHeight: 0,
+          height: "100%",
+          overflow: "hidden",
+        }}
+      >
+        <DocumentPanel caseData={caseData} />
+      </div>
       </div>
     </div>
   );
