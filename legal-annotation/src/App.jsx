@@ -682,6 +682,67 @@ export default function LegalAnnotationApp() {
   const importRef = useRef(null);
 
   const caseData = cases[caseIdx];
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+
+const submitCase = async () => {
+  setSubmitting(true);
+  setSubmitError("");
+
+  try {
+    const payload = {
+      case_id: caseData.id,
+      title: caseData.title,
+
+      parties: caseData.parties,
+
+      units: caseData.units,
+
+      reasoning: caseData.reasoning,
+
+      decisions: caseData.decisions,
+
+      submitted_at: new Date().toISOString(),
+    };
+
+    const response = await fetch(
+      "http://localhost:8000/api/submit",
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json",
+        },
+
+        body: JSON.stringify(payload),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Submit failed");
+    }
+
+    const result = await response.json();
+
+    console.log("Submitted:", result);
+
+    setSubmitted(true);
+
+  } catch (error) {
+
+    console.error(error);
+
+    setSubmitError(
+      "Không thể gửi kết quả. Vui lòng thử lại."
+    );
+
+  } finally {
+
+    setSubmitting(false);
+  }
+};
+
 
   const updateCase = useCallback((fn) => {
     setCases((cs) => cs.map((c, i) => (i === caseIdx ? fn(c) : c)));
@@ -888,7 +949,17 @@ export default function LegalAnnotationApp() {
             >
               <Upload size={13} /> Nhập JSON
             </button>
-            <button style={btnPrimaryStyle}>Hoàn tất case</button>
+            <button
+              onClick={submitCase}
+              disabled={submitting || submitted}
+              style={btnPrimaryStyle}
+            >
+              {submitting
+                ? "Đang gửi..."
+                : submitted
+                  ? "Đã gửi ✓"
+                  : "Hoàn tất case"}
+            </button>
           </div>
         </div>
         {importMessage && (
@@ -1027,13 +1098,13 @@ export default function LegalAnnotationApp() {
 
         <div
         style={{
-          flex: `0 0 ${100 - leftWidth}%`,
-          minWidth: 0,
-          minHeight: 0,
-          height: "100%",
-          overflow: "hidden",
-        }}
-      >
+            flex: `0 0 ${100 - leftWidth}%`,
+            minWidth: 0,
+            minHeight: 0,
+            height: "100%",
+            overflow: "hidden",
+          }}
+        >
         <DocumentPanel caseData={caseData} />
       </div>
       </div>

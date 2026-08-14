@@ -1,0 +1,143 @@
+{
+  "case_id": "20889",
+  "title": "Case 20889",
+  "parties": [
+    {
+      "id": "P1",
+      "name": "Huỳnh Trang T",
+      "role": "Nguyên đơn"
+    },
+    {
+      "id": "D1",
+      "name": "Nguyễn Thành P",
+      "role": "Bị đơn"
+    }
+  ],
+  "units": [
+    {
+      "id": "C1",
+      "type": "claim",
+      "order": 1,
+      "assertedBy": [
+        "P1"
+      ],
+      "text": "Vào ngày 10/11/2018, bà với ông P có thỏa thuận ký hợp đồng bao tiêu (mua bán) lúa nếp loại giống OM4625, với số lượng là 21 ha, với giá là 5.200đ/kg.",
+      "status": "unconfirmed",
+      "section": "content",
+      "modification_spans": []
+    },
+    {
+      "id": "C2",
+      "type": "claim",
+      "order": 2,
+      "assertedBy": [
+        "P1"
+      ],
+      "text": "Sau khi 2 bên ký hợp đồng mua bán, bà có đưa trước cho ông P số tiền là 267.000.000đ, hẹn đến ngày 09/01/2019 thu hoạch lúa, ông P sẽ giao lúa cho bà theo số lượng và giá cả do hai bên ký kết.",
+      "status": "unconfirmed",
+      "section": "content",
+      "modification_spans": []
+    },
+    {
+      "id": "C3",
+      "type": "claim",
+      "order": 3,
+      "assertedBy": [
+        "P1"
+      ],
+      "text": "Tuy nhiên, sau khi thu hoạch lúa xong, ông P không giao đủ số lượng lúa mà hai bên đã ký kết hợp đồng.",
+      "status": "unconfirmed",
+      "section": "content",
+      "modification_spans": []
+    },
+    {
+      "id": "C4",
+      "type": "claim",
+      "order": 4,
+      "assertedBy": [
+        "P1"
+      ],
+      "text": "Ngày 09/02/2019, giữa bà với ông P có đối chiếu lại số lượng lúa mà ông P giao cho bà theo hợp đồng mà 2 bên đã ký kết, thì ông P còn nợ lại bà số tiền mua lúa là 155.000.000đ, hẹn sau 15 ngày sẽ trả đủ số tiền trên cho bà, nhưng từ khi ông P làm biên nhận nợ cho đến nay, ông P không trả số tiền trên cho bà.",
+      "status": "unconfirmed",
+      "section": "content",
+      "modification_spans": []
+    },
+    {
+      "id": "R1",
+      "type": "request",
+      "order": 5,
+      "assertedBy": [
+        "P1"
+      ],
+      "text": "Nay bà khởi kiện yêu cầu ông Nguyễn Thành P có trách nhiệm trả lại cho bà số tiền mua lúa còn thiếu là 155.000.000đ và tiền lãi từ ngày ông P làm cam kết trả nợ cho bà, cho đến khi giải quyết xong vụ án với mức lãi suất là 1%/tháng.",
+      "status": "unconfirmed",
+      "section": "content",
+      "modification_spans": [],
+      "outcome": "accepted",
+      "linkedDecisions": [
+        "DE1"
+      ],
+      "linkedReasoning": [
+        "RE4",
+        "RE5",
+        "RE6"
+      ],
+      "linksConfirmed": false
+    }
+  ],
+  "reasoning": [
+    {
+      "id": "RE1",
+      "order": 6,
+      "text": "Bởi vì, trong quá trình thu thập chứng cứ bà T có cung cấp 01 Hợp đồng sản xuất nếp hàng hóa ngày 10/11/2018 giữa bà vời ông P, theo nội dung hợp đồng giữa 2 bên thể hiện: Bà T có thỏa thuận bao tiêu (mua bán) lúa nếp loại giống OM4625, với số lượng là 21 ha, với giá là 5.200đ/kg.",
+      "status": "unconfirmed",
+      "section": "assessment"
+    },
+    {
+      "id": "RE2",
+      "order": 7,
+      "text": "Sau khi 2 bên ký hợp đồng mua bán, bà có đưa trước cho ông P số tiền là 267.000.000đ. Tuy nhiên, sau khi thu hoạch xong mùa vụ, ông P không giao đủ số lượng đã thỏa thuận bán cho bà T nên ngày 09/02/2019 giữa bà T với ông P có đối chiếu lại số tiền mà bà T đã đưa trước cho ông P và số lúa mà ông P đã giao cho bà T, thì bên ông P còn nợ lại bà T số tiền 155.000.000đ. Ngày 09/02/2019, ông P có làm biên nhận nợ, thừa nhận còn nợ bà T số tiền mua lúa nếp là 155.000.000đ và hẹn trong 10 ngày sẽ trả số tiền trên cho bà T.",
+      "status": "unconfirmed",
+      "section": "assessment"
+    },
+    {
+      "id": "RE3",
+      "order": 8,
+      "text": "Việc ông P lập biên nhận nợ bà T số tiền 155.000.000đ có sự chứng kiến của ông Nguyễn Thành T (em ruột ông P) và ông Trần Văn S (người cùng tham gia mua lúa với ông T) chứng kiến và xác nhận vào biên nhận trên.Tại biên bản lấy lời khai ngày 01/02/2021 ông S và ông Thành T đều trình bày: Các ông có chứng kiến và ký tên vào biên nhận ngày 09/02/2019, với nội dung là ông P thừa nhận còn nợ bà T số tiền 155.000.000đ và biên nhận ngày 09/02/2019 là do chính ông P viết ra.",
+      "status": "unconfirmed",
+      "section": "assessment"
+    },
+    {
+      "id": "RE4",
+      "order": 9,
+      "text": "Như vậy, có căn cứ xác định ông P còn nợ lại bà T số tiền đặt mua lúa nếp là 155.000.000đ và từ khi ông P thừa nhận số nợ trên cho đến nay, chưa trả lại tiền cho bà T, nghĩ nên buộc ông P có trách nhiệm trả lại cho bà T số tiền nêu trên là phù hợp và có căn cứ chấp nhận.",
+      "status": "unconfirmed",
+      "section": "assessment"
+    },
+    {
+      "id": "RE5",
+      "order": 10,
+      "text": "[4] Đối với yêu cầu tính lãi của bà T là có căn cứ chấp nhận, bởi vì, căn cứ vào mục IV, Điều khoản chung của hợp đồng sản xuất nếp hàng hóa ngày 10/11/2018 giữa bà T và ông P thể hiện: Bên A (ông P) không thực hiện thu mua 4 nếp đúng như trên hợp đồng hoặc tự ý hủy bỏ hợp đồng, phải bồi thường số tiền tương đương gấp 3 lần tiền tạm ứng cho bên B (bà T).",
+      "status": "unconfirmed",
+      "section": "assessment"
+    },
+    {
+      "id": "RE6",
+      "order": 11,
+      "text": "Mặt khác, tại biên nhận ngày 09/02/2019, ông P cũng cam kết đến ngày 10/01/2019 (al) (ngày 14/2/2019(Dl)) sẽ trả lại số tiền trên cho bà T nhưng ông P không thực hiện đúng như cam kết của mình là đã vi phạm nghĩa vụ trả nợ nên bà T yêu cầu tính lãi số tiền trên theo mức lãi suất 1%/tháng, là phù hợp và có căn cứ chấp nhận, số tiền lãi được tính như sau: 155.000.000đ X 1%/tháng X 28 tháng 14 ngày (Từ 10/01/2019 al tức ngày 14/2/2019 đến ngày 28/6/2021) = 44.123.000đ. Tóm lại: Buộc ông P có trách nhiệm trả lại cho bà T số tiền mua lúa nếp còn thiếu là 155.000.000đ và tiền lãi từ ngày 14/02/2019 cho đến nay với số tiền lãi là 44.123.000đ, là phù hợp và có căn cứ chấp nhận.",
+      "status": "unconfirmed",
+      "section": "assessment"
+    }
+  ],
+  "decisions": [
+    {
+      "id": "DE1",
+      "order": 12,
+      "text": "1/ Chấp nhận yêu cầu khởi kiện của bà Huỳnh Trang T đối với ông Nguyễn Thành P. 2/ Buộc ông Nguyễn Thành P có trách nhiệm trả lại cho bà Huỳnh Trang T số tiền mua lúa nếp còn thiếu là 155.000.000đ và tiền lãi từ ngày 14/02/2019 cho đến nay với số là 44.123.000đ. Tổng cộng gốc và lãi là 199.123.000đ (Một trăm chín mươi chín triệu một trăm hai mươi ba nghìn đồng).",
+      "status": "unconfirmed",
+      "section": "decision"
+    }
+  ],
+  "submitted_at": "2026-08-14T14:14:13.571Z",
+  "received_at": "2026-08-14T21:14:13.592921"
+}
