@@ -39,6 +39,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 
 
 # ------------------------------ env configuration ------------------------------
@@ -173,6 +174,15 @@ class FileStorage:
         })
         _write_json_file(self.index_file, index)
 
+    def list_submissions(self):
+        """Toàn bộ submission đầy đủ (phục vụ export)."""
+        out = []
+        for f in sorted(self.submissions_dir.glob("case_*.json")):
+            data = _read_json_file(f, {})
+            if data:
+                out.append(data)
+        return out
+
     def read_config(self):
         return _read_json_file(self.config_file, {})
 
@@ -265,6 +275,10 @@ class MongoStorage:
         data["received_at"] = datetime.now().isoformat()
         doc = dict(data, _id=summary["file"], case_id=str(case_id), file=summary["file"])
         self.db.submissions.replace_one({"_id": summary["file"]}, doc, upsert=True)
+
+    def list_submissions(self):
+        """Toàn bộ submission đầy đủ (phục vụ export)."""
+        return list(self.db.submissions.find({}))
 
     def read_config(self):
         doc = self.db.config.find_one({"_id": "admin"})
@@ -841,6 +855,67 @@ def submit_case(payload: dict, request: Request):
         "file": filename,
         "status": "completed",
     }
+
+
+# ------------------------------ export (admin, cho nghiên cứu) ------------------------------
+
+@app.get("/api/export/submissions")
+def export_submissions(request: Request):
+    """Toàn bộ submission (payload đầy đủ) dạng JSON — dành cho nghiên cứu."""
+    _require_admin(request)
+    subs = storage.list_submissions()
+    subs.sort(key=lambda s: (str(s.get("case_id", "")), str(s.get("submitted_at", "") or "")))
+    return {
+        "exported_at": datetime.now().isoformat(),
+        "count": len(subs),
+        "submissions": subs,
+    }
+
+
+@app.get("/api/export/submissions.csv")
+def export_submissions_csv(request: Request):
+    """Bảng tóm tắt CSV (1 dòng/submission) — mở được bằng Excel."""
+    _require_admin(request)
+    subs = storage.list_submissions()
+    subs.sort(key=lambda s: (str(s.get("case_id", "")), str(s.get("submitted_at", "") or "")))
+
+    import csv
+    import io
+
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow([
+        "case_id", "title", "annotator_id", "annotator_name",
+        "submitted_at", "received_at", "file",
+        "num_units", "num_confirmed", "outcomes", "num_reasoning", "num_decisions",
+    ])
+    for s in subs:
+        units = s.get("units") or []
+        reasoning = s.get("reasoning") or []
+        decisions = s.get("decisions") or []
+        requests = [u for u in units if u.get("type") == "request"]
+        outcomes = ";".join(str(r.get("outcome") or "") for r in requests)
+        writer.writerow([
+            s.get("case_id", ""),
+            s.get("title", ""),
+            s.get("annotator_id", ""),
+            s.get("annotator_name", ""),
+            s.get("submitted_at", ""),
+            s.get("received_at", ""),
+            s.get("file", ""),
+            len(units),
+            sum(1 for u in units if u.get("status") == "confirmed"),
+            outcomes,
+            len(reasoning),
+            len(decisions),
+        ])
+
+    content = "\ufeff" + buf.getvalue()  # BOM để Excel đọc tiếng Việt đúng
+    return Response(
+        content=content,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="submissions.csv"'},
+    )
 
 
 def _safe_id(value):

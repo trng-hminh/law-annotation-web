@@ -5,7 +5,7 @@ import {
   ZoomIn, ZoomOut, X, GripVertical, ScrollText, Gavel, ListChecks,
   Scale, CircleCheck, Circle, UserRound, LogOut,
   FolderOpen, Shield, Loader2, LayoutDashboard, RefreshCw,
-  Users
+  Users, Download
 } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
@@ -848,7 +848,7 @@ function AdminDashboard({
   overview, annotators, onOpenCase, onAssign, onReopen, onAutoAssign,
   onImportFile, onImportPrototype, importMessage,
   onCreateAnnotator, onResetPasscode, onDeleteAnnotator,
-  onRefresh, refreshing, flash,
+  onRefresh, refreshing, flash, onExport,
 }) {
   const [section, setSection] = useState("cases"); // "cases" | "annotators"
   const [search, setSearch] = useState("");
@@ -907,6 +907,12 @@ function AdminDashboard({
               <button onClick={() => importRef.current?.click()} style={btnGhostStyle}>Import JSON</button>
             </>
           )}
+          <button onClick={() => onExport("json")} style={{ ...btnGhostStyle, display: "inline-flex", alignItems: "center", gap: 5 }} title="Tải toàn bộ submission (payload đầy đủ) dạng JSON">
+            <Download size={13} /> Tải dữ liệu (JSON)
+          </button>
+          <button onClick={() => onExport("csv")} style={{ ...btnGhostStyle, display: "inline-flex", alignItems: "center", gap: 5 }} title="Tải bảng tóm tắt CSV (mở bằng Excel)">
+            <Download size={13} /> Tải summary (CSV)
+          </button>
           <button onClick={onRefresh} disabled={refreshing} style={{ ...btnGhostStyle, display: "inline-flex", alignItems: "center", gap: 5 }}>
             {refreshing ? <Loader2 size={13} className="spin" /> : <RefreshCw size={13} />} Làm mới
           </button>
@@ -1487,6 +1493,44 @@ export default function LegalAnnotationApp() {
     await importCorpus(INITIAL_CASES);
   };
 
+  const downloadBlob = (text, filename, type) => {
+    const blob = new Blob([text], { type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  /* Tải submission phục vụ nghiên cứu: JSON (đầy đủ) hoặc CSV (tóm tắt) */
+  const exportSubmissions = async (format = "json") => {
+    if (!auth) return;
+    try {
+      const suffix = format === "csv" ? ".csv" : "";
+      const res = await fetch(`${API_BASE}/api/export/submissions${suffix}`, {
+        headers: { Authorization: `Bearer ${auth.token}` },
+      });
+      if (!res.ok) {
+        let detail = "";
+        try { detail = (await res.json()).detail || ""; } catch { /* ignore */ }
+        throw new Error(detail || `Lỗi ${res.status}`);
+      }
+      const text = await res.text();
+      const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+      if (format === "csv") {
+        downloadBlob(text, `submissions_summary_${stamp}.csv`, "text/csv;charset=utf-8");
+      } else {
+        downloadBlob(text, `submissions_${stamp}.json`, "application/json");
+      }
+      setFlash(`Đã tải ${format === "csv" ? "summary CSV" : "submissions JSON"} (${(text.length / 1024).toFixed(1)} KB).`);
+    } catch (e) {
+      setFlash(e.message || "Tải dữ liệu thất bại.");
+    }
+  };
+
   /* -------------------- derived values -------------------- */
 
   const allTrackedUnits = useMemo(
@@ -1757,6 +1801,7 @@ export default function LegalAnnotationApp() {
           onImportFile={importFromFile}
           onImportPrototype={importPrototype}
           importMessage={importMessage}
+          onExport={exportSubmissions}
           onCreateAnnotator={createAnnotator}
           onResetPasscode={resetPasscode}
           onDeleteAnnotator={deleteAnnotator}
