@@ -1,0 +1,3841 @@
+[
+  {
+    "case_id": 20889,
+    "parties": [
+      {
+        "party_id": "P1",
+        "name": "Huỳnh Trang T",
+        "procedural_role": "PLAINTIFF"
+      },
+      {
+        "party_id": "D1",
+        "name": "Nguyễn Thành P",
+        "procedural_role": "DEFENDANT"
+      }
+    ],
+    "claims": [
+      {
+        "claim_id": "C1",
+        "section": "content",
+        "span": {
+          "text": "Vào ngày 10/11/2018, bà với ông P có thỏa thuận ký hợp đồng bao tiêu (mua bán) lúa nếp loại giống OM4625, với số lượng là 21 ha, với giá là 5.200đ/kg."
+        },
+        "asserted_by": "P1",
+        "order": 1
+      },
+      {
+        "claim_id": "C2",
+        "section": "content",
+        "span": {
+          "text": "Sau khi 2 bên ký hợp đồng mua bán, bà có đưa trước cho ông P số tiền là 267.000.000đ, hẹn đến ngày 09/01/2019 thu hoạch lúa, ông P sẽ giao lúa cho bà theo số lượng và giá cả do hai bên ký kết."
+        },
+        "asserted_by": "P1",
+        "order": 2
+      },
+      {
+        "claim_id": "C3",
+        "section": "content",
+        "span": {
+          "text": "Tuy nhiên, sau khi thu hoạch lúa xong, ông P không giao đủ số lượng lúa mà hai bên đã ký kết hợp đồng."
+        },
+        "asserted_by": "P1",
+        "order": 3
+      },
+      {
+        "claim_id": "C4",
+        "section": "content",
+        "span": {
+          "text": "Ngày 09/02/2019, giữa bà với ông P có đối chiếu lại số lượng lúa mà ông P giao cho bà theo hợp đồng mà 2 bên đã ký kết, thì ông P còn nợ lại bà số tiền mua lúa là 155.000.000đ, hẹn sau 15 ngày sẽ trả đủ số tiền trên cho bà, nhưng từ khi ông P làm biên nhận nợ cho đến nay, ông P không trả số tiền trên cho bà."
+        },
+        "asserted_by": "P1",
+        "order": 4
+      }
+    ],
+    "requests": [
+      {
+        "request_id": "R1",
+        "section": "content",
+        "span": {
+          "text": "Nay bà khởi kiện yêu cầu ông Nguyễn Thành P có trách nhiệm trả lại cho bà số tiền mua lúa còn thiếu là 155.000.000đ và tiền lãi từ ngày ông P làm cam kết trả nợ cho bà, cho đến khi giải quyết xong vụ án với mức lãi suất là 1%/tháng."
+        },
+        "requested_by": [
+          "P1"
+        ],
+        "modification_spans": [],
+        "order": 5
+      }
+    ],
+    "reasonings": [
+      {
+        "reasoning_id": "RE1",
+        "section": "assessment",
+        "span": {
+          "text": "Bởi vì, trong quá trình thu thập chứng cứ bà T có cung cấp 01 Hợp đồng sản xuất nếp hàng hóa ngày 10/11/2018 giữa bà vời ông P, theo nội dung hợp đồng giữa 2 bên thể hiện: Bà T có thỏa thuận bao tiêu (mua bán) lúa nếp loại giống OM4625, với số lượng là 21 ha, với giá là 5.200đ/kg."
+        },
+        "order": 6
+      },
+      {
+        "reasoning_id": "RE2",
+        "section": "assessment",
+        "span": {
+          "text": "Sau khi 2 bên ký hợp đồng mua bán, bà có đưa trước cho ông P số tiền là 267.000.000đ. Tuy nhiên, sau khi thu hoạch xong mùa vụ, ông P không giao đủ số lượng đã thỏa thuận bán cho bà T nên ngày 09/02/2019 giữa bà T với ông P có đối chiếu lại số tiền mà bà T đã đưa trước cho ông P và số lúa mà ông P đã giao cho bà T, thì bên ông P còn nợ lại bà T số tiền 155.000.000đ. Ngày 09/02/2019, ông P có làm biên nhận nợ, thừa nhận còn nợ bà T số tiền mua lúa nếp là 155.000.000đ và hẹn trong 10 ngày sẽ trả số tiền trên cho bà T."
+        },
+        "order": 7
+      },
+      {
+        "reasoning_id": "RE3",
+        "order": 8,
+        "section": "assessment",
+        "span": {
+          "text": "Việc ông P lập biên nhận nợ bà T số tiền 155.000.000đ có sự chứng kiến của ông Nguyễn Thành T (em ruột ông P) và ông Trần Văn S (người cùng tham gia mua lúa với ông T) chứng kiến và xác nhận vào biên nhận trên.Tại biên bản lấy lời khai ngày 01/02/2021 ông S và ông Thành T đều trình bày: Các ông có chứng kiến và ký tên vào biên nhận ngày 09/02/2019, với nội dung là ông P thừa nhận còn nợ bà T số tiền 155.000.000đ và biên nhận ngày 09/02/2019 là do chính ông P viết ra."
+        }
+      },
+      {
+        "reasoning_id": "RE4",
+        "order": 9,
+        "section": "assessment",
+        "span": {
+          "text": "Như vậy, có căn cứ xác định ông P còn nợ lại bà T số tiền đặt mua lúa nếp là 155.000.000đ và từ khi ông P thừa nhận số nợ trên cho đến nay, chưa trả lại tiền cho bà T, nghĩ nên buộc ông P có trách nhiệm trả lại cho bà T số tiền nêu trên là phù hợp và có căn cứ chấp nhận."
+        }
+      },
+      {
+        "reasoning_id": "RE5",
+        "order": 10,
+        "section": "assessment",
+        "span": {
+          "text": "[4] Đối với yêu cầu tính lãi của bà T là có căn cứ chấp nhận, bởi vì, căn cứ vào mục IV, Điều khoản chung của hợp đồng sản xuất nếp hàng hóa ngày 10/11/2018 giữa bà T và ông P thể hiện: Bên A (ông P) không thực hiện thu mua 4 nếp đúng như trên hợp đồng hoặc tự ý hủy bỏ hợp đồng, phải bồi thường số tiền tương đương gấp 3 lần tiền tạm ứng cho bên B (bà T)."
+        }
+      },
+      {
+        "reasoning_id": "RE6",
+        "order": 11,
+        "section": "assessment",
+        "span": {
+          "text": "Mặt khác, tại biên nhận ngày 09/02/2019, ông P cũng cam kết đến ngày 10/01/2019 (al) (ngày 14/2/2019(Dl)) sẽ trả lại số tiền trên cho bà T nhưng ông P không thực hiện đúng như cam kết của mình là đã vi phạm nghĩa vụ trả nợ nên bà T yêu cầu tính lãi số tiền trên theo mức lãi suất 1%/tháng, là phù hợp và có căn cứ chấp nhận, số tiền lãi được tính như sau: 155.000.000đ X 1%/tháng X 28 tháng 14 ngày (Từ 10/01/2019 al tức ngày 14/2/2019 đến ngày 28/6/2021) = 44.123.000đ. Tóm lại: Buộc ông P có trách nhiệm trả lại cho bà T số tiền mua lúa nếp còn thiếu là 155.000.000đ và tiền lãi từ ngày 14/02/2019 cho đến nay với số tiền lãi là 44.123.000đ, là phù hợp và có căn cứ chấp nhận."
+        }
+      }
+    ],
+    "decisions": [
+      {
+        "decision_id": "DE1",
+        "section": "decision",
+        "span": {
+          "text": "1/ Chấp nhận yêu cầu khởi kiện của bà Huỳnh Trang T đối với ông Nguyễn Thành P. 2/ Buộc ông Nguyễn Thành P có trách nhiệm trả lại cho bà Huỳnh Trang T số tiền mua lúa nếp còn thiếu là 155.000.000đ và tiền lãi từ ngày 14/02/2019 cho đến nay với số là 44.123.000đ. Tổng cộng gốc và lãi là 199.123.000đ (Một trăm chín mươi chín triệu một trăm hai mươi ba nghìn đồng)."
+        },
+        "order": 12
+      }
+    ],
+    "request_decision_links": [
+      {
+        "request_id": "R1",
+        "decision_id": "DE1"
+      }
+    ],
+    "request_reasoning_links": [
+      {
+        "request_id": "R1",
+        "reasoning_id": "RE4"
+      },
+      {
+        "request_id": "R1",
+        "reasoning_id": "RE5"
+      },
+      {
+        "request_id": "R1",
+        "reasoning_id": "RE6"
+      }
+    ],
+    "request_outcomes": [
+      {
+        "request_id": "R1",
+        "outcome": "ACCEPTED"
+      }
+    ]
+  },
+  {
+    "case_id": 26842,
+    "parties": [
+      {
+        "party_id": "P1",
+        "name": "Nguyễn Hiếu Tr",
+        "procedural_role": "PLAINTIFF"
+      },
+      {
+        "party_id": "D1",
+        "name": "Nguyễn Thị Kiều D",
+        "procedural_role": "DEFENDANT"
+      },
+      {
+        "party_id": "D2",
+        "name": "Nguyễn Phúc Đ1",
+        "procedural_role": "DEFENDANT"
+      }
+    ],
+    "claims": [
+      {
+        "claim_id": "C1",
+        "section": "content",
+        "span": {
+          "text": "Ngày 21/5/2021, do quen biết nên ông Tr cho bà D vay số tiền 100.000.000 đồng, mục đích để vợ chồng bà D và ông Đ1 bổ sung vốn kinh doanh; ông Tr chuyển khoản số tiền 100.000.000 đồng vào số tài khoản 7412137 mở tại Ngân hàng Á Châu (ACB) do bà D làm chủ tài khoản."
+        },
+        "asserted_by": "P1",
+        "order": 1
+      },
+      {
+        "claim_id": "C2",
+        "section": "content",
+        "span": {
+          "text": "Tuy nhiên, sau một thời gian dài bà D không trả tiền nên vào ngày 21/01/2022, giữa ông Tr và bà D mới lập hợp đồng vay, trong đó có nội dung thời hạn vay đến ngày 21/6/2022 bà D sẽ trả lại cho ông Tr số tiền 100.000.000 đồng, lãi suất do hai bên thỏa thuận."
+        },
+        "asserted_by": "P1",
+        "order": 2
+      },
+      {
+        "claim_id": "C3",
+        "section": "content",
+        "span": {
+          "text": "Số tiền này trước đó vào ngày 21/5/2021 bà D đã nhận đủ 100.000.000 đồng."
+        },
+        "asserted_by": "P1",
+        "order": 3
+      },
+      {
+        "claim_id": "C4",
+        "section": "content",
+        "span": {
+          "text": "Vào tháng 6/2021, do cần vốn kinh doanh nên bà D và ông Đ1 vay ông Tr số tiền 23.000.000 đồng, không có làm biên nhận, ông Tr chuyển tiền vào số tài khoản 7412137 mở tại Ngân hàng Á Châu (ACB) do bà D làm chủ tài khoản (chuyển lần một số tiền 15.000.000 đồng và chuyển lần hai số tiền 8.000.000 đồng)."
+        },
+        "asserted_by": "P1",
+        "order": 4
+      },
+      {
+        "claim_id": "C5",
+        "section": "content",
+        "span": {
+          "text": "Ngoài ra, cửa hàng Vân Việt Long do ông Đ1 làm chủ, còn nợ tiền mua hàng (Bu lông, tán, lông đền) của ông Tr số tiền 36.380.060 đồng chưa thanh toán kể từ ngày 14/4/2021 cho đến nay."
+        },
+        "asserted_by": "P1",
+        "order": 5
+      },
+      {
+        "claim_id": "C6",
+        "section": "content",
+        "span": {
+          "text": "Việc vay các khoản tiền 100.000.000 đồng, 23.000.000 đồng và khoản nợ tiền hàng 36.380.060 đồng, thì ông Đ1 có đến nhà riêng của ông Tr tại tổ 18, khóm Vĩnh Lộc, thị trấn Cái Dầu để xác nhận nợ và hứa khi bán nhà được thì sẽ trả đủ số tiền 159.380.060 đồng cho ông Tr."
+        },
+        "asserted_by": "P1",
+        "order": 6
+      },
+      {
+        "claim_id": "C7",
+        "section": "content",
+        "span": {
+          "text": "Tuy nhiên, sau khi ký hợp đồng vay vào ngày 21/01/2022 đến nay thì bà D chỉ đóng lãi được số tiền 3.600.000 đồng."
+        },
+        "asserted_by": "P1",
+        "order": 7
+      },
+      {
+        "claim_id": "C8",
+        "section": "content",
+        "span": {
+          "text": "Ông Tr đã nhiều lần gặp bà D và ông Đ1 để yêu cầu trả tiền nhưng bà D và ông Đ1 chỉ hứa hẹn trả mà không thực hiện."
+        },
+        "asserted_by": "P1",
+        "order": 8
+      },
+      {
+        "claim_id": "C9",
+        "section": "content",
+        "span": {
+          "text": "Không yêu cầu tính lãi đối với khoản vốn vay 23.000.000 đồng và khoản nợ tiền hàng 36.380.060 đồng."
+        },
+        "asserted_by": "P1",
+        "order": 11
+      },
+      {
+        "claim_id": "C11",
+        "section": "content",
+        "span": {
+          "text": "Thống nhất bà D và ông Đ1 còn nợ ông Tr số tiền vốn vay tổng cộng 123.000.000 đồng, trong đó bà D đã trả lãi được số tiền 3.600.000 đồng."
+        },
+        "asserted_by": [
+          "D1",
+          "D2"
+        ],
+        "order": 17
+      },
+      {
+        "claim_id": "C12",
+        "section": "content",
+        "span": {
+          "text": "Đối với số tiền mua hàng 36.380.060 đồng mà ông Tr yêu cầu thì các bị đơn không thừa nhận."
+        },
+        "asserted_by": [
+          "D1",
+          "D2"
+        ],
+        "order": 20
+      }
+    ],
+    "requests": [
+      {
+        "request_id": "R1",
+        "section": "content",
+        "span": {
+          "text": "Do đó, ông Tr yêu cầu Tòa án giải quyết như sau: - Yêu cầu Tòa án buộc bà D và ông Đ1 có trách nhiệm liên đới trả cho ông Tr số tiền tổng cộng 159.380.060 đồng, trong đó bao gồm: Tiền vốn vay 123.000.000 đồng và tiền nợ mua hàng 36.380.060 đồng."
+        },
+        "requested_by": [
+          "P1"
+        ],
+        "modification_spans": [
+          {
+            "order": 12,
+            "section": "content",
+            "text": "Nguyên đơn tự nguyện rút lại một phần yêu cầu khởi kiện đối với số tiền mua hàng 36.380.060 đồng."
+          },
+          {
+            "order": 13,
+            "section": "content",
+            "text": "Yêu cầu bà D và ông Đ1 có trách nhiệm liên đới trả cho ông Tr số tiền vốn vay tổng cộng 123.000.000 đồng."
+          }
+        ],
+        "order": 9
+      },
+      {
+        "request_id": "R2",
+        "section": "content",
+        "span": {
+          "text": "Yêu cầu tính lãi theo mức lãi suất 1,6%/tháng trên số tiền vốn vay 100.000.000 đồng, tính kể từ ngày 21/02/2022 đến khi trả xong khoản tiền này."
+        },
+        "requested_by": [
+          "P1"
+        ],
+        "modification_spans": [
+          {
+            "order": 14,
+            "section": "content",
+            "text": "Yêu cầu tính lãi theo quy định pháp luật với mức lãi suất 10%/năm trên số tiền vốn vay 100.000.000 đồng, tính kể từ ngày 21/01/2022 cho đến khi bà D, ông Đ1 trả xong số tiền vốn vay 100.000.000 đồng; đồng ý khấu trừ 3.600.000 đồng tiền lãi bà D, ông Đ1 đã đóng."
+          },
+          {
+            "order": 15,
+            "section": "content",
+            "text": "Không yêu cầu tính lãi đối với số tiền vốn vay 23.000.000 đồng."
+          },
+          {
+            "order": 16,
+            "section": "content",
+            "text": "Yêu cầu tiếp tục tính lãi kể từ sau ngày xét xử sơ thẩm cho đến khi bà D và ông Đ1 trả xong các khoản nợ vay cho ông Tr."
+          }
+        ],
+        "order": 10
+      },
+      {
+        "request_id": "R3",
+        "section": "content",
+        "span": {
+          "text": "Hợp đồng vay số tiền 100.000.000 đồng ông Tr cung cấp cho Tòa án không thỏa thuận cụ thể lãi suất nên đề nghị Hội đồng xét xử điều chỉnh mức lãi suất là 10%/năm theo khoản 2 Điều 468 Bộ luật Dân sự năm 2015."
+        },
+        "requested_by": [
+          "D1",
+          "D2"
+        ],
+        "modification_spans": [],
+        "order": 18
+      },
+      {
+        "request_id": "R4",
+        "section": "content",
+        "span": {
+          "text": "Đối với tiền vốn vay 23.000.000 đồng thì đề nghị không tính lãi."
+        },
+        "requested_by": [
+          "D1",
+          "D2"
+        ],
+        "modification_spans": [],
+        "order": 19
+      }
+    ],
+    "reasonings": [
+      {
+        "reasoning_id": "RE1",
+        "order": 21,
+        "section": "assessment",
+        "span": {
+          "text": "[1.2] Về việc hợp đồng mua bán tài sản: Ông Tr tự nguyện rút lại yêu cầu khởi kiện đối với nợ tiền hàng 36.380.060 đồng nên Hội đồng xét xử đình chỉ yêu cầu này theo điểm c khoản 1 Điều 217 Bộ luật Tố tụng dân sự."
+        }
+      },
+      {
+        "reasoning_id": "RE2",
+        "order": 22,
+        "section": "assessment",
+        "span": {
+          "text": "[2] Về những tình tiết, sự kiện không phải chứng minh: Ông H đại diện cho các bị đơn, có lời khai thừa nhận các bị đơn còn nợ ông Tr số tiền vốn vay 123.000.000 đồng. Tại khoản 2 Điều 92 của Bộ luật Tố tụng dân sự quy định: “Một bên đương sự thừa nhận hoặc không phản đối những tình tiết, sự kiện, tài liệu, văn bản, kết luận của cơ quan chuyên môn mà bên đương sự kia đưa ra thì bên đương sự đó không phải chứng minh”. Do đó, Hội đồng xét xử căn cứ lời khai thừa nhận của các bên để làm cơ sở giải quyết vụ án."
+        }
+      },
+      {
+        "reasoning_id": "RE3",
+        "order": 23,
+        "section": "assessment",
+        "span": {
+          "text": "[3.1] Căn cứ lời khai của người đại diện theo ủy quyền của ông Tr và của bà D, ông Đ1 trong quá trình giải quyết vụ án và tại phiên tòa, có cơ sở xác định: Giữa ông Tr và bà D, ông Đ1 có xác lập hợp đồng vay tài sản vào ngày 21/01/2022 số tiền vốn vay là 100.000.000 đồng; thuộc loại hợp đồng vay tài sản có thời hạn và có lãi, thời hạn vay từ ngày 21/01/2022 đến ngày 21/6/2022. Giữa ông Tr và bà D, ông Đ1 có xác lập hợp đồng vay tài sản vào tháng 6/2021, số tiền vốn vay là 23.000.000 đồng, thuộc loại hợp đồng vay tài sản không có thời hạn và không có lãi."
+        }
+      },
+      {
+        "reasoning_id": "RE4",
+        "order": 24,
+        "section": "assessment",
+        "span": {
+          "text": "[3.2] Xét thấy, hợp đồng vay tài sản giữa các bên được xác lập trên cơ sở tự nguyện, mục đích và nội dung của hợp đồng không vi phạm điều cấm của luật, không trái đạo đức xã hội, hình thức giao dịch phù hợp với quy định tại các điều 117, 118, 119, 463 của Bộ luật Dân sự năm 2015, nên làm phát sinh quyền và nghĩa vụ dân sự giữa các bên. Qua kiểm tra sao kê các giao dịch chuyển khoản theo yêu cầu của bà D, không có cơ sở để xác định bà D có chuyển khoản thanh toán nợ cho ông Tr. Do đó, bà D và ông Đ1 đã vi phạm nghĩa vụ trả nợ theo thỏa thuận nên ông Tr khởi kiện yêu cầu bà D và ông Đ1 trả số tiền vốn vay 123.000.000 đồng và tiền lãi là có căn cứ, phù hợp với quy định tại các điều 466, 469 và 470 của Bộ luật Dân sự năm 2015 nên Hội đồng xét xử chấp nhận."
+        }
+      },
+      {
+        "reasoning_id": "RE5",
+        "order": 25,
+        "section": "assessment",
+        "span": {
+          "text": "[3.3] Về việc tính lãi: Đối với số tiền vốn vay 100.000.000 đồng, căn cứ hợp đồng vay tiền ngày 21/01/2022, giữa ông Tr và bà D, ông Đ1 có thỏa thuận về lãi nhưng không xác định rõ lãi suất và có tranh chấp về lãi suất nên Hội đồng xét xử áp dụng mức lãi suất 10%/năm theo quy định tại khoản 2 Điều 468 của Bộ luật Dân sự năm 2015. Tiền lãi kể từ ngày 21/01/2022 đến ngày xét xử sơ thẩm (17/4/2023) được tính như sau: - Lãi trong hạn từ ngày 21/01/2022 đến ngày 21/6/2022 là: 151 ngày x 10%/năm x 100.000.000 đồng = 4.137.000 đồng (làm tròn số) - Lãi quá hạn từ ngày 22/6/2022 đến ngày 17/4/2023 là: 300 ngày x 150% x 10%/năm x 100.000.000 đồng = 12.329.000 đồng (làm tròn số) Tiền vốn vay không tính lãi là: 23.000.000 đồng. Tiền lãi bà D, ông Đ1 đã trả là: 3.600.000 đồng. Tổng cộng vốn, lãi là: 139.466.000 đồng – trừ ra 3.600.000 đồng lãi đã nhận = 135.866.000 đồng."
+        }
+      },
+      {
+        "reasoning_id": "RE6",
+        "order": 26,
+        "section": "assessment",
+        "span": {
+          "text": "[3.4] Như vậy, bà D và ông Đ1 có trách nhiệm liên đới trả cho ông Tr số tiền nợ vay tổng cộng 135.866.000 đồng, trong đó: Vốn vay 123.000.000 đồng và tiền lãi tính đến ngày xét xử sơ thẩm (17/4/2023) là 12.866.000 đồng. Ngoài ra, kể từ ngày tiếp theo của ngày xét xử sơ thẩm cho đến khi thi hành án xong, bà D và ông Đ1 còn phải chịu khoản tiền lãi của số tiền còn phải thi hành án, tính theo mức lãi suất bằng 150% mức lãi suất quy định tại khoản 2 Điều 468 của Bộ luật Dân sự năm 2015 (đối với tiền vốn vay 100.000.000 đồng) và tính theo mức lãi suất quy định tại khoản 2 Điều 468 của Bộ luật Dân sự năm 2015 (đối với tiền vốn vay 23.000.000 đồng), tương ứng với số tiền và thời gian chậm thi hành án."
+        }
+      }
+    ],
+    "decisions": [
+      {
+        "decision_id": "DE1",
+        "order": 27,
+        "section": "decision",
+        "span": {
+          "text": "1. Đình chỉ một phần yêu cầu khởi kiện của ông Nguyễn Hiếu Tr đối với số tiền mua hàng 36.380.060 đồng (Ba mươi sáu triệu ba trăm tám mươi nghìn không trăm sáu mươi đồng)."
+        }
+      },
+      {
+        "decision_id": "DE2",
+        "order": 28,
+        "section": "decision",
+        "span": {
+          "text": "2. Chấp nhận một phần yêu cầu khởi kiện của ông Nguyễn Hiếu Tr về việc yêu cầu bà Nguyễn Thị Kiều D và ông Nguyễn Phúc Đ1 trả nợ vay. Buộc bà Nguyễn Thị Kiều D và ông Nguyễn Phúc Đ1 có trách nhiệm liên đới trả cho ông Nguyễn Hiếu Tr số tiền nợ vay tổng cộng 135.866.000 đồng (Một trăm ba mươi lăm triệu tám trăm sáu mươi sáu nghìn đồng), trong đó bao gồm: - Tiền vốn vay: 123.000.000 đồng (Một trăm hai mươi ba nghìn đồng); - Tiền lãi tính kể từ ngày 21/01/2022 đến ngày xét xử sơ thẩm (17/4/2023) là 12.866.000 đồng (Mười hai triệu tám trăm sáu mươi sáu nghìn đồng)."
+        }
+      },
+      {
+        "decision_id": "DE3",
+        "order": 29,
+        "section": "decision",
+        "span": {
+          "text": "Kể từ ngày 18/4/2023 (ngày tiếp theo của ngày xét xử sơ thẩm) cho đến khi thi hành án xong, bà Nguyễn Thị Kiều D và ông Nguyễn Phúc Đ1 còn phải chịu khoản tiền lãi của số tiền còn phải thi hành án, tính theo mức lãi suất bằng 150% mức lãi suất quy định tại khoản 2 Điều 468 của Bộ luật Dân sự năm 2015 (đối với số tiền vốn vay 100.000.000 đồng) và tính theo mức lãi suất quy định tại khoản 2 Điều 468 của Bộ luật Dân sự năm 2015 (đối với số tiền vốn vay 23.000.000 đồng), tương ứng với số tiền và thời gian chậm thi hành án."
+        }
+      }
+    ],
+    "request_decision_links": [
+      {
+        "request_id": "R1",
+        "decision_id": "DE1"
+      },
+      {
+        "request_id": "R1",
+        "decision_id": "DE2"
+      },
+      {
+        "request_id": "R2",
+        "decision_id": "DE2"
+      },
+      {
+        "request_id": "R2",
+        "decision_id": "DE3"
+      },
+      {
+        "request_id": "R3",
+        "decision_id": "DE2"
+      },
+      {
+        "request_id": "R4",
+        "decision_id": "DE2"
+      }
+    ],
+    "request_reasoning_links": [
+      {
+        "request_id": "R1",
+        "reasoning_id": "RE1"
+      },
+      {
+        "request_id": "R1",
+        "reasoning_id": "RE2"
+      },
+      {
+        "request_id": "R1",
+        "reasoning_id": "RE3"
+      },
+      {
+        "request_id": "R1",
+        "reasoning_id": "RE4"
+      },
+      {
+        "request_id": "R1",
+        "reasoning_id": "RE6"
+      },
+      {
+        "request_id": "R2",
+        "reasoning_id": "RE4"
+      },
+      {
+        "request_id": "R2",
+        "reasoning_id": "RE5"
+      },
+      {
+        "request_id": "R2",
+        "reasoning_id": "RE6"
+      },
+      {
+        "request_id": "R3",
+        "reasoning_id": "RE5"
+      },
+      {
+        "request_id": "R4",
+        "reasoning_id": "RE3"
+      }
+    ],
+    "request_outcomes": [
+      {
+        "request_id": "R1",
+        "outcome": "ACCEPTED"
+      },
+      {
+        "request_id": "R2",
+        "outcome": "ACCEPTED"
+      },
+      {
+        "request_id": "R3",
+        "outcome": "ACCEPTED"
+      },
+      {
+        "request_id": "R4",
+        "outcome": "ACCEPTED"
+      }
+    ]
+  },
+  {
+    "case_id": 36854,
+    "parties": [
+      {
+        "party_id": "P1",
+        "name": "Trần Thị N",
+        "procedural_role": "PLAINTIFF"
+      },
+      {
+        "party_id": "D1",
+        "name": "Trần Đức M",
+        "procedural_role": "DEFENDANT"
+      },
+      {
+        "party_id": "D2",
+        "name": "Phạm Thị T",
+        "procedural_role": "DEFENDANT"
+      },
+      {
+        "party_id": "I1",
+        "name": "Trần C",
+        "procedural_role": "RELATED_PARTY"
+      }
+    ],
+    "claims": [
+      {
+        "claim_id": "C1",
+        "section": "content",
+        "span": {
+          "text": "Theo ñôn khôûi kieän laäp ngaøy 18/9/2015; bản tự khai; biên bản hòa giải; chứng cứ của nguyên đơn cung cấp có trong hồ sơ vụ án và lời trình bày của người đại diện theo ủy quyền của nguyên đơn ông Trần Hải Q tại phiên tòa hôm nay, thì: Vào năm 1986, vợ chồng bà Trần Thị N và ông Trần C từ Quảng Ngãi đến xã S, huyện L, tỉnh Bình Thuận để lập nghiệp và tự khai hoang được một thửa đất hơn 6.000m2, ở thôn I, xã S."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 1
+      },
+      {
+        "claim_id": "C2",
+        "section": "content",
+        "span": {
+          "text": "Vợ chồng bà N có làm một ngôi nhà tạm để ở và trồng cây điều trên đất."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 2
+      },
+      {
+        "claim_id": "C3",
+        "section": "content",
+        "span": {
+          "text": "Khi đó, vợ chồng bà N có cho ông Trần Đức M (là chú của ông Trần C) 01 lô đất giáp mặt tiền để làm nhà ở."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 3
+      },
+      {
+        "claim_id": "C4",
+        "section": "content",
+        "span": {
+          "text": "Diện tích đất của vợ chồng bà N còn lại khoảng 6.000m2 và diện tích đất này đã được Nhà nước cấp Giấy chứng nhận quyền sử dụng đất số: I 199351 cấp ngày 20/02/1997, của UBND huyện L mang tên Trần C tại thửa số 58, tờ bản đồ số 03, diện tích 6.000m2 (trong đó đất ở 300m2 và đất đào 5.700m2)."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 4
+      },
+      {
+        "claim_id": "C5",
+        "section": "content",
+        "span": {
+          "text": "Đến năm 1996, ông M dùng vũ lực rào đường đòi chiếm đất của vợ chồng bà N, khi ông Trần C ra mở đường đi thì bị ông M đánh."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 5
+      },
+      {
+        "claim_id": "C6",
+        "section": "content",
+        "span": {
+          "text": "Đến năm 1997, vợ chồng bà N có vay vốn Ngân hàng nông nghiệp và phát triển nông thôn huyện L số tiền là: 5.000.000 đồng (thế chấp Giấy chứng nhận quyền sử dụng đất số: I 199351 cấp ngày 20/02/1997), để đào giếng nước Tới 200 trụ thanh long và sửa lại nhà ở."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 6
+      },
+      {
+        "claim_id": "C7",
+        "section": "content",
+        "span": {
+          "text": "Tuy nhiên, khi sửa nhà thì bị ông M ngăn cản, ông M đánh chồng bà N và hai người thợ làm nhà gây thương tích, chồng bà N thấy không sống được nên định bán nhà và 3 đất cho người khác giá là: 30.000.000 đồng, nhưng bị ông M đe dọa nên những người mua đất không dám mua."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 7
+      },
+      {
+        "claim_id": "C8",
+        "section": "content",
+        "span": {
+          "text": "Vào năm 1998, vì kinh tế khó khăn nên bà N đi làm ăn tại tỉnh Bình Phước, ở nhà chồng bà N là ông Trần C mới bán đất cho ông M, nhưng bà N không đồng ý và bà N có qua nhà ông M nói ông M biết là bà không đồng ý bán đất cho ông M mà để lại sau này làm nhà cho con nếu chồng bà có bán đất cho ông M, thì bà cũng về đòi lại vì đây là tài sản chung của vợ chồng bà."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 8
+      },
+      {
+        "claim_id": "C9",
+        "section": "content",
+        "span": {
+          "text": "Đến cuối năm 1998, ông C chuyển đến ở với bà N tại tỉnh Bình Phước và có nói với bà N là đất đai để lại cho ông M giữ dùm, nhưng sau đó bà N biết ông C đã viết giấy bán đất cho ông M vào ngày 30/6/1998 và ông M đã trả nợ cho Ngân hàng số tiền 5.000.000 đồng để lấy Giấy chứng nhận quyền sử dụng đất số: I 199351 cấp ngày 20/02/1997 về cất giữ."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 9
+      },
+      {
+        "claim_id": "C10",
+        "section": "content",
+        "span": {
+          "text": "Khi bà N biết được ông C bán đất cho ông M, bà có về làm nhiều đơn khiếu nại đến UBND xã S, nhưng ông Chủ tịch xã S là bà con với ông M nên không giải quyết, sự vụ kéo dài suốt 03 nhiệm kỳ đến khi ông Chủ tịch này chết, thì UBND xã S mới giải quyết cho bà N vào ngày 17/9/2015, nhưng không hòa giải được."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 10
+      },
+      {
+        "claim_id": "C11",
+        "section": "content",
+        "span": {
+          "text": "Tài liệu, chứng cứ chứng M cho yêu cầu của bà N là có căn cứ pháp lý, thể hiện gồm: - 01 Đơn sang nhượng đất nhà ở (bản pho to); - 01 Biên bản hòa giải (bản sao); - 01 Sổ hộ khẩu (bản sao); - 01 Giấy chứng M nhân dân (bản sao); Theo các bản tự khai, biên bản hòa giải, chứng cứ có trong hồ sơ vụ án và lời trình bày của ông Trần Đức M tại phiên tòa hôm nay, thì: Vào ngày 30/6/1998, vợ chồng ông Trần C và bà Trần Thị N có sang nhượng cho ông một mảnh đất có diện tích là: 6.000m2 (trong đó có 300m2 đất ở và 5.700m2 đất trồng đào), với giá sang nhượng là: 18.000.000 đồng."
+        },
+        "asserted_by": [
+          "D1"
+        ],
+        "order": 12
+      },
+      {
+        "claim_id": "C12",
+        "section": "content",
+        "span": {
+          "text": "Hai bên thống nhất xong, thì ông Trần C đại diện bên bán viết Đơn sang nhượng đất nhà ở lập 4 ngày 30/6/1998, có người làm chứng là ông Nguyễn Văn Tuấn (nay đã chết) cùng ký tên."
+        },
+        "asserted_by": [
+          "D1"
+        ],
+        "order": 13
+      },
+      {
+        "claim_id": "C13",
+        "section": "content",
+        "span": {
+          "text": "Khi ông giao đủ số tiền 18.000.000 đồng, cho vợ chồng ông Trần C và bà Trần Thị N, thì bà N giao Giấy chứng nhận quyền sử dụng đất số: I 199351 cấp ngày 20/02/1997 cho ông cất giữ."
+        },
+        "asserted_by": [
+          "D1"
+        ],
+        "order": 14
+      },
+      {
+        "claim_id": "C14",
+        "section": "content",
+        "span": {
+          "text": "Sau đó vợ chồng bà N đi về tỉnh Bình Phước sinh sống cho đến nay."
+        },
+        "asserted_by": [
+          "D1"
+        ],
+        "order": 15
+      },
+      {
+        "claim_id": "C15",
+        "section": "content",
+        "span": {
+          "text": "Do bận nhiều công việc, cũng như không am hiểu về thủ tục chuyển nhượng quyền sử dụng đất và vợ chồng bà N sau khi sang nhượng đất cho ông cũng bỏ đi luôn không đề cập gì về việc sang nhượng đất cho ông nên ông không nghĩ đến chuyện tranh chấp sẽ xảy ra sau này."
+        },
+        "asserted_by": [
+          "D1"
+        ],
+        "order": 16
+      },
+      {
+        "claim_id": "C16",
+        "section": "content",
+        "span": {
+          "text": "Mãi đến năm 2015, ông mới liên lạc được vợ chồng bà N và yêu cầu vợ chồng bà N về làm thủ tục sang tên quyền sử dụng đất cho vợ chồng ông, thì được vợ chồng bà N đồng ý."
+        },
+        "asserted_by": [
+          "D1"
+        ],
+        "order": 17
+      },
+      {
+        "claim_id": "C17",
+        "section": "content",
+        "span": {
+          "text": "Ông C, bà N và vợ chồng ông có đến UBND xã S làm thủ tục chuyển nhượng quyền sử dụng đất tại Ban địa chính xã S do ông Nguyễn Văn H(cán bộ địa chính xã) tiếp và làm việc."
+        },
+        "asserted_by": [
+          "D1"
+        ],
+        "order": 18
+      },
+      {
+        "claim_id": "C18",
+        "section": "content",
+        "span": {
+          "text": "Tại đây ông C, bà N đã đồng ý làm thủ tục chuyển nhượng diện tích 6.000m2 đất cho ông, nhưng lúc đó ông Hcó yêu cầu phải có mặt tất cả các con của ông C, bà N cùng ký tên vào Hợp đồng chuyển nhượng quyền sử dụng đất mới đúng thủ tục, nhưng do các con của bà N hiện đang ở xa không thể về để ký hợp đồng chuyển nhượng quyền sử dụng đất."
+        },
+        "asserted_by": [
+          "D1"
+        ],
+        "order": 19
+      },
+      {
+        "claim_id": "C19",
+        "section": "content",
+        "span": {
+          "text": "Vì vậy, không làm thủ tục sang nhượng quyền sử dụng đất tại UBND xã S vào năm 2015 được."
+        },
+        "asserted_by": [
+          "D1"
+        ],
+        "order": 20
+      },
+      {
+        "claim_id": "C20",
+        "section": "content",
+        "span": {
+          "text": "Sau Khoảng được vài tháng, thì bà N có đơn khiếu nại tại UBND xã S, để đòi lại diện tích 6.000m2 đất đã sang nhượng cho gia đình ông."
+        },
+        "asserted_by": [
+          "D1"
+        ],
+        "order": 21
+      },
+      {
+        "claim_id": "C21",
+        "section": "content",
+        "span": {
+          "text": "UBND xã S đã tổ chức hòa giải vào ngày 17/9/2015, do bà N cho rằng bà không đồng ý làm thủ tục chuyển nhượng cho vợ chồng ông, là vì bà không thừa nhận đã cùng ông C sang nhượng đất cho gia đình ông nên việc hòa giải không thành."
+        },
+        "asserted_by": [
+          "D1"
+        ],
+        "order": 22
+      },
+      {
+        "claim_id": "C22",
+        "section": "content",
+        "span": {
+          "text": "Bà N, khởi kiện vợ chồng ông đến Tòa án nhân dân huyện L, từ tháng 10/2015, qua làm việc tại Tòa án ông thấy yêu cầu của bà N là vô lý."
+        },
+        "asserted_by": [
+          "D1"
+        ],
+        "order": 23
+      },
+      {
+        "claim_id": "C23",
+        "section": "content",
+        "span": {
+          "text": "Bởi vì, vợ chồng bà N, ông C đã tự nguyện chuyển nhượng đất cho vợ chồng ông từ năm 1998, vợ chồng ông đã sử dụng đất ổn định không ai tranh chấp trong một thời gian dài, cây trồng trên đất ông cũng đã chặt hạ và trồng cây cao su, cây bưởi từ năm"
+        },
+        "asserted_by": [
+          "D1"
+        ],
+        "order": 24
+      },
+      {
+        "claim_id": "C24",
+        "section": "content",
+        "span": {
+          "text": "Theo biên bản lấy lời khai của người có quyền lợi nghĩa vụ liên quan - Ông Trần C trong hồ sơ vụ án, thì: Ông có sang nhượng lô đất diện tích 6.000m2 đất tại thôn I, xã S, huyện L, tỉnh Bình Thuận cho ông M, bà T."
+        },
+        "asserted_by": [
+          "I1"
+        ],
+        "order": 26
+      },
+      {
+        "claim_id": "C25",
+        "section": "content",
+        "span": {
+          "text": "Vì trước khi sang nhượng đất ông có bàn bạc với vợ ông là bà Trần Thị N về việc sang nhượng diện tích đất trên nhưng bà N nói sang nhượng cho người khác thì được, còn sang nhượng cho ông M, bà T, thì bà N không đồng ý do giữa hai bên gia đình có mâu thuẫn về lối đi từ trước."
+        },
+        "asserted_by": [
+          "I1"
+        ],
+        "order": 27
+      },
+      {
+        "claim_id": "C26",
+        "section": "content",
+        "span": {
+          "text": "Do điều kiện khó khăn nên vào khoảng ngày 28/6/1998, vợ, con ông đã bỏ vào Bình Phước sinh sống và khoảng hai ngày sau ông cũng đi theo nên vào ngày 30/6/1998, ông viết giấy sang nhượng đất cho ông M, bà T có sự chứng kiến của ông Nguyễn Văn Tuấn với giá sang nhượng là: 18.000.000 đồng, ông M đưa cho ông số tiền là: 12.500.000 đồng, số còn lại 5.500.000 đồng ông M giữ để trả 5.000.000 đồng nợ gốc do vợ chồng ông vay trước đó cho Ngân hàng, còn 500.000 đồng cho đến nay ông M chưa trả và ông cũng không đòi."
+        },
+        "asserted_by": [
+          "I1"
+        ],
+        "order": 28
+      },
+      {
+        "claim_id": "C27",
+        "section": "content",
+        "span": {
+          "text": "Sau khi sang nhượng đất cho ông M, thì vào năm 2008, ông M có đến huyện B, tỉnh Bình Phước điện thoại gặp ông để bàn bạc việc làm thủ tục sang tên, nhưng gia đình ông không đồng ý, năm 2010 gia đình ông tổ chức đám cưới cho con, thì ông M đến dự và yêu cầu vợ chồng ông về tách sổ đỏ, nhưng gia đình ông không đồng ý đến năm 2015, khi vợ chồng ông về dự đám tang của ông Nguyễn Thượng Hùng, thì ông M có yêu cầu nhưng vợ chồng ông cũng không đồng ý."
+        },
+        "asserted_by": [
+          "I1"
+        ],
+        "order": 29
+      },
+      {
+        "claim_id": "C28",
+        "section": "content",
+        "span": {
+          "text": "Hiện nay bà N khởi kiện yêu cầu Tòa án nhân dân huyện L giải quyết tuyên bố hợp đồng chuyển nhượng đất diện tích 6.000m2 năm 1998 là giao dịch dân sự vô hiệu, ông đồng ý với ý kiến của vợ ông là bà N."
+        },
+        "asserted_by": [
+          "I1"
+        ],
+        "order": 30
+      },
+      {
+        "claim_id": "C29",
+        "section": "content",
+        "span": {
+          "text": "Vì năm 1998, khi ông sang nhượng đất có 01 phần lỗi của ông M, do vợ, con ông bỏ đi nên tinh thần ông bị ức chế và lúc đó cả ông, ông M và ông Tuấn đều có uống rượu say nên ông đã viết giấy sang nhượng đất mà không có sự đồng ý của vợ ông."
+        },
+        "asserted_by": [
+          "I1"
+        ],
+        "order": 31
+      },
+      {
+        "claim_id": "C30",
+        "section": "content",
+        "span": {
+          "text": "Trong khi tài sản trên là tài sản chung của vợ chồng, mặc dù ông viết giấy sang nhượng là hoàn toàn tự nguyện."
+        },
+        "asserted_by": [
+          "I1"
+        ],
+        "order": 32
+      },
+      {
+        "claim_id": "C31",
+        "section": "content",
+        "span": {
+          "text": "Ông không giao nộp bất kỳ chứng cứ gì cho Tòa án nhân dân huyện L và cũng không có ý kiến gì khác."
+        },
+        "asserted_by": [
+          "I1"
+        ],
+        "order": 33
+      },
+      {
+        "claim_id": "C32",
+        "section": "content",
+        "span": {
+          "text": "Theo biên bản lấy lời khai của người có quyền lợi nghĩa vụ liên quan - Chị Trần Thị Kim C1 trong hồ sơ vụ án, thì: Chị là con của ông Trần C và bà Trần Thị N, việc sang nhượng đất cho ông M vào năm 1998 thì chị không biết do lúc đó chị còn nhỏ và hợp đồng giao dịch sang nhượng đất chị không thấy, cũng không nghe nói lại."
+        },
+        "asserted_by": [
+          "I1"
+        ],
+        "order": 34
+      },
+      {
+        "claim_id": "C33",
+        "section": "content",
+        "span": {
+          "text": "Tuy nhiên, quan điểm 6 của chị là tài sản sang nhượng là của cha mẹ."
+        },
+        "asserted_by": [
+          "I1"
+        ],
+        "order": 35
+      },
+      {
+        "claim_id": "C34",
+        "section": "content",
+        "span": {
+          "text": "Vì vậy, mọi việc để cha mẹ chị giải quyết chị không yêu cầu gì và không yêu cầu Tòa án triệu tập chị, chị xin vắng mặt trong quá trình giải quyết và xét xử của Tòa án."
+        },
+        "asserted_by": [
+          "I1"
+        ],
+        "order": 36
+      },
+      {
+        "claim_id": "C35",
+        "section": "content",
+        "span": {
+          "text": "Theo biên bản lấy lời khai của người có quyền lợi nghĩa vụ liên quan - Anh Trần Ngọc S1 trong hồ sơ vụ án, thì: Anh là con của ông Trần C và bà Trần Thị N, việc sang nhượng đất anh không biết do lúc đó anh còn nhỏ và hợp đồng giao dịch sang nhượng đất anh không thấy, cũng không nghe nói lại."
+        },
+        "asserted_by": [
+          "I1"
+        ],
+        "order": 37
+      },
+      {
+        "claim_id": "C36",
+        "section": "content",
+        "span": {
+          "text": "Tuy nhiên, quan điểm của anh là tài sản sang nhượng là của cha mẹ nên mọi việc để cha mẹ anh giải quyết anh không yêu cầu gì và không yêu cầu Tòa án triệu tập anh, anh xin vắng mặt trong quá trình giải quyết và xét xử của Tòa án."
+        },
+        "asserted_by": [
+          "I1"
+        ],
+        "order": 38
+      },
+      {
+        "claim_id": "C37",
+        "section": "content",
+        "span": {
+          "text": "Theo biên bản lấy lời khai có trong hồ sơ vụ án và lời trình bày của người làm chứng - ông Nguyễn Văn H tại phiên tòa hôm nay thì: Khoảng tháng 12/2015, hộ ông Trần Đức M có đến bộ phận một cửa của UBND xã S gặp ông H(cán bộ địa chính xã), để hỏi về thủ tục sang tên lô đất có diện tích 6.000m2, tại thửa số 58, tờ bản đồ số 03, ông có hướng dẫn cho ông M về mang hồ sơ, giấy chứng nhận quyền sử dụng đất, sổ hộ khẩu đến UBND xã làm thủ tục sang nhượng."
+        },
+        "asserted_by": [
+          "I1"
+        ],
+        "order": 39
+      },
+      {
+        "claim_id": "C38",
+        "section": "content",
+        "span": {
+          "text": "Khoảng vài ngày sau đó, ông M, bà T, ông Trần C và bà Trần Thị N có đến UBND xã S gặp ông để làm thủ tục sang tên."
+        },
+        "asserted_by": [
+          "I1"
+        ],
+        "order": 40
+      },
+      {
+        "claim_id": "C39",
+        "section": "content",
+        "span": {
+          "text": "Tại buổi làm việc vợ chồng ông Trần C và bà Trần Thị N đồng ý làm thủ tục chuyển nhượng quyền sử dụng đất cho ông M, bà T với diện tích đất là 6.000m2, thửa đất số 58, tờ bản đồ số 03, Giấy chứng nhận quyền sử dụng đất số: I 199351 cấp ngày 20/02/1997."
+        },
+        "asserted_by": [
+          "I1"
+        ],
+        "order": 41
+      },
+      {
+        "claim_id": "C40",
+        "section": "content",
+        "span": {
+          "text": "Sau khi kiểm tra sổ hộ khẩu và hồ sơ chuyển nhượng, thì ông yêu cầu những người con của ông C, bà N phải có mặt tại UBND xã S để ký vào Hợp đồng chuyển nhượng quyền sử dụng đất."
+        },
+        "asserted_by": [
+          "I1"
+        ],
+        "order": 42
+      },
+      {
+        "claim_id": "C41",
+        "section": "content",
+        "span": {
+          "text": "Nhưng do những người con của ông C, bà N ở xa và việc đi lại rất khó khăn nên không về ký."
+        },
+        "asserted_by": [
+          "I1"
+        ],
+        "order": 43
+      },
+      {
+        "claim_id": "C42",
+        "section": "content",
+        "span": {
+          "text": "Do đó không thể thực hiện thủ tục chuyển nhượng quyền sử dụng đất giữa vợ chồng ông Trần C, bà Trần Thị N với ông Trần Đức M và bà Phạm Thị T."
+        },
+        "asserted_by": [
+          "I1"
+        ],
+        "order": 44
+      },
+      {
+        "claim_id": "C43",
+        "section": "content",
+        "span": {
+          "text": "Sau đó một thời gian, thì bà N có nộp đơn khiếu nại yêu cầu giải quyết tranh chấp đất đai với ông Trần Đức M tại xã S."
+        },
+        "asserted_by": [
+          "I1"
+        ],
+        "order": 45
+      },
+      {
+        "claim_id": "C44",
+        "section": "content",
+        "span": {
+          "text": "Tại buổi hòa giải ông C, bà N yêu cầu ông M, bà T phải trả lại diện tích đất 6.000m2 mà ông C, bà N đã sang nhượng vào năm 1998, nhưng ông M, bà T không chấp nhận nên hòa giải tại xã không thành."
+        },
+        "asserted_by": [
+          "I1"
+        ],
+        "order": 46
+      }
+    ],
+    "requests": [
+      {
+        "request_id": "R1",
+        "section": "content",
+        "span": {
+          "text": "Nay bà N yêu cầu Tòa án tuyên bố Đơn sang nhượng đất và nhà ở xác lập ngày 30/6/1998, giữa ông Trần C và vợ chồng ông Trần Đức M, bà Phạm Thị T là giao dịch dân sự vô hiệu và yêu cầu ông M, bà T phải trả lại diện tích đất 6.000m2, tại thửa số 58, tờ bản đồ số 03, theo Giấy chứng nhận quyền sử dụng đất số: I 199351 cấp ngày 20/02/1997 cho vợ chồng bà N, ngoài ra bà N không còn yêu cầu gì khác."
+        },
+        "requested_by": [
+          "P1"
+        ],
+        "modification_spans": [],
+        "order": 11
+      },
+      {
+        "request_id": "R2",
+        "section": "content",
+        "span": {
+          "text": "Nay ông yêu cầu Hội đồng xét xử bác yêu cầu khởi kiện của bên nguyên đơn, vì diện tích đất đang tranh chấp là do vợ chồng ông nhận sang nhượng rõ ràng và gia đình ông đã chuyển đổi cây trồng từ cây điều qua cây cao su, cây bưởi từ năm 2012 cho đến nay không ai ngăn cản, chính quyền địa phương không nói gì về việc chuyển đổi cây trồng của gia đình ông, ông C và bà N thường xuyên về thăm vợ chồng ông cũng không khiếu nại."
+        },
+        "requested_by": [
+          "D1"
+        ],
+        "modification_spans": [],
+        "order": 25
+      }
+    ],
+    "reasonings": [
+      {
+        "reasoning_id": "RE1",
+        "section": "assessment",
+        "span": {
+          "text": "Trong năm 1997, ông Trần C thế chấp Giấy chứng nhận quyền sử dụng đất số I 199351 ngày 20/02/1997, để vay vốn tại Ngân hàng nông nghiệp và phát triển nông thôn Việt Nam - Chi nhánh L với số tiền là: 5.000.000 đồng."
+        },
+        "order": 47
+      },
+      {
+        "reasoning_id": "RE2",
+        "section": "assessment",
+        "span": {
+          "text": "Vào ngày 30/6/1998, ông Trần C viết đơn sang nhượng đất, nhà ở cho ông Trần Đức M với giá 18.000.000 đồng, trong đó có 5.000.000 đồng để trả nợ cho Ngân hàng và lấy Giấy chứng nhận quyền sử dụng đất số I 199351 cấp ngày 20/02/1997."
+        },
+        "order": 48
+      },
+      {
+        "reasoning_id": "RE3",
+        "section": "assessment",
+        "span": {
+          "text": "Ông Trần C thừa nhận việc sang nhượng 6.000m2 đất tại thôn 1, xã S cho ông M, bà T vào năm 1998 theo như ông M trình bày."
+        },
+        "order": 49
+      },
+      {
+        "reasoning_id": "RE4",
+        "section": "assessment",
+        "span": {
+          "text": "Tuy nhiên, ông C, bà N cho rằng việc sang nhượng không thông qua ý kiến của bà N và bà N không đồng ý sang nhượng đất cho vợ chồng ông M."
+        },
+        "order": 50
+      },
+      {
+        "reasoning_id": "RE5",
+        "section": "assessment",
+        "span": {
+          "text": "Trong khi đó, bà N lại thừa nhận vào năm 2015 bà có về xã S và cùng ông C, ông M, bà T đến địa chính xã S làm thủ tục sang nhượng 6.000m2 đất nhưng với mục đích là giả vờ đồng ý làm thủ tục sang nhượng để ông M đưa ra giấy sang nhượng đất, nhà ở năm 1998 chứ không phải bà về để hoàn tất thủ tục sang nhượng theo quy định của pháp luật."
+        },
+        "order": 51
+      },
+      {
+        "reasoning_id": "RE6",
+        "section": "assessment",
+        "span": {
+          "text": "Do đó, ngày 17/9/2015, bà gửi đơn lên UBND xã S để yêu cầu giải quyết buộc vợ chồng ông M, bà T trả lại 6.000m2 đất cho vợ chồng bà nhưng kết quả không thành và bà khởi kiện ra Tòa án. 9 Xét thấy, việc sang nhượng 6.000m2 giữa ông C và ông M là đúng ý chí tự nguyện của ông C, giữa hai bên đã giao đủ tiền và ông C đã giao GCNQSDĐ cho ông M giữ."
+        },
+        "order": 52
+      },
+      {
+        "reasoning_id": "RE7",
+        "section": "assessment",
+        "span": {
+          "text": "Bà N cho rằng bà đã khiếu nại về chủ tịch xã UBND xã S để giải quyết nhiều lần nhưng không được chính quyền xã S giải quyết là không có căn cứ vì bà N không cung cấp bất kỳ chứng cứ nào thể hiện cho lời khai nại của bà là có căn cứ."
+        },
+        "order": 53
+      },
+      {
+        "reasoning_id": "RE8",
+        "section": "assessment",
+        "span": {
+          "text": "Trong khi đó, ông C và bà N đều thừa nhận ông M có liên lạc với ông bà để làm thủ tục sang nhượng và đến năm 2015, vợ chồng bà cũng có về UBND xã S để cùng ông M, bà T làm thủ tục sang nhượng nhưng vì không có mặt các con bà N nên hợp đông không được ký kết theo quy định."
+        },
+        "order": 54
+      },
+      {
+        "reasoning_id": "RE9",
+        "section": "assessment",
+        "span": {
+          "text": "Tình tiết này phù hợp với lời khai của ông Nguyễn Văn Hlà cán bộ địa chính xã đã làm việc với các bên thời điểm năm 2015 về việc làm thủ tục sang nhượng 6.000m2 đất tại thôn 1, xã S."
+        },
+        "order": 55
+      },
+      {
+        "reasoning_id": "RE10",
+        "section": "assessment",
+        "span": {
+          "text": "Điều đó cho thấy, việc chuyển nhượng quyền sử dụng đất giữa ông C với ông M là bà N có biết và không phản đối gì cho đến khi Hợp đồng không có chữ ký của các con nên bà N thay đổi ngược lại và khởi kiện đòi ông M, bà T trả đất."
+        },
+        "order": 56
+      },
+      {
+        "reasoning_id": "RE11",
+        "section": "assessment",
+        "span": {
+          "text": "Trong khi đó vợ chồng ông M và bà T đã phá bỏ ranh mốc, cải tạo đất liên canh, giáp ranh với thửa đất của ông bà."
+        },
+        "order": 57
+      },
+      {
+        "reasoning_id": "RE12",
+        "section": "assessment",
+        "span": {
+          "text": "Hiện không còn ranh giới thửa đất đang tranh chấp giữa ông C, bà N với ông M, bà T."
+        },
+        "order": 58
+      },
+      {
+        "reasoning_id": "RE13",
+        "section": "assessment",
+        "span": {
+          "text": "Ông M, bà T đã phá bỏ cây điều để trồng cây cao su từ tháng 6/2012 (Theo biên bản xem xét thẩm định tại chỗ bút lục số: 57)."
+        },
+        "order": 59
+      },
+      {
+        "reasoning_id": "RE14",
+        "section": "assessment",
+        "span": {
+          "text": "Bà N và ông C cũng không phản đối việc làm trên của vợ chồng ông M, bà T."
+        },
+        "order": 60
+      },
+      {
+        "reasoning_id": "RE15",
+        "section": "assessment",
+        "span": {
+          "text": "Theo quy định tại điểm b.3 mục 2.3 mục 2 Nghị quyết số: 02/2004/NQ- HĐTP ngày 10/8/2004 của Hội đồng Thẩm phán Tòa án nhân dân tối cao hướng dẫn áp dụng pháp luật trong việc giải quyết các vụ án dân sự, hôn nhân và gia đình: “Đối với hợp đồng chuyển nhượng quyền sử dụng đất vi phạm điều kiện được hướng dẫn tại điểm a.4 và điểm a.6 mục 2.3 mục 2 này, nếu sau khi thực hiện hợp đồng chuyển nhượng, bên nhận chuyển nhượng đã trồng cây lâu năm, đã làm nhà kiên cố... và bên chuyển nhượng không phản đối và cũng không bị cơ quan nhà nước có thẩm quyền xử lý vi phạm hành chính theo các quy định của Nhà nước về xử lý vi phạm hành chính trong lĩnh vực đất đai, thì Tòa án công nhận hợp đồng..” Xét thấy, mặc dù hợp đồng sang nhượng quyền sử dụng đất giữa ông Trần C với ông Trần Đức M không tuân thủ theo quy định về hình thức, cụ thể: Hợp đồng chuyển nhượng quyền sử dụng đất không được lập thành văn bản có chứng nhận của Công chứng Nhà nước hoặc chứng thực của UBND cấp có thẩm quyền theo quy định của Bộ luật dân sự năm 1995 và Luật đất đai năm 1993 nhưng sau khi thực hiện hợp đồng chuyển nhượng, ông M đã trồng cây lâu năm, đã làm nhà kiên cố... và ông C, bà N không phản đối và cũng không bị cơ quan nhà nước có thẩm quyền xử lý vi phạm hành chính theo các quy định của Nhà nước về xử lý vi phạm hành chính trong lĩnh vực đất đai, thì hợp đồng sang nhượng quyền sử dụng đất giữa ông Trần C với ông Trần Đức M được công nhận."
+        },
+        "order": 61
+      },
+      {
+        "reasoning_id": "RE16",
+        "section": "assessment",
+        "span": {
+          "text": "Hội đồng xét xử xét thấy, yêu cầu tuyên bố giao dịch dân sự về hợp đồng chuyển nhượng quyền sử dụng đất, giữa: Ông Trần C với ông Trần Đức M là vô hiệu, buộc ông M và bà T phải trả lại diện tích đất 6.000m2, cho bà N và ông C của bà Trần Thị N là không có căn cứ chấp nhận."
+        },
+        "order": 62
+      },
+      {
+        "reasoning_id": "RE17",
+        "section": "assessment",
+        "span": {
+          "text": "Do đó, Hội đồng xét xử bác yêu cầu khởi kiện của bà N là phù hợp với quy định tại điểm b.3 mục 2.3 mục 2 Nghị quyết số: 02/2004/NQ-HĐTP ngày 10/8/2004 của Hội đồng Thẩm phán Tòa án nhân dân tối cao hướng dẫn áp dụng pháp luật trong việc giải quyết các vụ án dân sự, hôn nhân và gia đình. [3] Xét yêu cầu phản tố của bị đơn: Thấy rằng ông M, bà T có đủ điều kiện về nhận chuyển nhượng quyền sử dụng đất theo quy định của pháp luật."
+        },
+        "order": 63
+      },
+      {
+        "reasoning_id": "RE18",
+        "section": "assessment",
+        "span": {
+          "text": "Sau khi nhận chuyển nhượng đất đã sử dụng diện tích đất liên tục từ năm 1998, cho đến năm 2015 mới xảy ra tranh chấp."
+        },
+        "order": 64
+      },
+      {
+        "reasoning_id": "RE19",
+        "section": "assessment",
+        "span": {
+          "text": "Từ ngày nhận chuyển nhượng đất cho đến nay Chính quyền địa phương cũng không xử lý vi phạm hành chính trong lĩnh vực đất đai đối với vợ chồng ông M, bà T."
+        },
+        "order": 65
+      },
+      {
+        "reasoning_id": "RE20",
+        "section": "assessment",
+        "span": {
+          "text": "Vợ chồng ông M, bà T đã trồng mới 346 cây cao su 07 năm tuổi và 21 cây bưởi 07 năm tuổi, nhưng ông C, bà N không có tranh chấp. 11 Căn cứ các Điều 131, 705, 707 và Điều 711 Bộ luật dân sự năm 1995, quy định về điều kiện để công nhận hợp đồng chuyển nhượng quyền sử dụng đất; Căn cứ khoản 2 Điều 3, Điều 30, 31 Luật đất đai năm 1993; Căn cứ điểm b.3 mục 2.3 mục 2 Nghị quyết số: 02/2004/NQ-HĐTP ngày 10/8/2004 của Hội đồng Thẩm phán Tòa án nhân dân tối cao hướng dẫn áp dụng pháp luật trong việc giải quyết các vụ án dân sự, hôn nhân và gia đình."
+        },
+        "order": 66
+      },
+      {
+        "reasoning_id": "RE21",
+        "section": "assessment",
+        "span": {
+          "text": "Nghĩ nên chấp nhận yêu cầu phản tố của bị đơn, để công nhận hợp đồng chuyển nhượng quyền sử dụng đất giữa ông Trần C với ông Trần Đức M, tại thửa số 58, tờ bản đồ số 03, diện tích 6.000m2 (trong đó 300m2 đất thổ cư và 5.700m2 đất đào) theo Giấy chứng nhận quyền sử dụng đất số: I 199351 của UBND huyện L cấp ngày 20/02/1997, mang tên Trần C."
+        },
+        "order": 67
+      }
+    ],
+    "decisions": [
+      {
+        "decision_id": "DE1",
+        "section": "decision",
+        "span": {
+          "text": "Bác yêu cầu khởi kiện của bà Trần Thị N về việc yêu cầu tuyên hợp đồng sang nhượng đất và nhà ở vào ngày 30/6/1998 giữa ông Trần C và vợ chồng ông Trần Đức M, bà Phạm Thị T diện tích đất 6.000m2, thuộc thửa 58, tờ bản đồ số 03, Giấy chứng nhận quyền sử dụng đất số I 199351 do UBND huyện cấp ngày 20/02/1997 là vô hiệu, vì không có căn cứ pháp lý."
+        },
+        "order": 68
+      },
+      {
+        "decision_id": "DE2",
+        "section": "decision",
+        "span": {
+          "text": "Chấp nhận yêu cầu phản tố của ông Trần Đức M và bà Phạm Thị T về việc công nhận hợp đồng sang nhượng đất và nhà ở vào ngày 30/6/1998, giữa ông Trần C và vợ chồng ông Trần Đức M, bà Phạm Thị T đối với diện tích 6.000m2, thuộc thửa 58, tờ bản đồ số 03, Giấy chứng nhận quyền sử dụng đất số I 199351 do UBND huyện cấp ngày 20/02/1997."
+        },
+        "order": 69
+      },
+      {
+        "decision_id": "DE3",
+        "section": "decision",
+        "span": {
+          "text": "Ông Trần Đức M và bà Phạm Thị T có trách nhiệm liên hệ cơ quan Nhà nước có thẩm quyền để làm thủ tục sang tên theo quy định của pháp luật."
+        },
+        "order": 70
+      }
+    ],
+    "request_decision_links": [
+      {
+        "request_id": "R1",
+        "decision_id": "DE1"
+      },
+      {
+        "request_id": "R2",
+        "decision_id": "DE2"
+      },
+      {
+        "request_id": "R2",
+        "decision_id": "DE3"
+      }
+    ],
+    "request_reasoning_links": [
+      {
+        "request_id": "R2",
+        "reasoning_id": "RE21"
+      },
+      {
+        "request_id": "R1",
+        "reasoning_id": "RE16"
+      },
+      {
+        "request_id": "R1",
+        "reasoning_id": "RE17"
+      }
+    ],
+    "request_outcomes": [
+      {
+        "request_id": "R1",
+        "outcome": "REJECTED"
+      },
+      {
+        "request_id": "R2",
+        "outcome": "ACCEPTED"
+      }
+    ]
+  },
+  {
+    "case_id": 16529,
+    "parties": [
+      {
+        "party_id": "P1",
+        "name": "Huỳnh Thị Bích T",
+        "procedural_role": "PLAINTIFF"
+      },
+      {
+        "party_id": "D1",
+        "name": "Nguyễn Đức T",
+        "procedural_role": "DEFENDANT"
+      },
+      {
+        "party_id": "D2",
+        "name": "Văn Xuân L",
+        "procedural_role": "DEFENDANT"
+      }
+    ],
+    "claims": [
+      {
+        "claim_id": "C1",
+        "section": "content",
+        "span": {
+          "text": "Ngày 09 tháng 9 năm 2011 bà T có sang nhượng của vợ chồng Ông Nguyễn Đức T và Bà Văn Xuân L 01 diện tích đất có diện tích 17.832,2 m2 (Trong đó có 400 m2 đất ở nông thôn bà T tự chuyển đổi mục đích sử dụng), có tứ cận phía đông giáp đất ông Nguyễn Đức E, phía Tây giáp đường đất (nay là đường bê tông), phía nam giáp đất Ông Nguyễn Đức T, phía bắc giáp đất Ông Nguyễn Đức T, đất tọa lạc tại: Thôn T, xã B, huyện B (nay là huyện P), tỉnh Bình Phước với số tiền là 1.238.000.000 (Một tỷ hai trăm ba mươi tám triệu đồng), bà T đã thanh toán tiền đầy đủ cho Ông Tvà bà L."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 1
+      },
+      {
+        "claim_id": "C2",
+        "section": "content",
+        "span": {
+          "text": "Ông T cam kết chịu trách nhiệm tiến hành các thủ tục sang tên giấy chứng nhận quyền sử dụng đất (CNQSDĐ) cho bà Thu, các khoản tiền thuế, phí bà T phải chịu và trực tiếp đi nộp."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 2
+      },
+      {
+        "claim_id": "C3",
+        "section": "content",
+        "span": {
+          "text": "Đến ngày 14/11/2013 Ủy ban nhân dân huyện B, tỉnh Bình Phước đã cấp giấy CNQSDĐ – Quyền sở hữu nhà ở và tài sản khác gắn liền với đất số: BR 037030, do Bà Huỳnh Thị Bích T đứng tên."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 3
+      },
+      {
+        "claim_id": "C4",
+        "section": "content",
+        "span": {
+          "text": "Quá trình sử dụng đất đến năm 2016 thì bà T phát hiện phần diện tích đất chuyển nhượng của Ông T và bà L đã giao cho bà T là thiếu đất có diện tích là 623,3 m2 bà T đã yêu cầu Ông T và bà L giao đủ phần diện tích đất trên nhưng ông T, bà L không chấp nhận."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 4
+      },
+      {
+        "claim_id": "C5",
+        "section": "content",
+        "span": {
+          "text": "Ông thống nhất với ý kiến trình bày của người đại diện theo ủy quyền của nguyên đơn Bà Huỳnh Thị Bích T về việc chuyển nhượng, diện tích đất, giá chuyển nhượng là 700.000.000đ/1ha."
+        },
+        "asserted_by": [
+          "D1"
+        ],
+        "order": 6
+      },
+      {
+        "claim_id": "C6",
+        "section": "content",
+        "span": {
+          "text": "Ông là người đi làm thủ tục sang tên tách thửa sang cho bà T và ông đã bàn giao đất cho bà T sử dụng từ thời gian đó cho đến nay."
+        },
+        "asserted_by": [
+          "D1"
+        ],
+        "order": 7
+      },
+      {
+        "claim_id": "C7",
+        "section": "content",
+        "span": {
+          "text": "Nhưng ông chỉ chuyển nhượng đất và tài sản trên đất là cây quýt và sầu riêng từ mốc nhà yến đổ về phía giáp thửa số 89 chứ không chuyển nhượng phần diện tích đất đang làm đường đi chung giữa hai nhà, mặt khác bà T chưa giao đủ tiền chuyển nhượng đất cho ông nên hai bên chưa tiến hành đo đạc lại đất thì phát sinh tranh chấp."
+        },
+        "asserted_by": [
+          "D1"
+        ],
+        "order": 8
+      },
+      {
+        "claim_id": "C8",
+        "section": "content",
+        "span": {
+          "text": "Tài sản chuyển nhượng cho Bà Huỳnh Thị Bích T có diện tích đất 17.832,2m2 và toàn bộ tài sản trên đất tọa lạc tại thôn T, xã B, huyện P, tỉnh Bình Phước là tài sản riêng của Ông Nguyễn Đức T, Ông T có tài sản này trước khi lấy bà và khi lấy bà cũng không nhập vào khối tài sản chung."
+        },
+        "asserted_by": [
+          "D2"
+        ],
+        "order": 9
+      },
+      {
+        "claim_id": "C9",
+        "section": "content",
+        "span": {
+          "text": "Trong hợp đồng bà ký vào giấy tờ chuyển nhượng vì lúc đó bà vẫn là vợ Ông Tnên phải đi ký."
+        },
+        "asserted_by": [
+          "D2"
+        ],
+        "order": 10
+      },
+      {
+        "claim_id": "C10",
+        "section": "content",
+        "span": {
+          "text": "Bà không có quyền và nghĩa vụ gì đối với việc tranh chấp giữa bà T và Ông T nên bà không có ý kiến gì về mọi vấn đề giải quyết vụ án và để Ông T quyết định vì đó là tài sản riêng của ông T, không liên quan gì đến bà."
+        },
+        "asserted_by": [
+          "D2"
+        ],
+        "order": 11
+      }
+    ],
+    "requests": [
+      {
+        "request_id": "R1",
+        "section": "content",
+        "span": {
+          "text": "Nay bà T yêu cầu Tòa án công nhận Hợp đồng chuyển nhượng quyền sử dụng đất và tài sản gắn liền với đất lập ngày 09/9/2013 tại UBND xã Bù Nho về việc ông T, bà L chuyển nhượng diện tích 17.832,2 m2 tọa lạc tại thôn T, xã B, huyện P, tỉnh Bình Phước cho bà T và đã được UBND huyện Bù Gia Mập cấp giấy CNQSDĐ số BR 037030 cho Bà Huỳnh Thị Bích T và buộc Ông T và bà L phải giao đủ phần diện tích đất theo hợp đồng còn thiếu là 632,3m2 đất tọa lạc tại: Thôn T, xã B, huyện P, tỉnh Bình Phước."
+        },
+        "requested_by": [
+          "P1"
+        ],
+        "modification_spans": [],
+        "order": 5
+      }
+    ],
+    "reasonings": [
+      {
+        "reasoning_id": "RE1",
+        "section": "assessment",
+        "span": {
+          "text": "Xét yêu cầu khởi kiện của nguyên đơn và quá trình giải quyết vụ án xác định đây là vụ án “Tranh chấp Hợp đồng chuyển nhượng quyền sử dụng đất và tài sản gắn liền với đất” các bên xác lập năm 2013 và đến năm 2016 thì phát sinh tranh chấp nên căn cứ vào Điều 688 Bộ luật dân sự năm 2015 thì áp dụng các quy định của Bộ luật dân sự năm 2005 và các văn bản có liên quan để giải quyết."
+        },
+        "order": 12
+      },
+      {
+        "reasoning_id": "RE2",
+        "section": "assessment",
+        "span": {
+          "text": "Ông Nguyễn Đức T và Bà Văn Xuân L có quan hệ là vợ chồng và ngày 09/9/2013 Ông T và bà L có thỏa thuận chuyển nhượng cho bà T diện tích đất 17.832,2m2 tọa lạc tại thôn T, xã B, huyện P, tỉnh Bình Phước với giá là 700.000.000đ/1ha (Bảy trăm triệu đồng/ha) Xét về hình thức hợp đồng chuyển nhượng quyền sử dụng đất."
+        },
+        "order": 13
+      },
+      {
+        "reasoning_id": "RE3",
+        "section": "assessment",
+        "span": {
+          "text": "Theo quy định tại khoản 2 điều 689 Bộ luật dân sự năm 2005 thì “Hợp đồng chuyển nhượng quyền sử dụng đất phải được lập thành văn bản, có công chứng chứng thực theo quy định của pháp luật”."
+        },
+        "order": 14
+      },
+      {
+        "reasoning_id": "RE4",
+        "section": "assessment",
+        "span": {
+          "text": "Đối chiếu với hợp đồng chuyển nhượng giữa bà T và ông T, bà L vào ngày 09/9/2013 là tuân thủ đúng về mặt hình thức theo quy định của pháp luật về chuyển nhượng QSDĐ."
+        },
+        "order": 15
+      },
+      {
+        "reasoning_id": "RE5",
+        "section": "assessment",
+        "span": {
+          "text": "Xét về nội dung hợp đồng chuyển nhượng quyền sử dụng đất: Thửa đất mà ông T, bà L chuyển nhượng cho bà T vào ngày 09/9/2013 đã được UBND huyện Phước Long, tỉnh Bình Phước cấp giấy CNQSDĐ cấp cho Ông Nguyễn Đức T ngày 10/3/2006."
+        },
+        "order": 16
+      },
+      {
+        "reasoning_id": "RE6",
+        "section": "assessment",
+        "span": {
+          "text": "Ông Tcho rằng bà T chưa giao cho ông đủ tiền nên ông không giao đủ đất, tuy nhiên từ năm 2013 cho đến nay Ông T không yêu cầu bà T trả tiền theo hợp đồng và trong vụ án này Ông Tcũng không có yêu cầu phản tố về việc trả tiền theo hợp đồng nên Hội đồng xét xử không xem xét."
+        },
+        "order": 17
+      },
+      {
+        "reasoning_id": "RE7",
+        "section": "assessment",
+        "span": {
+          "text": "Xét lời khai của bà L là không phù hợp bởi lẽ nếu là tài sản riêng của Ông T thì tại sao trong hợp đồng chuyển nhượng QSDĐ và tài sản gắn liền với đất ngày 09/9/2013 bà L lại ký vào bên chuyển nhượng cho bà Thu."
+        },
+        "order": 18
+      },
+      {
+        "reasoning_id": "RE8",
+        "section": "assessment",
+        "span": {
+          "text": "Vì vậy, lời trình bày của bà L là không có cơ sở và không phù hợp với các quy định của pháp luật. [4] Việc xem xét thẩm định và định giá tài sản: Ngày 21/7/2017 Tòa án nhân dân huyện Phú Riềng, tỉnh Bình Phước tiến hành xem xét, thẩm định tại chỗ đối với tài sản chuyển nhượng tranh chấp thì diện tích chuyển nhượng ông T, bà L chuyển nhượng cho bà T còn thiếu diện tích chưa giao đủ là 632,3m2 và Hội đồng định giá tài sản huyện Phú Riềng, tỉnh Bình Phước cũng tiến hành định giá tài sản chuyển nhượng tranh chấp là diện tích đất 632,3m2 đất tọa lạc tại thôn T, xã B, huyện P, tỉnh Bình Phước có giá là 12.646.000 đồng (Mười hai triệu sáu trăm bốn mươi sáu nghìn đồng) [5] Xét yêu cầu khởi kiện của nguyên đơn: Từ những phân tích trên, nhận thấy hợp đồng chuyển nhượng quyền sử dụng đất và tài sản gắn liền với đất giữa Ông Nguyễn Đức T và Bà Văn Xuân L chuyển nhượng cho Bà Huỳnh Thị Bích T lập ngày 09/9/2013 là tuân thủ đúng về hình thức và nội dung của hợp đồng theo quy định của pháp luật."
+        },
+        "order": 19
+      },
+      {
+        "reasoning_id": "RE9",
+        "section": "assessment",
+        "span": {
+          "text": "Do đó có cơ sở chấp nhận yêu cầu khởi kiện của nguyên đơn Bà Huỳnh Thị Bích T về việc yêu cầu Tòa án chấp nhận hợp đồng chuyển nhượng QSDĐ và tài sản gắn liền với đất giữa Ông Nguyễn Đức T và Bà Văn Xuân L với Bà Huỳnh Thị Bích T lập ngày 09/9/2013 đất có diện tích 17.832,2m2 tọa lạc tại Thôn T, xã B, huyện P, tỉnh Bình Phước."
+        },
+        "order": 20
+      },
+      {
+        "reasoning_id": "RE10",
+        "section": "assessment",
+        "span": {
+          "text": "Ngày 14/11/2013 Ủy ban Nhân dân huyện Bù Gia Mập, tỉnh Bình Phước đã cấp giấy CNQSDĐ – QSHN ở và tài sản khác gắn liền với đất số: BR 037030, do Bà Huỳnh Thị Bích T đứng tên."
+        },
+        "order": 21
+      },
+      {
+        "reasoning_id": "RE11",
+        "section": "assessment",
+        "span": {
+          "text": "Do vậy, cần buộc Ông Nguyễn Đức T và Bà Văn Xuân L phải giao đủ phần diện tích chuyển nhượng cho bà T còn thiếu có diện tích là 632,3m2 đất tọa lạc tại Thôn T, xã B, huyện P, tỉnh Bình Phước. 6 Đất có tứ cận: Phía đông giáp thửa 87 có chiều dài là 4,34m."
+        },
+        "order": 22
+      },
+      {
+        "reasoning_id": "RE12",
+        "section": "assessment",
+        "span": {
+          "text": "Phía tây giáp đường đất (giờ là xi măng) có chiều dài 3,2m Phía nam giáp đất bà T có chiều dài 167,78m Phía bắc giáp đất Ông Tcó chiều dài 171,99m Về số tiền chuyển nhượng Ông Tcho rằng bà T chưa giao đủ tiền cho ông nhưng ông không có yêu cầu phản tố nên Hội đồng xét xử không có căn cứ để xem xét."
+        },
+        "order": 23
+      }
+    ],
+    "decisions": [
+      {
+        "decision_id": "DE1",
+        "section": "decision",
+        "span": {
+          "text": "Tuyên: 1/Chấp nhận yêu cầu khởi kiện của nguyên đơn Bà Huỳnh Thị Bích T về việc “Tranh chấp hợp đồng chuyển nhượng quyền sử dụng đất và tài sản gắn liền với đất” giữa Ông Nguyễn Đức T và Bà Văn Xuân L với Bà Huỳnh Thị Bích T."
+        },
+        "order": 24
+      },
+      {
+        "decision_id": "DE2",
+        "section": "decision",
+        "span": {
+          "text": "Công nhận Hợp đồng chuyển nhượng quyền sử dụng đất lập ngày 09/9/2013 tại UBND xã Bù Nho giữa Ông Nguyễn Đức T và Bà Văn Xuân L với Bà Huỳnh Thị Bích T về việc chuyển nhượng diện tích 17.832,2 m2 tọa lạc tại thôn T, xã B, huyện P, tỉnh Bình Phước và đã được UBND huyện Bù 7 Gia Mập cấp giấy chứng nhận QSDĐ số BR 037030, do Bà Huỳnh Thị Bích T đứng tên."
+        },
+        "order": 25
+      },
+      {
+        "decision_id": "DE3",
+        "section": "decision",
+        "span": {
+          "text": "Buộc Ông Nguyễn Đức T và Bà Văn Xuân L có nghĩa vụ phải giao đủ phần diện tích chuyển nhượng còn thiếu cho Bà Huỳnh Thị Bích T là 632,3m2 đất tọa lạc tại: Thôn T, xã B, huyện P, tỉnh Bình Phước theo hợp đồng chuyển nhượng QSD đất và tài sản gắn liền với đất ngày 09/9/2013 lập tại UBND xã Bù Nho, huyện Bù Gia Mập (nay là huyện Phú Riềng), tỉnh Bình Phước. Đất có tứ cận: Phía đông giáp giáp thửa 87 có chiều dài là 4,34m. Phía tây giáp đường đất (giờ là xi măng) có chiều dài 3,2m. Phía nam giáp đất bà T có chiều dài 167,78m. Phía bắc giáp đất Ông Tcó chiều dài 171,99m. 2/ Về án phí, lệ phí Tòa án: Chi phí đo đạc là 2.778.508 đồng (Hai triệu bảy trăm bảy mươi tám nghìn năm trăm lẻ tám đồng)."
+        },
+        "order": 26
+      },
+      {
+        "decision_id": "DE4",
+        "section": "decision",
+        "span": {
+          "text": "Bà T đã nộp xong tại Chi nhánh Văn phòng đăng ký đất đai huyện Phú Riềng nên ông T, bà L phải có nghĩa vụ trả lại cho bà T số tiền 2.778.508 đồng (Hai triệu bảy trăm bảy mươi tám nghìn năm trăm lẻ tám đồng)."
+        },
+        "order": 27
+      },
+      {
+        "decision_id": "DE5",
+        "section": "decision",
+        "span": {
+          "text": "Số tiền tạm ứng chi phí xem xét thẩm định và định giá 7.000.000đ (Bảy triệu đồng) bà T đã nộp ngày 16/2/2017 và ngày 21/7/2017 tại Tòa án nhân dân huyện Phú Riềng, tỉnh Bình Phước."
+        },
+        "order": 28
+      },
+      {
+        "decision_id": "DE6",
+        "section": "decision",
+        "span": {
+          "text": "Ông T, bà L phải có nghĩa vụ trả lại cho Bà Huỳnh Thị Bích T số tiền là 7.000.000đồng (Bảy triệu đồng)."
+        },
+        "order": 29
+      },
+      {
+        "decision_id": "DE7",
+        "section": "decision",
+        "span": {
+          "text": "Kể từ ngày có đơn yêu cầu thi hành án của người được thi hành án cho đến khi thi hành xong các khoản tiền, hàng tháng bên phải thi hành án còn phải trả cho bên được thi hành án khoản tiền lãi của số tiền còn phải thi hành án theo mức lãi suất theo quy định tại khoản 2 Điều 468 Bộ luật dân sự tương ứng với thời gian chưa thi hành án."
+        },
+        "order": 30
+      },
+      {
+        "decision_id": "DE8",
+        "section": "decision",
+        "span": {
+          "text": "Về án phí dân sự sơ thẩm: Ông T, bà T phải nộp 300.000đồng (Ba trăm nghìn đồng) án phí dân sự không có giá ngạch và 632.300đ (Sáu trăm ba mươi hai nghìn ba trăm đồng) án phí dân sự sơ thẩm có giá ngạch."
+        },
+        "order": 31
+      },
+      {
+        "decision_id": "DE9",
+        "section": "decision",
+        "span": {
+          "text": "Bà T không phải nộp tiền án phí dân sự sơ thẩm, hoàn trả cho bà T số tiền 750.000đ (Bảy trăm năm mươi nghìn đồng) và 625.000đ (Sáu trăm hai mươi lăm nghìn đồng) theo biên lai thu tiền tạm ứng án phí số 025622 ngày 21/11/2016 và 025850 ngày 16/5/2017 của Chi cục Thi hành án dân sự huyện Phú Riềng."
+        },
+        "order": 32
+      }
+    ],
+    "request_decision_links": [
+      {
+        "request_id": "R1",
+        "decision_id": "DE2"
+      },
+      {
+        "request_id": "R1",
+        "decision_id": "DE3"
+      }
+    ],
+    "request_reasoning_links": [
+      {
+        "request_id": "R1",
+        "reasoning_id": "RE4"
+      },
+      {
+        "request_id": "R1",
+        "reasoning_id": "RE6"
+      },
+      {
+        "request_id": "R1",
+        "reasoning_id": "RE9"
+      },
+      {
+        "request_id": "R1",
+        "reasoning_id": "RE11"
+      }
+    ],
+    "request_outcomes": [
+      {
+        "request_id": "R1",
+        "outcome": "ACCEPTED"
+      }
+    ]
+  },
+  {
+    "case_id": 332,
+    "parties": [
+      {
+        "party_id": "P1",
+        "name": "Ông Hsiao Wang J",
+        "procedural_role": "PLAINTIFF"
+      },
+      {
+        "party_id": "D1",
+        "name": "Ông Thạch Tha Va R",
+        "procedural_role": "DEFENDANT"
+      },
+      {
+        "party_id": "I1",
+        "name": "Bà Thạch Thị Su Y",
+        "procedural_role": "RELATED_PARTY"
+      },
+      {
+        "party_id": "I2",
+        "name": "Bà Lâm Thị H",
+        "procedural_role": "RELATED_PARTY"
+      },
+      {
+        "party_id": "I3",
+        "name": "Bà Lâm Huệ G",
+        "procedural_role": "RELATED_PARTY"
+      }
+    ],
+    "claims": [
+      {
+        "claim_id": "C1",
+        "section": "content",
+        "span": {
+          "text": "2 Vào ngày 27/4/2019, ông Thạch Tha Va R có vay của ông số tiền 30.000.000 VNĐ (ba mươi triệu đồng), có giấy viết tay ghi nợ có chữ ký của ông Va R."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 1
+      },
+      {
+        "claim_id": "C2",
+        "section": "content",
+        "span": {
+          "text": "Trong bản ghi nợ có ghi ông Va R vay của ông 30.000.000 đồng và hứa 01 tháng sau là đến ngày 27/5/2019 sẽ trả, nếu đến ngày 27/5/2019 không trả thì sẽ tính lãi suất theo lãi suất Ngân hàng (có giấy viết tay và chữ ký của ông Va R kèm theo), nhưng đến nay là ngày 16/3/2021 ông Va R vẫn chưa trả cho ông khoản tiền nào, ông có gọi điện thoại vài lần nhưng không trả lời đến ngày nào sẽ trả tiền cho ông và không muốn trả."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 2
+      },
+      {
+        "claim_id": "C3",
+        "section": "content",
+        "span": {
+          "text": "Tại phiên tòa sơ thẩm, ông Hsiao Wang J xác định sau khi vay tiền thì ông Va R bỏ địa phương đi thành phố làm đến nay vẫn không có về địa phương, ông chỉ liên lạc với ông Va R qua điện thoại."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 4
+      },
+      {
+        "claim_id": "C4",
+        "section": "content",
+        "span": {
+          "text": "Ông ly hôn với bà Lâm Huệ G vào ngày 16/3/2021."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 6
+      },
+      {
+        "claim_id": "C5",
+        "section": "content",
+        "span": {
+          "text": "Vào năm 2019, vợ chồng bà có vay của ông Hsiao Wang J số tiền 30.000.000 đồng, không có lãi suất."
+        },
+        "asserted_by": [
+          "I1"
+        ],
+        "order": 7
+      },
+      {
+        "claim_id": "C6",
+        "section": "content",
+        "span": {
+          "text": "Khi vay các bên có thỏa thuận 01 tháng sau sẽ trả, nội dung giống như biên nhận mà ông Hsiao Wang J cung cấp cho Tòa án, nhưng đến hạn thì vợ chồng bà không có khả năng trả."
+        },
+        "asserted_by": [
+          "I1"
+        ],
+        "order": 8
+      },
+      {
+        "claim_id": "C7",
+        "section": "content",
+        "span": {
+          "text": "Sau đó, thì vợ chồng bà đi thành phố làm, qua năm 2020 thì vợ chồng bà có gửi tiền về cho bà Lâm Thị H trả cho ông Hsiao Wang J là bà Lâm Huệ G, cụ thể các lần bà gửi tiền về như sau: lần 1 ngày 11/02/2020 số tiền 1.000.000 đồng, lần 2 ngày 15/3/2020 số tiền 3.000.000 đồng, lần 3 ngày 12/4/2020 số tiền 3.000.000 đồng, lần 4 ngày 10/5/2020 số tiền 3.000.000 đồng, lần 5 ngày 14/6/2020 số tiền 3.000.000 đồng, lần 6 ngày 12/7/2020 số tiền 3.000.000 đồng, lần 7 ngày 16/8/2020 số tiền 3.000.000 đồng, lần 8 ngày 13/9/2020 số tiền 3.000.000 đồng, lần 9 ngày 11/10/2020 số tiền 1.000.000 đồng, lần 10 ngày 15/11/2020 số tiền 2.000.000 đồng, lần 11 ngày 13/12/2020 số tiền 1.000.000 đồng, lần 12 ngày 10/01/2021 số tiền 2.000.000 đồng, đến tết năm 2021 bà về quê có gửi trực tiếp cho bà G số tiền 2.000.000 đồng."
+        },
+        "asserted_by": [
+          "I1"
+        ],
+        "order": 9
+      },
+      {
+        "claim_id": "C8",
+        "section": "content",
+        "span": {
+          "text": "Tất cả các lần trả tiền bà có ghi cụ thể nhưng không có làm biên nhận."
+        },
+        "asserted_by": [
+          "I1"
+        ],
+        "order": 10
+      },
+      {
+        "claim_id": "C9",
+        "section": "content",
+        "span": {
+          "text": "Đối với yêu cầu khởi kiện của nguyên đơn vợ chồng bà không đồng ý, vì vợ chồng bà đã trả hết nợ cho ông Hsiao Wang J."
+        },
+        "asserted_by": [
+          "I1"
+        ],
+        "order": 11
+      },
+      {
+        "claim_id": "C10",
+        "section": "content",
+        "span": {
+          "text": "3 Bà là mẹ ruột của bà Su Y, bà thống nhất với lời trình bày của bà Su Y về các lần trả tiền mà bà Su Y đã trình bày, bà Su Y có gửi tiền về bà có trả tiền cho bà G, lúc đó bà G là vợ của ông Hsiao Wang J, việc trả tiền cho bà G không có làm biên nhận, nhưng sự việc có mẹ bà G tên Kim Ngọc A chứng kiến, bà không đồng ý với yêu cầu khởi kiện của nguyên đơn, vì bà Su Y đã trả đủ tiền cho ông Hsiao Wang J."
+        },
+        "asserted_by": [
+          "I2"
+        ],
+        "order": 12
+      }
+    ],
+    "requests": [
+      {
+        "request_id": "R1",
+        "section": "content",
+        "span": {
+          "text": "Nay ông làm đơn khởi kiện yêu cầu Tòa án giải quyết buộc ông Va R phải trả đủ số tiền gốc cho ông là 30.000.000 đồng."
+        },
+        "requested_by": [
+          "P1"
+        ],
+        "modification_spans": [
+          {
+            "text": "Ông chỉ yêu cầu ông Va R trả đủ số tiền gốc cho ông là 30.000.000 đồng, không yêu cầu trả tiền lãi và cũng không yêu cầu bất cứ ai có nghĩa vụ liên đới trả cho ông số tiền trên.",
+            "section": "content",
+            "order": 5
+          }
+        ],
+        "order": 3
+      }
+    ],
+    "reasonings": [
+      {
+        "reasoning_id": "RE1",
+        "section": "assessment",
+        "span": {
+          "text": "Xét thấy, khi khởi kiện ông Hsiao Wang J có cung cấp Giấy mượn tiền không có ngày, tháng, năm (BL số 02) nội dung thể hiện: Ông Va R đã mượn tiền ông Hsiao Wang J 30.000.000 đồng và hứa một tháng sẽ trả (27/4/2019 đến 27/5/2019) nếu không làm đúng lời hứa thì làm theo quyết định của ông Hsiao Wang J, nếu ngày 4 27/5/2019 không trả sẽ tính lãi, có chữ ký và phía dưới chữ ký ghi tên Thạch Tha Va R."
+        },
+        "order": 13
+      },
+      {
+        "reasoning_id": "RE2",
+        "section": "assessment",
+        "span": {
+          "text": "Đồng thời, theo bà Su Y là vợ của ông Va R xác định: Vào năm 2019, vợ chồng bà có vay của ông Hsiao Wang J số tiền 30.000.000 đồng, không có lãi suất."
+        },
+        "order": 14
+      },
+      {
+        "reasoning_id": "RE3",
+        "section": "assessment",
+        "span": {
+          "text": "Khi vay các bên có thỏa thuận 01 tháng sau sẽ trả, nội dung giống như biên nhận mà ông Hsiao Wang J cung cấp cho Tòa án, nhưng đến hạn thì vợ chồng bà không có khả năng trả."
+        },
+        "order": 15
+      },
+      {
+        "reasoning_id": "RE4",
+        "section": "assessment",
+        "span": {
+          "text": "Sau đó, thì vợ chồng bà đi thành phố làm và gửi tiền về cho mẹ ruột của bà tên H để trả cho bà G là vợ của ông Hsiao Wang J tổng cộng 12 lần và bà trực tiếp trả cho bà G 01 lần cuối cùng là đủ số tiền 30.000.000 đồng, việc trả tiền có bà Kim Ngọc A là mẹ ruột của bà G chứng kiến."
+        },
+        "order": 16
+      },
+      {
+        "reasoning_id": "RE5",
+        "section": "assessment",
+        "span": {
+          "text": "Theo bà A xác định: Trước đây bà có thấy bà H là mẹ ruột của bà Su Y lại nhà bà trả nhiều lần cho bà G số tiền mà ông Va R nợ con rể bà là ông Hsiao Wang J, bà nghe con gái bà nói là bà Su Y đã trả đủ tiền rồi."
+        },
+        "order": 17
+      },
+      {
+        "reasoning_id": "RE6",
+        "section": "assessment",
+        "span": {
+          "text": "Việc vợ ông Va R gửi trả tiền cho bà G (vợ ông Hsiao Wang J) là trước khi ông Hsiao Wang J ly hôn với bà G (ông Hsiao Wang J ly hôn với bà G vào ngày 16/3/2021)."
+        },
+        "order": 18
+      },
+      {
+        "reasoning_id": "RE7",
+        "section": "assessment",
+        "span": {
+          "text": "Mặc dù, việc trả tiền không có làm giấy tờ, nhưng được bà A là mẹ vợ ông Hsiao Wang J xác định, lời trình bày của bà A phù hợp với lời trình bày của bà Sy Ry."
+        },
+        "order": 19
+      },
+      {
+        "reasoning_id": "RE8",
+        "section": "assessment",
+        "span": {
+          "text": "Do đó, có căn cứ để chứng minh ông Va R đã trả đủ số tiền 30.000.000 đồng cho vợ ông Hsiao Wang J."
+        },
+        "order": 20
+      }
+    ],
+    "decisions": [
+      {
+        "decision_id": "DE1",
+        "section": "decision",
+        "span": {
+          "text": "Không chấp nhận yêu cầu khởi kiện của nguyên đơn ông Hsiao Wang J về việc yêu cầu Tòa án giải quyết buộc ông Thạch Tha Va R trả đủ số tiền gốc cho 5 ông là 30.000.000 VNĐ (ba mươi triệu đồng), không yêu cầu trả tiền lãi và cũng không yêu cầu bất cứ ai có nghĩa vụ liên đới trả cho ông số tiền trên."
+        },
+        "order": 21
+      },
+      {
+        "decision_id": "DE2",
+        "section": "decision",
+        "span": {
+          "text": "Về án phí dân sự sơ thẩm: Ông Hsiao Wang J phải chịu 1.500.000 đồng (một triệu năm trăm nghìn đồng) tiền án phí dân sự sơ thẩm, nhưng được khấu trừ vào số tiền tạm ứng án phí đã nộp 750.000 đồng (bảy trăm năm mươi nghìn đồng) theo Biên lai thu số 0009146 ngày 30/3/2021 của Cục Thi hành án dân sự tỉnh Sóc Trăng."
+        },
+        "order": 22
+      },
+      {
+        "decision_id": "DE3",
+        "section": "decision",
+        "span": {
+          "text": "Như vậy, ông Hsiao Wang J còn phải nộp thêm số tiền án phí dân sự sơ thẩm là 750.000 đồng (bảy trăm năm mươi nghìn đồng)."
+        },
+        "order": 23
+      }
+    ],
+    "request_decision_links": [
+      {
+        "request_id": "R1",
+        "decision_id": "DE1"
+      }
+    ],
+    "request_reasoning_links": [
+      {
+        "request_id": "R1",
+        "reasoning_id": "RE7"
+      },
+      {
+        "request_id": "R1",
+        "reasoning_id": "RE8"
+      }
+    ],
+    "request_outcomes": [
+      {
+        "request_id": "R1",
+        "outcome": "REJECTED"
+      }
+    ]
+  },
+  {
+    "case_id": 28430,
+    "parties": [
+      {
+        "party_id": "P1",
+        "name": "Đỗ Văn K",
+        "procedural_role": "PLAINTIFF"
+      },
+      {
+        "party_id": "D1",
+        "name": "Trần Thị Bích T",
+        "procedural_role": "DEFENDANT"
+      },
+      {
+        "party_id": "D2",
+        "name": "Hà Bảo L1",
+        "procedural_role": "DEFENDANT"
+      },
+      {
+        "party_id": "I1",
+        "name": "Nguyễn Thị Ngọc D",
+        "procedural_role": "RELATED_PARTY"
+      }
+    ],
+    "claims": [
+      {
+        "claim_id": "C1",
+        "section": "content",
+        "span": {
+          "text": "Vào ngày 08/9/2014, ông Đỗ Văn K và bà Trần Thị Bích T có lập hợp đồng đặt cọc để bảo đảm cho việc ký kết hợp đồng chuyển nhượng quyền sử dụng đất đối với phần đất diện tích 469,3m2 thuộc thửa 35 tờ bản đồ số 73, xã L, huyện C, Thành phố Hồ Chí Minh với giá chuyển nhượng là 500.000.000 đồng (được Văn phòng Công chứng T chứng thực số 00008448 ngày 08/9/2014)."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 1
+      },
+      {
+        "claim_id": "C2",
+        "section": "content",
+        "span": {
+          "text": "Ông K đã giao cho bà T số tiền đặt cọc là 400.000.000 đồng."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 2
+      },
+      {
+        "claim_id": "C3",
+        "section": "content",
+        "span": {
+          "text": "Do phần đất chuyển nhượng có nguồn gốc là do bà T nhận tặng cho của các thành viên trong gia đình theo hợp đồng tặng cho quyền sử dụng đất số 002822 ngày 21/04/2014 của Văn phòng Công chứng A, bà T chưa đăng bộ sang tên nên trong hợp đồng đặt cọc hai bên có thỏa thuận là bà T sẽ liên hệ cơ quan có thẩm quyền đăng bộ sang tên cho bà T rồi sau đó tiến hành ký hợp đồng công chứng chuyển nhượng phần đất nêu trên cho ông K."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 3
+      },
+      {
+        "claim_id": "C4",
+        "section": "content",
+        "span": {
+          "text": "Tuy nhiên, sau khi bà T được đăng bộ sang tên quyền sử dụng đất (12/6/2015), ông K đã nhiều lần liên hệ với bà T yêu cầu bà T ra công chứng ký hợp đồng chuyển nhượng quyền sử dụng đất với ông K nhưng bà T không thực hiện."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 4
+      },
+      {
+        "claim_id": "C5",
+        "section": "content",
+        "span": {
+          "text": "Do đó, ông K đã khởi kiện bà T đến Tòa án nhân dân huyện C tranh chấp hợp đồng đặt cọc và được Tòa án nhân dân huyện C thụ lý vụ án số 515/2015/TLST-DS ngày 03/5/2015."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 5
+      },
+      {
+        "claim_id": "C6",
+        "section": "content",
+        "span": {
+          "text": "Ngày 07/6/2016, tại Tòa án nhân dân huyện C, ông K và bà T đã thỏa thuận được với nhau về việc giải quyết toàn bộ vụ án có nội dung là hai bên thỏa thuận hủy hợp đồng đặt cọc số 00008448 ngày 08/9/2014 của Văn phòng Công chứng Đồng T giữa ông K và bà T; bà T có nghĩa vụ trả cho ông K số tiền 500.000.000 đồng vào ngày 30/6/2016."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 6
+      },
+      {
+        "claim_id": "C7",
+        "section": "content",
+        "span": {
+          "text": "Ngày 15/6/2016, Tòa án nhân dân huyện C ban hành Quyết định công nhận sự thỏa thuận của các đương sự số 36/2016/QĐST-DS ghi nhận toàn bộ sự thỏa thuận nêu trên giữa bà T và ông K."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 7
+      },
+      {
+        "claim_id": "C8",
+        "section": "content",
+        "span": {
+          "text": "Do bà T không thực hiện nghĩa vụ đã thỏa thuận nên ông K đã yêu cầu Chi cục Thi hành án dân sự huyện C kê biên tài sản là phần đất diện tích 469,3m2 thuộc thửa 35 tờ bản đồ số 73, xã L, huyện C, Thành phố Hồ Chí Minh theo giấy chứng nhận quyền sử dụng đất số CH02445 do Ủy ban nhân dân huyện C cấp ngày 02/7/2013 để thi hành án."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 8
+      },
+      {
+        "claim_id": "C9",
+        "section": "content",
+        "span": {
+          "text": "Trong 3 quá trình Chi cục Thi hành án dân sự huyện C xác minh tài sản yêu cầu kê biên thì ông Hà Bảo L1 đến Chi cục Thi hành án dân sự huyện C xuất trình hợp đồng chuyển nhượng quyền sử dụng đất số 000928 ngày 01/3/2016 của Văn phòng Công chứng L giữa ông Hà Bảo L1 và bà Trần Thị Bích T đối với phần đất nêu trên."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 9
+      },
+      {
+        "claim_id": "C10",
+        "section": "content",
+        "span": {
+          "text": "Do đó, Chi cục thi hành án dân sự huyện C đã tạm ngưng việc kê biên tài sản thi hành án."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 10
+      },
+      {
+        "claim_id": "C11",
+        "section": "content",
+        "span": {
+          "text": "Bà T ký kết hợp đồng chuyển nhượng quyền sử dụng đất nêu trên cho ông L1 với mục đích tẩu tán tài sản, nhằm trốn tránh nghĩa vụ trả nợ đối với ông K."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 12
+      },
+      {
+        "claim_id": "C12",
+        "section": "content",
+        "span": {
+          "text": "Hậu quả pháp lý của việc hợp đồng chuyển nhượng quyền sử dụng đất số 000928 ngày 01/3/2016 của Văn phòng Công chứng L giữa ông Hà Bảo L1 và bà Trần Thị Bích T vô hiệu thì ông K không yêu cầu Tòa án giải quyết vì đây là quan hệ mua bán giữa bà T và ông L1."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 13
+      },
+      {
+        "claim_id": "C13",
+        "section": "content",
+        "span": {
+          "text": "Ngày 01/3/2016 bà có vay của ông Hà Bảo L1 số tiền 300.000.000 đồng (ba trăm triệu đồng), lãi suất 3%/tháng, thời hạn vay 12 tháng, để đảm bảo khoản tiền vay này bà đã thế chấp cho ông L1 quyền sử dụng đất phần đất diện tích 469,3m2 thuộc thửa 35 tờ bản đồ số 73 xã L, huyện C, Thành phố Hồ Chí Minh."
+        },
+        "asserted_by": [
+          "D1"
+        ],
+        "order": 14
+      },
+      {
+        "claim_id": "C14",
+        "section": "content",
+        "span": {
+          "text": "Tuy nhiên, sau khi lý hợp đồng vay tiền, ông L1 yêu cầu bà ký thêm hợp đồng chuyển nhượng quyền sử dụng đất phần diện tích 469,3m2 thuộc thửa 35 tờ bản đồ số 73, xã L huyện C để đảm bảo cho khoản vay này."
+        },
+        "asserted_by": [
+          "D1"
+        ],
+        "order": 15
+      },
+      {
+        "claim_id": "C15",
+        "section": "content",
+        "span": {
+          "text": "Sau khi vay tiền, bà có trả lãi cho ông L1 được 10 tháng thông qua tài khoản của bà Nguyễn Thị Ngọc D1 (vợ ông L1)."
+        },
+        "asserted_by": [
+          "D1"
+        ],
+        "order": 16
+      },
+      {
+        "claim_id": "C16",
+        "section": "content",
+        "span": {
+          "text": "Sau đó, bà D1 nói bà thường trả lãi trễ hạn nên bà D1yêu cầu trả vốn trước hạn, thời gian này bà phát hiện mình bị bệnh ung thư nên không có khả năng trả tiền trước hạn cho ông L1, bà có đề nghị với bà D1 được bán phần đất đã thế chấp cho ông L1 để lấy tiền thanh toán nợ cho ông L1 và ông K nhưng bà D1 không đồng ý."
+        },
+        "asserted_by": [
+          "D1"
+        ],
+        "order": 17
+      },
+      {
+        "claim_id": "C17",
+        "section": "content",
+        "span": {
+          "text": "Nay ông K yêu cầu tòa án tuyên bố hợp đồng chuyển nhượng quyền sử dụng đất số 000928 ngày 01/3/2016 của Văn phòng Công chứng L giữa ông Hà Bảo L1 và bà Trần Thị Bích T đối với phần đất diện tích 469,3m2 thuộc thửa 35 tờ bản đồ số 73 xã L, huyện C, Thành phố Hồ Chí Minh vô hiệu thì bà đồng ý vì hợp đồng chuyển nhượng này giữa bà T và ông L1 là hợp đồng giả tạo nhằm che đậy hợp đồng vay tiền giữa bà T và ông L1."
+        },
+        "asserted_by": [
+          "D1"
+        ],
+        "order": 18
+      },
+      {
+        "claim_id": "C18",
+        "section": "content",
+        "span": {
+          "text": "Bà T không yêu cầu Tòa án giải quyết hậu quả pháp lý của việc hợp đồng chuyển nhượng quyền sử dụng đất số 000928 ngày 01/3/2016 của Văn phòng Công chứng L giữa ông L1 và bà T đối với phần đất diện tích 469,3m2 thuộc thửa 35 tờ bản đồ số 73 xã L, huyện C, Thành phố Hồ Chí Minh vô hiệu."
+        },
+        "asserted_by": [
+          "D1"
+        ],
+        "order": 19
+      },
+      {
+        "claim_id": "C19",
+        "section": "content",
+        "span": {
+          "text": "Nếu sau này ông L1 có tranh chấp thì bà T sẽ có ý kiến sau."
+        },
+        "asserted_by": [
+          "D1"
+        ],
+        "order": 20
+      },
+      {
+        "claim_id": "C20",
+        "section": "content",
+        "span": {
+          "text": "Do bị bệnh nên 4 bà có đơn yêu cầu Tòa án giải quyết vắng mặt trong suốt quá trình giải quyết vụ án, cam kết không thắc mắc, khiếu nại gì về việc vắng mặt của mình."
+        },
+        "asserted_by": [
+          "D1"
+        ],
+        "order": 21
+      },
+      {
+        "claim_id": "C21",
+        "section": "content",
+        "span": {
+          "text": "Ngoài ra, bà không có ý kiến và yêu cầu gì khác."
+        },
+        "asserted_by": [
+          "D1"
+        ],
+        "order": 22
+      },
+      {
+        "claim_id": "C22",
+        "section": "content",
+        "span": {
+          "text": "Ngày 01/3/2016, ông Hà Bảo L1 và bà Trần Thị Bích T ký hợp đồng chuyển nhượng quyền sử dụng đất số 000928/HĐGD được Văn phòng Công chứng L chứng thực nội dung bà T chuyển nhượng cho ông L1 phần đất diện tích 469,3m2 thuộc thửa 35 tờ bản đồ số 73 xã L, huyện C, Thành phố Hồ Chí Minh."
+        },
+        "asserted_by": [
+          "D2"
+        ],
+        "order": 23
+      },
+      {
+        "claim_id": "C23",
+        "section": "content",
+        "span": {
+          "text": "Ông L1 đã giao đủ tiền chuyển nhượng cho bà T là 300.000.000 đồng và bà T giao toàn bộ bản chính giấy tờ liên quan đến quyền sử dụng đất cho ông L1 giữ."
+        },
+        "asserted_by": [
+          "D2"
+        ],
+        "order": 24
+      },
+      {
+        "claim_id": "C24",
+        "section": "content",
+        "span": {
+          "text": "Tuy nhiên, sau khi ký hợp đồng chuyển nhượng xong thì ông L1 bận công tác nên không có thời gian tiến hành đăng bộ sang tên ông L1 phần đất chuyển nhượng."
+        },
+        "asserted_by": [
+          "D2"
+        ],
+        "order": 25
+      },
+      {
+        "claim_id": "C25",
+        "section": "content",
+        "span": {
+          "text": "Đến tháng 11/2016, ông L1 tiến hành các thủ tục đăng bộ sang tên phần đất chuyển nhượng trên thì phát hiện ông K đang yêu cầu Chi cục Thi hành án dân sự huyện C kê biên tài sản trên để thi hành án nghĩa vụ trả nợ của bà T."
+        },
+        "asserted_by": [
+          "D2"
+        ],
+        "order": 26
+      },
+      {
+        "claim_id": "C26",
+        "section": "content",
+        "span": {
+          "text": "Theo Quyết định công nhận sự thỏa thuận của các đương sự số 36/2016/QĐST-DS ngày 15/6/2016 của Tòa án nhân dân huyện C, Thành phố Hồ Chí Minh ghi nhận sự thỏa thuận giữa bà Trần Thị Bích T và ông Đỗ Văn K thì các bên thỏa thuận hủy hợp đồng đặt cọc số 00008448 ngày 08/9/2014 của Văn phòng Công chứng T giữa ông K và bà T; bà T có nghĩa vụ hoàn trả cho ông K số tiền 500.000.000 đồng vào ngày 30/6/2016."
+        },
+        "asserted_by": [
+          "D2"
+        ],
+        "order": 27
+      },
+      {
+        "claim_id": "C27",
+        "section": "content",
+        "span": {
+          "text": "Như vậy, giao dịch đặt cọc giữa bà T và ông K đã chấm dứt, bà T chỉ còn nghĩa vụ trả tiền cho ông K, không có nghĩa vụ về quyền sử dụng đất đối với ông K."
+        },
+        "asserted_by": [
+          "D2"
+        ],
+        "order": 28
+      },
+      {
+        "claim_id": "C28",
+        "section": "content",
+        "span": {
+          "text": "Do đó, khi quyết định trên có hiệu lực thì bà T có toàn quyền đối với quyền sử dụng đất trên."
+        },
+        "asserted_by": [
+          "D2"
+        ],
+        "order": 29
+      },
+      {
+        "claim_id": "C29",
+        "section": "content",
+        "span": {
+          "text": "Hơn nữa giao dịch dân sự giữa ông K và T là hợp đồng đặt cọc, hợp đồng này nhằm mục đích đảm bảo giao dịch chuyển nhượng quyền sử dụng đất, nếu không tiếp tục chuyển nhượng thì phát sinh trách nhiệm bồi thường."
+        },
+        "asserted_by": [
+          "D2"
+        ],
+        "order": 30
+      },
+      {
+        "claim_id": "C30",
+        "section": "content",
+        "span": {
+          "text": "Ngày 15/6/2016, thì hợp đồng đặt cọc hợp đồng chuyển nhượng quyền sử dụng đất giữa bà T và ông K bị hủy."
+        },
+        "asserted_by": [
+          "D2"
+        ],
+        "order": 31
+      },
+      {
+        "claim_id": "C31",
+        "section": "content",
+        "span": {
+          "text": "Ngày 01/3/2016, bà T chuyển nhượng cho ông L1 toàn bộ diện tích đất là sai về mặt nghĩa vụ nhưng không sai về mặt hình thức vì hợp đồng chuyển nhượng quyền sử dụng đất giữa bà T và ông L1 được công chứng chứng thực và hợp đồng đặt cọc không làm mất đi quyền chuyển nhượng quyền sử dụng đất của bà T."
+        },
+        "asserted_by": [
+          "D2"
+        ],
+        "order": 32
+      },
+      {
+        "claim_id": "C32",
+        "section": "content",
+        "span": {
+          "text": "Do đó, hợp đồng chuyển nhượng quyền sử dụng đất số 000928 ngày 01/3/2016 của Văn phòng Công chứng L giữa ông L1 và bà T không bị vô hiệu, giao dịch này hợp pháp."
+        },
+        "asserted_by": [
+          "D2"
+        ],
+        "order": 33
+      },
+      {
+        "claim_id": "C33",
+        "section": "content",
+        "span": {
+          "text": "Giữa ông K và ông L1 không có giao dịch chuyển nhượng quyền sử dụng đất, ông K không có quyền khởi kiện đối với ông L1, Tòa án không được đưa ông L1 vào tham gia tố tụng với tư cách là bị đơn."
+        },
+        "asserted_by": [
+          "D2"
+        ],
+        "order": 34
+      },
+      {
+        "claim_id": "C34",
+        "section": "content",
+        "span": {
+          "text": "Theo Quyết định công nhận sự thỏa thuận của các đương sự số 36/2016/QĐST-DS ngày 15/6/2016 của Tòa án nhân dân huyện C thì bà T chỉ có nghĩa vụ hoàn trả cho ông K số tiền 500.000.000 đồng vào ngày 30/6/2016, bà T không có nghĩa vụ về quyền sử dụng đất đối với ông K."
+        },
+        "asserted_by": [
+          "D2"
+        ],
+        "order": 37
+      },
+      {
+        "claim_id": "C35",
+        "section": "content",
+        "span": {
+          "text": "Ngay sau khi quyết định công nhận thỏa thuận có hiệu lực thì ông K không còn quyền và lợi ích liên quan đến diện tích đất bà T đã sang nhượng cho ông L1."
+        },
+        "asserted_by": [
+          "D2"
+        ],
+        "order": 38
+      },
+      {
+        "claim_id": "C36",
+        "section": "content",
+        "span": {
+          "text": "Do đó ông K không có quyền khởi kiện ông L1, Bà T yêu cầu tòa án tuyên bố hợp đồng chuyển nhượng quyền sử dụng đất lập ngày 01/3/2016 của Văn phòng Công chứng L giữa L1 và T vô hiệu."
+        },
+        "asserted_by": [
+          "D2"
+        ],
+        "order": 39
+      },
+      {
+        "claim_id": "C37",
+        "section": "content",
+        "span": {
+          "text": "Nguyên đơn không đồng ý với yêu cầu kháng cáo của bị đơn - ông Hà Bảo L1."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 42
+      }
+    ],
+    "requests": [
+      {
+        "request_id": "R1",
+        "section": "content",
+        "span": {
+          "text": "Ngày 06/12/2016, ông Đỗ Văn K nộp đơn khởi kiện ông Hà Bảo L1 và bà Trần Thị Bích T yêu cầu tuyên bố Hợp đồng chuyển nhượng quyền sử dụng đất số 000928 ngày 01/3/2016 của Văn phòng Công chứng L giữa ông Hà Bảo L1 và bà Trần Thị Bích T vô hiệu vì hợp đồng được ký kết trong thời gian hợp đồng đặt cọc số 00008448 ngày 08/9/2014 giữa ông K và bà T vẫn còn hiệu lực, đang có tranh chấp, Tòa án đang giải quyết."
+        },
+        "requested_by": [
+          "P1"
+        ],
+        "modification_spans": [],
+        "order": 11
+      },
+      {
+        "request_id": "R2",
+        "section": "content",
+        "span": {
+          "text": "Do đó, ông yêu cầu đình chỉ giải quyết vụ án."
+        },
+        "requested_by": [
+          "D2"
+        ],
+        "modification_spans": [
+          {
+            "text": "Nếu không được thì đề nghị hội đồng xét xử hủy bản án sơ thẩm, đình chỉ giải quyết vụ án vì ông K không có quyền khởi kiện.",
+            "section": "content",
+            "order": 41
+          }
+        ],
+        "order": 35
+      },
+      {
+        "request_id": "R3",
+        "section": "content",
+        "span": {
+          "text": "Trong trường hợp Tòa án không chấp nhận yêu cầu đình chỉ giải quyết vụ án thì đề nghị Hội đồng xét xử triệu tập bà T đến Tòa án tham gia tố tụng để làm rõ vụ án và không chấp nhận yêu cầu khởi kiện của ông K. 5 Tại phiên tòa sơ thẩm, ông Thi trình bày phần đất mà ông L1 nhận chuyển nhượng của bà T hiện nay ông L1 đã ký hợp đồng chuyển nhượng lại cho ông T2 bằng giấy tay nhưng ông Thi không cung cấp được hợp đồng chuyển nhượng giữa ông L1 và ông T2 nên nếu ông L1 và ông T2 có tranh chấp giao dịch dân sự chuyển nhượng quyền sử dụng đất thì sẽ được giải quyết bằng một vụ kiện khác."
+        },
+        "requested_by": [
+          "D2"
+        ],
+        "modification_spans": [
+          {
+            "text": "Đề nghị Hội đồng xét xử xem xét sửa bản án sơ thẩm theo hướng chấp nhận kháng cáo của ong L1, không chấp nhận yêu cầu khởi kiện của nguyên dơn.",
+            "section": "content",
+            "order": 40
+          }
+        ],
+        "order": 36
+      },
+      {
+        "request_id": "R4",
+        "section": "content",
+        "span": {
+          "text": "Đề nghị hội đồng xét xử không chấp nhận kháng cáo của ông L1 và giữ nguyên bản án sơ thẩm."
+        },
+        "requested_by": [
+          "P1"
+        ],
+        "modification_spans": [],
+        "order": 43
+      }
+    ],
+    "reasonings": [
+      {
+        "reasoning_id": "RE1",
+        "section": "assessment",
+        "span": {
+          "text": "Hội đồng xét xử nhận thấy: Hợp đồng chuyển nhượng quyền sử dụng đất số 000928 ngày 01/3/2016 được Văn phòng Công chứng L chứng thực giữa bà T và ông L1 được thực hiện trước ngày Quyết định công nhận sự thỏa thuận của các đương sự số 36/2016/QĐST-DS ngày 15/6/2016 của Tòa án nhân dân huyện C có hiệu lực pháp luật."
+        },
+        "order": 44
+      },
+      {
+        "reasoning_id": "RE2",
+        "section": "assessment",
+        "span": {
+          "text": "Theo nội dung quyết định công nhận trên, bà T và ông K thỏa thuận hủy hợp đồng đặt cọc số 00008448 ngày 08/9/2014 của Văn phòng Công chứng T giữa ông K và bà T và bà T có nghĩa vụ hoàn trả cho ông K số tiền 500.000.000 đồng vào ngày 30/6/2016."
+        },
+        "order": 45
+      },
+      {
+        "reasoning_id": "RE3",
+        "section": "assessment",
+        "span": {
+          "text": "Như vậy, kể từ thời điểm Quyết định công nhận sự thỏa thuận của các đương sự số 36/2016/QĐST-DS ngày 15/6/2016 thì hợp đồng đặt cọc giữa bà T và ông K không còn tồn tại."
+        },
+        "order": 46
+      },
+      {
+        "reasoning_id": "RE4",
+        "section": "assessment",
+        "span": {
+          "text": "Bà T chỉ có nghĩa vụ trả 500.000.000 đồng cho ông K, bà T không có nghĩa vụ về quyền sử dụng đất đối với ông K."
+        },
+        "order": 47
+      },
+      {
+        "reasoning_id": "RE5",
+        "section": "assessment",
+        "span": {
+          "text": "Ngoài ra, nội dung Quyết định công nhận sự thỏa thuận của các đương sự số 36/2016/QĐST-DS ngày 15/6/2016 của Tòa án nhân dân huyện C cũng không có nội dung nào thỏa thuận trường hợp bà T không trả 500.000.000 đồng cho ông K thì kê biên, phát mãi tài sản là quyền sử dụng đất đối với phần đất diện tích 469,3m2 thuộc thửa 35 tờ bản đồ số 73 xã L, huyện C, Thành phố Hồ Chí Minh để thi hành án."
+        },
+        "order": 48
+      },
+      {
+        "reasoning_id": "RE6",
+        "section": "assessment",
+        "span": {
+          "text": "Ông K yêu cầu Tòa án tuyên bố hợp đồng chuyển nhượng quyền sử dụng đất số 000928/HĐGD ngày 03/6/2015 giữa ông L1 và bà T được Văn phòng Công chứng L chứng thực vô hiệu, tuy nhiên ông K không có liên quan về quyền và nghĩa vụ trong hợp đồng chuyển nhượng quyền sử dụng đất nêu trên nên ông K không có quyền khởi kiện yêu cầu tuyên bố hợp đồng chuyển nhượng quyền sử dụng đất số 000928/HĐGD ngày 03/6/2015 giữa ông L1 và bà T được Văn phòng Công chứng L chứng thực vô hiệu."
+        },
+        "order": 49
+      },
+      {
+        "reasoning_id": "RE7",
+        "section": "assessment",
+        "span": {
+          "text": "Tòa án cấp sơ thẩm cho rằng ông K có quyền khởi kiện yêu cầu Tòa án tuyên bố hợp đồng chuyển nhượng quyền sử dụng đất số 000928/HĐGD ngày 03/6/2015 giữa ông L1 và bà T được Văn phòng Công chứng L chứng thực vô hiệu vì hợp đồng chuyển nhượng quyền sử dụng đất nêu trên ảnh hưởng đến quyền và lợi ích của ông K cụ thể là quyền được thi hành án theo Quyết định thi hành án theo yêu cầu số 318/QĐ-CCTHADS ngày 12/7/2016 và Quyết định về việc cưỡng chế kê biên quyền sử dụng đất số 06/QĐ-CCTHADS ngày 02/01/201/8 của Chi cục Thi hành án dân sự huyện C là không có căn cứ, trái quy định tại khoản 2 Điều 75 Luật Thi hành án dân sự năm 2015, Điều 24 Nghị định số 62/2015/NĐ-CP của Chính phủ ngày 18/7/2015 quy định chi tiết và hướng dẫn thi hành một số diều của Luật Thi hành án dân sự năm 2015, khoản 1 Điều 398 Bộ luật Tố tụng dân sự năm"
+        },
+        "order": 50
+      },
+      {
+        "reasoning_id": "RE8",
+        "section": "assessment",
+        "span": {
+          "text": "Từ những nhận định trên, căn cứ các Điều 311, Điều 186, điểm a khoản 1 Điều 192, điểm g khoản 1 Điều 217, khoản 4 Điều 308, khoản 1 Điều 398 Bộ luật Tố tụng dân sự năm 2015, Hội đồng xét xử không xem xét nội dung vụ án."
+        },
+        "order": 51
+      },
+      {
+        "reasoning_id": "RE9",
+        "section": "assessment",
+        "span": {
+          "text": "Hội đồng xét xử hủy bản án dân sự sơ thẩm và đình chỉ giải quyết vụ án do nguyên đơn không có quyền khởi kiện."
+        },
+        "order": 52
+      }
+    ],
+    "decisions": [
+      {
+        "decision_id": "DE1",
+        "section": "decision",
+        "span": {
+          "text": "Hủy bản án dân sự sơ thẩm số 143/2018/DS-ST ngày 07 tháng 9 năm 2018 của Tòa án nhân dân huyện C, Thành phố Hồ Chí Minh và Đình chỉ giải quyết vụ án dân sự thụ lý số 620/2016/TLST-DS ngày 28 tháng 12 năm 2016 của Tòa án nhân dân huyện C, Thành phố Hồ Chí Minh về việc “Tranh chấp hợp đồng chuyển nhượng quyền sử dụng đất”, giữa: Nguyên đơn: Ông Đỗ Văn K, sinh năm: 1976; Cư trú tại: DE-9 Hưng Vượng 3, đường Nguyễn Văn Linh, phường Tân Phong, Quận 7, Thành phố Hồ Chí Minh."
+        },
+        "order": 53
+      },
+      {
+        "decision_id": "DE2",
+        "section": "decision",
+        "span": {
+          "text": "Về án phí: - Án phí dân sự sơ thẩm: Ông Đỗ Văn K không phải chịu án phí dân sự sơ thẩm. Hoàn trả lại cho ông Đỗ Văn K số tiền tạm ứng án phí dân sự sơ thẩm đã nộp là 7.500.000 (Bảy triệu năm trăm nghìn) đồng theo Biên lai thu tiền tạm ứng án phí, lệ phí tòa án số AA/2016/0021433 ngày 15 tháng 12 năm 2016 của Chi cục Thi hành án dân sự huyện C, Thành phố Hồ Chí Minh. - Án phí dân sự phúc thẩm: Ông Hà Bảo L1 không phải chịu án phí dân sự phúc thẩm. Hoàn trả lại cho ông Hà Bảo L1 tiền tạm ứng án phí dân sự phúc 11 thẩm đã nộp là 300.000 (Ba trăm nghìn) đồng theo Biên lai thu tiền tạm ứng án phí, lệ phí tòa án số AA/2018/0006058 ngày 26 tháng 9 năm 2018 của Chi cục Thi hành án dân sự huyện C, Thành phố Hồ Chí Minh."
+        },
+        "order": 54
+      }
+    ],
+    "request_decision_links": [
+      {
+        "request_id": "R1",
+        "decision_id": "DE1"
+      },
+      {
+        "request_id": "R2",
+        "decision_id": "DE1"
+      },
+      {
+        "request_id": "R3",
+        "decision_id": "DE1"
+      },
+      {
+        "request_id": "R4",
+        "decision_id": "DE1"
+      }
+    ],
+    "request_reasoning_links": [
+      {
+        "request_id": "R2",
+        "reasoning_id": "RE8"
+      },
+      {
+        "request_id": "R2",
+        "reasoning_id": "RE9"
+      },
+      {
+        "request_id": "R4",
+        "reasoning_id": "RE8"
+      },
+      {
+        "request_id": "R4",
+        "reasoning_id": "RE9"
+      },
+      {
+        "request_id": "R3",
+        "reasoning_id": "RE8"
+      },
+      {
+        "request_id": "R3",
+        "reasoning_id": "RE9"
+      },
+      {
+        "request_id": "R1",
+        "reasoning_id": "RE6"
+      },
+      {
+        "request_id": "R1",
+        "reasoning_id": "RE8"
+      },
+      {
+        "request_id": "R1",
+        "reasoning_id": "RE9"
+      }
+    ],
+    "request_outcomes": [
+      {
+        "request_id": "R1",
+        "outcome": "REJECTED"
+      },
+      {
+        "request_id": "R2",
+        "outcome": "ACCEPTED"
+      },
+      {
+        "request_id": "R3",
+        "outcome": "REJECTED"
+      },
+      {
+        "request_id": "R4",
+        "outcome": "REJECTED"
+      }
+    ]
+  },
+  {
+    "case_id": 24850,
+    "parties": [
+      {
+        "party_id": "P1",
+        "name": "Trần Văn Đ",
+        "procedural_role": "PLAINTIFF"
+      },
+      {
+        "party_id": "D1",
+        "name": "Huỳnh Thanh L",
+        "procedural_role": "DEFENDANT"
+      }
+    ],
+    "claims": [
+      {
+        "claim_id": "C1",
+        "section": "content",
+        "span": {
+          "text": "Vào ngày 09/5/2019, ông cho ông Huỳnh Thanh L mượn số tiền 30.000.000 đồng, không tính lãi, để làm vốn, anh L hứa khi nào ông cần lấy lại thì báo trước cho ông L 01 tháng."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 1
+      }
+    ],
+    "requests": [
+      {
+        "request_id": "R1",
+        "section": "content",
+        "span": {
+          "text": "Nay ông có nhu cầu cần sử dụng số tiền này, đã yêu cầu ông L hoàn trả, nhưng ông L hẹn hoài mà không trả tiền. 2 Nay ông cầu Tòa án giải quyết: Buộc ông Huỳnh Thanh L phải trả số tiền vồn 30.000.000 đồng, không yêu cầu tính lãi."
+        },
+        "requested_by": [
+          "P1"
+        ],
+        "modification_spans": [],
+        "order": 2
+      }
+    ],
+    "reasonings": [
+      {
+        "reasoning_id": "RE1",
+        "section": "assessment",
+        "span": {
+          "text": "Căn cứ vào Tờ cho mượn tiền nêu trên, có căn cứ xác định bị đơn có mượn của nguyên đơn 30.000.000 đồng, không có thời hạn và không có thỏa thuận lãi, đến nay bị đơn vẫn chưa trả cho nguyên đơn. [4] Tại Điều 463 của Bộ luật Dân sự năm 2015 quy định:“Hợp đồng vay tài sản là sự thoả thuận giữa các bên, theo đó bên cho vay giao tài sản cho bên vay; khi đến hạn trả, bên vay phải hoàn trả cho bên cho vay tài sản cùng loại theo đúng số lượng, chất lượng và phải chịu lãi nếu có thoả thuận hoặc pháp luật có quy định”. [5] Tại khoản 4 Điều 466 của Bộ luật Dân sự năm 2015 quy định nghĩa vụ trả nợ của bên vay:“4."
+        },
+        "order": 3
+      },
+      {
+        "reasoning_id": "RE2",
+        "section": "assessment",
+        "span": {
+          "text": "Do yêu cầu khởi kiện được chấp nhận, nên nguyên đơn không phải chịu án phí và được nhận lại số tiền tạm ứng án phí đã nộp."
+        },
+        "order": 4
+      }
+    ],
+    "decisions": [
+      {
+        "decision_id": "DE1",
+        "section": "decision",
+        "span": {
+          "text": "Chấp nhận yêu cầu khởi kiện của ông Trần Văn Đ, buộc ông Huỳnh Thanh L phải có nghĩa vụ trả cho ông Đ số tiền vốn 30.000.000 đồng."
+        },
+        "order": 5
+      },
+      {
+        "decision_id": "DE2",
+        "section": "decision",
+        "span": {
+          "text": "Khi bản án có hiệu lực pháp luật, kể từ ngày người được thi hành án có đơn yêu cầu thi hành án thì hàng tháng người phải thi hành án còn phải trả lãi cho người được thi hành án theo mức lãi suất quy định tại khoản 2 Điều 357 và khoản 2 Điều 468 của Bộ luật Dân sự năm 2015, đối với số tiền chậm thi hành án."
+        },
+        "order": 6
+      },
+      {
+        "decision_id": "DE3",
+        "section": "decision",
+        "span": {
+          "text": "Án phí dân sự sơ thẩm: - Buộc ông Huỳnh Thanh L phải chịu 1.500.000 đồng."
+        },
+        "order": 7
+      },
+      {
+        "decision_id": "DE4",
+        "section": "decision",
+        "span": {
+          "text": "Ông Trần Văn Đ không phải chịu và được nhận lại số tiền tạm ứng đã nộp 750.000 đồng, theo Biên lai thu tạm ứng án phí, lệ phí Tòa án số 0001440, ngày 29/10/2021 của Chi cục Thi hành án dân sự huyện Kế Sách, tỉnh Sóc Trăng. 4"
+        },
+        "order": 8
+      }
+    ],
+    "request_decision_links": [
+      {
+        "request_id": "R1",
+        "decision_id": "DE1"
+      }
+    ],
+    "request_reasoning_links": [
+      {
+        "request_id": "R1",
+        "reasoning_id": "RE1"
+      }
+    ],
+    "request_outcomes": [
+      {
+        "request_id": "R1",
+        "outcome": "ACCEPTED"
+      }
+    ]
+  },
+  {
+    "case_id": 23166,
+    "parties": [
+      {
+        "party_id": "P1",
+        "name": "Trần Quang T",
+        "procedural_role": "PLAINTIFF"
+      },
+      {
+        "party_id": "D1",
+        "name": "Phạm Anh D",
+        "procedural_role": "DEFENDANT"
+      }
+    ],
+    "claims": [
+      {
+        "claim_id": "C1",
+        "section": "content",
+        "span": {
+          "text": "Taïi ñôn khôûi kieän ñeà ngaøy 23/9/2019 cuûa ông Trần Quang T vaø các caùc lôøi khai tiếp theo trong quá trình giải quyết vụ án cuûa ngöôøi ñaïi dieän uûy quyeàn laø oâng Nguyễn Đình N trình baøy: Ngày 02 tháng 4 năm 2014 nguyên đơn ông Trần Quang T có cho bị đơn, ông Phạm Anh D vay số tiền: 1.303.497.000 đồng."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 1
+      },
+      {
+        "claim_id": "C2",
+        "section": "content",
+        "span": {
+          "text": "Theo Giấy vay tiền ngày 02 tháng 4 năm 2014 có chữ ký và dấu lăn tay của ông D các bên thỏa thuận như sau: ông D sẽ thanh toán cả tiền gốc lẫn tiền lãi làm 03 đợt lần lượt vào ngày 02/4/2015, ngày 02/4/2016 và 02/4/2017."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 2
+      },
+      {
+        "claim_id": "C3",
+        "section": "content",
+        "span": {
+          "text": "Tuy nhiên, kể từ ngày 02/4/2014 đến nay, ông D chỉ trả cho ông Trần Quang T 60.000.000 đồng tiền lãi của năm vay đầu tiên (vào ngày 25/6/2014 và 31/12/2014)."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 3
+      },
+      {
+        "claim_id": "C4",
+        "section": "content",
+        "span": {
+          "text": "Ông Trần Quang T đã nhiều lần gọi điện thoại, gửi email, gửi thông báo bằng văn bản và gặp mặt nhắc nợ nhưng ông D vẫn không thực hiện việc thanh toán tiền vay như đã cam kết."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 4
+      },
+      {
+        "claim_id": "C5",
+        "section": "content",
+        "span": {
+          "text": "Đến ngày 10/7/2019 ông T và ông D có lập Biên bản (về việc xác nhận nợ và thời gian trả nợ) với nội dung: Căn cứ Giấy vay tiền ngày 02 tháng 4 năm 2014 ông D có ký tên để vay số tiền 1.303.497 đồng của ông T."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 5
+      },
+      {
+        "claim_id": "C6",
+        "section": "content",
+        "span": {
+          "text": "Nên hôm nay ông T mời ông D họp để yêu cầu ông D trả hết nợ."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 6
+      },
+      {
+        "claim_id": "C7",
+        "section": "content",
+        "span": {
+          "text": "Sau khi họp ông D đề nghị chỉ trả cho ông T 600.000.000 (sáu trăm triệu) đồng chứ không trả số tiền 1.303.497.000 đồng trong vòng 03 (ba) năm vì theo ông D số tiền này là chưa chính xác."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 7
+      },
+      {
+        "claim_id": "C8",
+        "section": "content",
+        "span": {
+          "text": "Từ sau khi ký Giấy vay tiền ngày 02/4/2014 và Biên bản về việc xác nhận nợ và thời gian trả nợ ngày 10/7/2019 nêu trên ông D không thanh toán cho ông T bất kỳ khoản tiền nào nữa vì thế ông D đã làm đơn khởi kiện yêu cầu Tòa án:"
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 8
+      },
+      {
+        "claim_id": "C9",
+        "section": "content",
+        "span": {
+          "text": "Ông Nguyễn Đình N (là đại diện theo ủy quyền của nguyên đơn- ông Trần Quang T) xác nhận chữ ký trên Giấy vay tiền ngày 02/4/2014 và Biên bản về việc xác nhận nợ và thời gian trả nợ ngày 10/7/2019 là đúng chữ ký của ông T và ông D nên ông N đề nghị Tòa án không giám định các chữ ký, chữ viết trên các văn bản nêu trên."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 12
+      },
+      {
+        "claim_id": "C10",
+        "section": "content",
+        "span": {
+          "text": "Quá trình Tòa án giải quyết vụ án; Bị đơn là ông Phạm Anh D có đến Tòa để trình bày ý kiến bằng các bản tự khai ngày 19/11/2020, ngày 08/01/2020 và tại các phiên họp kiểm tra việc giao nộp tiếp cận công khai chúng cứ và các biên bản hòa giải ông D xác nhận yêu cầu khởi kiện của nguyên đơn là đúng, ông có ký Giấy vay tiền ngày 02/04/2014 (đúng chữ ký) với nội dung đúng như nguyên đơn trình bày."
+        },
+        "asserted_by": [
+          "D1"
+        ],
+        "order": 13
+      },
+      {
+        "claim_id": "C11",
+        "section": "content",
+        "span": {
+          "text": "Tuy nhiên trên thực tế ông chỉ vay nguyên đơn khoảng 300.000.000 (ba trăm triệu) đồng chứ không phải 1.303.497.000 (Một tỷ ba trăm lẻ ba triệu bốn trăm chín mươi bảy nghìn) đồng như trên giấy vay tiền thể hiện."
+        },
+        "asserted_by": [
+          "D1"
+        ],
+        "order": 14
+      },
+      {
+        "claim_id": "C12",
+        "section": "content",
+        "span": {
+          "text": "Ông T và ông thỏa thuận với nhau lập ra Giấy vay tiền ngày 02/4/2014 để hợp thức hóa cho việc chấm dứt công việc làm ăn giữa hai người trước đây."
+        },
+        "asserted_by": [
+          "D1"
+        ],
+        "order": 15
+      },
+      {
+        "claim_id": "C13",
+        "section": "content",
+        "span": {
+          "text": "Trước tình hình kinh tế khó khăn, ông D đồng ý trả cho ông Trần Quang T số tiền 300.000.000 đồng trong thời hạn 01 năm kể từ ngày hòa giải, chia thành 12 kỳ chứ không đồng ý trả 1.303.497.000 như yêu cầu khởi kiện của nguyên đơn."
+        },
+        "asserted_by": [
+          "D1"
+        ],
+        "order": 16
+      },
+      {
+        "claim_id": "C14",
+        "section": "content",
+        "span": {
+          "text": "Ông D xác nhận chữ ký trên Giấy vay tiền ngày 02/4/2014 và Biên bản về việc xác nhận nợ và thời gian trả nợ ngày 10/7/2019 là đúng chữ ký của ông T và ông D 3 nên ông D đề nghị Tòa án không giám định các chữ ký, chữ viết trên các văn bản nêu trên."
+        },
+        "asserted_by": [
+          "D1"
+        ],
+        "order": 17
+      }
+    ],
+    "requests": [
+      {
+        "request_id": "R1",
+        "section": "content",
+        "span": {
+          "text": "Buộc ông Phạm Anh D hoàn trả số tiền gốc: 1.303.497.000 đồng;"
+        },
+        "requested_by": [
+          "P1"
+        ],
+        "modification_spans": [
+          {
+            "section": "content",
+            "text": "Số tiền 60.000.000 đồng mà bị dơn đã trả nguyên đơn đồng ý trừ vào tiền nợ gốc.",
+            "order": 19
+          },
+          {
+            "section": "content",
+            "text": "Đồng thời đại diện theo ủy quyền của nguyên đơn xác định chỉ yêu cầu cá nhân ông Phạm Anh D có nghĩa vụ trả cho nguyên đơn số tiền nợ trên mà không yêu cầu chủ thể thứ ba nào khác có nghĩa vụ liên đới trả nợ thay.",
+            "order": 20
+          }
+        ],
+        "order": 9
+      },
+      {
+        "request_id": "R2",
+        "section": "content",
+        "span": {
+          "text": "Buộc ông Phạm Anh D trả tiền lãi trên nợ gốc trong hạn."
+        },
+        "requested_by": [
+          "P1"
+        ],
+        "modification_spans": [
+          {
+            "section": "content",
+            "text": "Ngày 07/12/2021 ông Nguyễn Đình N là đại diện theo ủy quyền của nguyên đơn có đơn đề nghị xét xử vắng mặt và bản tự khai với nội dung giữ nguyên yêu cầu khởi kiện, tuy nhiên ông điều chỉnh cách tính lãi trong hạn trên số nợ gốc theo hướng giảm từ 9%/năm xuống còn 7%/năm để có lợi cho bị đơn.",
+            "order": 18
+          }
+        ],
+        "order": 10
+      },
+      {
+        "request_id": "R3",
+        "section": "content",
+        "span": {
+          "text": "Buộc ông D trả tiền lãi trên nợ gốc quá hạn: Từ ngày 03/4/2017 đến ngày 16/11/2020 là: 29 tháng."
+        },
+        "requested_by": [
+          "P1"
+        ],
+        "modification_spans": [],
+        "order": 11
+      }
+    ],
+    "reasonings": [
+      {
+        "reasoning_id": "RE1",
+        "section": "assessment",
+        "span": {
+          "text": "Tuy nhiên ông D cho rằng ông lập và ký Giấy vay tiền trên chỉ nhằm để hợp thức hóa chấm dứt công việc làm ăn trước đây giữa ông và ông T chứ ông không mượn ông T số tiền 1.303.497.000 (Một tỷ ba trăm lẻ ba triệu bốn trăm chín mươi bảy nghìn) đồng, thực tế ông chỉ mượn nguyên đơn khoảng ba trăm triệu đồng mà thôi."
+        },
+        "order": 21
+      },
+      {
+        "reasoning_id": "RE2",
+        "section": "assessment",
+        "span": {
+          "text": "Tòa án đã ra Quyết định cung cấp chứng cứ đề nghị ông D cung cấp toàn bộ tài liệu chứng cứ chứng minh cho lời khai của ông."
+        },
+        "order": 22
+      },
+      {
+        "reasoning_id": "RE3",
+        "section": "assessment",
+        "span": {
+          "text": "Tuy nhiên ông D đã không cung cấp cho Tòa án bất cứ tài liệu chứng cứ nào để chứng minh cho lời khai của ông là có cơ sở."
+        },
+        "order": 23
+      },
+      {
+        "reasoning_id": "RE4",
+        "section": "assessment",
+        "span": {
+          "text": "Đồng thời ông Nguyễn Đình N là đại diện theo ủy quyền của ông T khai nhận, ông T là giám đốc công ty nơi ông D là người lao động được trả lương chứ không phải là đối tác của ông T nên ông D khai lập giấy vay tiền để hợp thức hóa cho việc chấm dứt công việc làm ăn là không đúng."
+        },
+        "order": 24
+      },
+      {
+        "reasoning_id": "RE5",
+        "section": "assessment",
+        "span": {
+          "text": "Từ những nhận định trên có cơ sở xác định nguyên đơn ông Trần Quang T có cho bị đơn là ông Phạm Anh D vay tiền đúng như yêu cầu khởi kiện của nguyên đơn."
+        },
+        "order": 25
+      },
+      {
+        "reasoning_id": "RE6",
+        "section": "assessment",
+        "span": {
+          "text": "Về thời hạn thanh toán nợ: theo Giấy vay tiền ngày 02 tháng 4 năm 2014 ông D có trách nhiệm thanh toán cả tiền gốc lẫn tiền lãi làm 03 đợt lần lượt vào ngày 02/4/2015, ngày 02/4/2016 và 02/4/2017."
+        },
+        "order": 26
+      },
+      {
+        "reasoning_id": "RE7",
+        "section": "assessment",
+        "span": {
+          "text": "Mỗi đợt trả 525.743.000 đồng, trong đó nợ gốc mỗi đợt là 434.499.000 đồng và lãi mỗi đợt là 91.244.000 đồng."
+        },
+        "order": 27
+      },
+      {
+        "reasoning_id": "RE8",
+        "section": "assessment",
+        "span": {
+          "text": "Nếu vi phạm nghĩa vụ thanh toán nợ ông D sẽ chịu tất cả các khoản phạt và lãi suất sẽ tự động tăng mỗi năm thêm 3% cho mỗi lần vi phạm lịch thanh toán (lãi suất tối đa không vượt quá 24%/năm)."
+        },
+        "order": 28
+      },
+      {
+        "reasoning_id": "RE9",
+        "section": "assessment",
+        "span": {
+          "text": "Tuy nhiên, kể từ ngày 02/4/2014 đến nay, ông D chỉ trả cho Trần Quang T 60.000.000 đồng, nguyên đơn đồng ý trừ số tiền này vào nợ gốc."
+        },
+        "order": 29
+      },
+      {
+        "reasoning_id": "RE10",
+        "section": "assessment",
+        "span": {
+          "text": "Ông Trần Quang T đã nhiều lần gọi điện thoại, gửi email, gửi thông báo bằng văn bản và gặp mặt nhắc nợ nhưng ông D vẫn không thực hiện việc thanh toán tiền vay như đã cam kết."
+        },
+        "order": 30
+      },
+      {
+        "reasoning_id": "RE11",
+        "section": "assessment",
+        "span": {
+          "text": "Như vậy ông D đã vi phạm thời hạn thanh toán nợ."
+        },
+        "order": 31
+      },
+      {
+        "reasoning_id": "RE12",
+        "section": "assessment",
+        "span": {
+          "text": "Đối với tiền lãi, các bên thỏa thuận nợ lãi trong hạn là 9%, nay ông N là đại diện theo ủy quyền của ông T điều chỉnh lại tiền lãi là 7%/năm đối với lãi suất trong hạn từ 02/4/2015 đến 02/4/2017 trên nợ gốc trong 03 năm là 261.134.370 đồng, việc điều chỉnh lãi này có lợi cho bị đơn nên được chấp nhận."
+        },
+        "order": 32
+      },
+      {
+        "reasoning_id": "RE13",
+        "section": "assessment",
+        "span": {
+          "text": "Về cách tính nợ lãi quá hạn: Tại Bút lục số 61, 62 và 63 nguyên đơn tính nợ lãi quá hạn với lãi suất 0.75%/tháng tính từ ngày 03/4/2015 đến 08/12/2021 là: 634.183.470 đồng tính theo công thức: Lãi trên nợ gốc quá hạn = Nợ gốc 1.243.497.000 đồng chia thành 03 đợt x 9% x 12 tháng x số tháng quá hạn."
+        },
+        "order": 33
+      },
+      {
+        "reasoning_id": "RE14",
+        "section": "assessment",
+        "span": {
+          "text": "Cụ thể: Từ 03/4/2015 đến 08/12/2021: Nợ gốc 414.499.000 đồng x 80 tháng x 0.75% = 248.699.400 đồng."
+        },
+        "order": 34
+      },
+      {
+        "reasoning_id": "RE15",
+        "section": "assessment",
+        "span": {
+          "text": "Từ 03/4/2016 đến 08/12/2021: Nợ gốc 414.499.000đồng x 68 tháng x 0.75% = 211.394.490 đồng."
+        },
+        "order": 35
+      },
+      {
+        "reasoning_id": "RE16",
+        "section": "assessment",
+        "span": {
+          "text": "Từ 03/4/2017 đến 08/12/2021: Nợ gốc 414.499.000đồng x 56 tháng x 0.75% = 174.089.580 đồng. 6 Cách tính tách số nợ gốc ra thành 03 đợt để tính lãi quá hạn trên nợ gốc theo từng đợt như trên là có lợi có lợi cho bị đơn nên được chấp nhận."
+        },
+        "order": 36
+      },
+      {
+        "reasoning_id": "RE17",
+        "section": "assessment",
+        "span": {
+          "text": "Nay ông T yêu cầu Tòa án buộc ông D hoàn trả số tiền gốc: 1.243.497.000 đồng (đã trừ 60.000.000 đồng ông D đã thanh toán ngày 25/6/2014 và ngày 31/12/2014), tiền lãi trong hạn từ 02/4/2015 đến 02/4/2017 trên nợ gốc trong 03 năm là 261.134.370 đồng, tiền lãi quá hạn trên nợ gốc từ ngày 03/4/2015 đến ngày 08/12/2021 là 634.183.470 đồng."
+        },
+        "order": 37
+      },
+      {
+        "reasoning_id": "RE18",
+        "section": "assessment",
+        "span": {
+          "text": "Tổng cộng là 2.138.814.840 (Hai tỷ một trăm ba mươi tám triệu tám trăm mười bốn nghìn tám trăm bốn mươi) đồng với thời hạn trả một lần ngay khi bản án có hiệu lực pháp luật là có cơ sở để chấp nhận."
+        },
+        "order": 38
+      },
+      {
+        "reasoning_id": "RE19",
+        "section": "assessment",
+        "span": {
+          "text": "Ngoài ra, đại diện nguyên đơn là ông Nguyễn Đình N khai nhận nguyên đơn chỉ khởi kiện yêu cầu cá nhân ông Phạm Anh D phải trả toàn bộ số tiền còn nợ nêu trên ngay khi bản án có hiệu lực pháp luật mà không yêu cầu chủ thể thứ ba nào khác có nghĩa vụ liên đới trả số nợ trên."
+        },
+        "order": 39
+      },
+      {
+        "reasoning_id": "RE20",
+        "section": "assessment",
+        "span": {
+          "text": "Hội đồng xét xử nhận định đây là yêu cầu có cơ sở nên được ghi nhận."
+        },
+        "order": 40
+      }
+    ],
+    "decisions": [
+      {
+        "decision_id": "DE1",
+        "section": "decision",
+        "span": {
+          "text": "Chấp nhận toàn bộ yêu cầu khởi kiện của nguyên đơn là ông Trần Quang T."
+        },
+        "order": 41
+      },
+      {
+        "decision_id": "DE2",
+        "section": "decision",
+        "span": {
+          "text": "Buộc ông Phạm Anh D trả cho ông Trần Quang T số tiền 2.138.814.840 (Hai tỷ một trăm ba mươi tám triệu tám trăm mười bốn nghìn tám trăm bốn mươi) đồng."
+        },
+        "order": 42
+      },
+      {
+        "decision_id": "DE3",
+        "section": "decision",
+        "span": {
+          "text": "Trong đó bao gồm: Nợ gốc: 1.243.497.000 đồng, nợ lãi trong hạn tính từ 02/4/2015 đến 02/4/2017 trên nợ gốc là 261.134.370 đồng, nợ lãi quá hạn trên nợ gốc từ ngày 03/4/2015 đến ngày 08/12/2021 là 634.183.470 đồng."
+        },
+        "order": 43
+      }
+    ],
+    "request_decision_links": [
+      {
+        "request_id": "R1",
+        "decision_id": "DE2"
+      },
+      {
+        "request_id": "R1",
+        "decision_id": "DE3"
+      },
+      {
+        "request_id": "R2",
+        "decision_id": "DE2"
+      },
+      {
+        "request_id": "R2",
+        "decision_id": "DE3"
+      },
+      {
+        "request_id": "R3",
+        "decision_id": "DE2"
+      },
+      {
+        "request_id": "R3",
+        "decision_id": "DE3"
+      }
+    ],
+    "request_reasoning_links": [
+      {
+        "request_id": "R2",
+        "reasoning_id": "RE12"
+      },
+      {
+        "request_id": "R2",
+        "reasoning_id": "RE18"
+      },
+      {
+        "request_id": "R3",
+        "reasoning_id": "RE13"
+      },
+      {
+        "request_id": "R3",
+        "reasoning_id": "RE16"
+      },
+      {
+        "request_id": "R3",
+        "reasoning_id": "RE18"
+      },
+      {
+        "request_id": "R1",
+        "reasoning_id": "RE5"
+      },
+      {
+        "request_id": "R1",
+        "reasoning_id": "RE11"
+      },
+      {
+        "request_id": "R1",
+        "reasoning_id": "RE18"
+      }
+    ],
+    "request_outcomes": [
+      {
+        "request_id": "R1",
+        "outcome": "ACCEPTED"
+      },
+      {
+        "request_id": "R2",
+        "outcome": "ACCEPTED"
+      },
+      {
+        "request_id": "R3",
+        "outcome": "ACCEPTED"
+      }
+    ]
+  },
+  {
+    "case_id": 48935,
+    "parties": [
+      {
+        "party_id": "P1",
+        "name": "Nguyễn Tuấn A",
+        "procedural_role": "PLAINTIFF"
+      },
+      {
+        "party_id": "D1",
+        "name": "Lê Thị Kinh T",
+        "procedural_role": "DEFENDANT"
+      },
+      {
+        "party_id": "D2",
+        "name": "Nguyễn Quang T",
+        "procedural_role": "DEFENDANT"
+      },
+      {
+        "party_id": "I1",
+        "name": "Bùi Việt T",
+        "procedural_role": "RELATED_PARTY"
+      },
+      {
+        "party_id": "I2",
+        "name": "Nguyễn Văn V",
+        "procedural_role": "RELATED_PARTY"
+      }
+    ],
+    "claims": [
+      {
+        "claim_id": "C1",
+        "section": "content",
+        "span": {
+          "text": "Ngày 17/01/2022 ông Nguyễn Tuấn A có góp vốn cùng bà Lê Thị Kinh T để nhận chuyển nhượng một diện tích đất là 3.315,9 m2 tọa lạc tại thôn Láng Gòn 2, xã Tân Xuân, huyện H. T, tỉnh Bình Thuận, thửa đất số 197, tờ bản đồ số 8, cấp ngày 22/5/2019 do ông Nguyễn Văn V đứng tên chủ sở hữu."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 1
+      },
+      {
+        "claim_id": "C2",
+        "section": "content",
+        "span": {
+          "text": "Khi góp vốn ông A và bà T làm hợp đồng góp vốn nhưng chưa công chứng, tổng số tiền góp vốn là 3.600.000.000 đồng, vợ chồng bà T ông T góp vốn 2.700.000.000 đồng, ông T. A góp vốn 900.000.000 đồng và đưa cho bà Nguyễn Thị Thanh M số tiền 900.000.000 đồng bằng hình thức chuyển khoản 650.000.000 đồng từ tài khoản Techcombank của vợ ông T.A là bà Bùi Việt T đến tài khoản Ngân hàng ACB của ông Lê Nguyễn Quốc K (con bà M) và đưa tiền mặt là 250.000.000 đồng cho bà M để bà M thay mặt ông T. A đưa số tiền 900.000.000 đồng cho bà Lê Thị Kinh T và ông Nguyễn Quang T để góp vốn đầu tư mua chung lô đất trên."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 2
+      },
+      {
+        "claim_id": "C3",
+        "section": "content",
+        "span": {
+          "text": "Vì bà T góp 03 phần nên ông A đồng ý để bà T đứng tên, nếu có sang nhượng đất trên cho ai phải có sự đồng ý của ông A."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 3
+      },
+      {
+        "claim_id": "C4",
+        "section": "content",
+        "span": {
+          "text": "Tuy nhiên, từ đó đến nay bà T không bàn bạc với ông A, nhiều lần có khách mua, nhưng bà T không chịu, ông A có gặp bà T hỏi sổ đất hiện nay đâu để ông giới thiệu khách mua nhưng bà T không hợp tác."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 4
+      },
+      {
+        "claim_id": "C5",
+        "section": "content",
+        "span": {
+          "text": "Thời gian gần đây bà nói đã được bên chủ đất cũ (ông V) ủy quyền toàn phần cho bà."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 5
+      },
+      {
+        "claim_id": "C6",
+        "section": "content",
+        "span": {
+          "text": "Hiện nay, bà T thế chấp sổ để vay tiền bên ngoài mà không bàn bạc gì, ông A rất muốn lấy lại phần góp vốn nhưng bà T cố tình không trả."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 6
+      },
+      {
+        "claim_id": "C7",
+        "section": "content",
+        "span": {
+          "text": "Ngày 24/4/2023, bà T nộp bản tự khai trình bày ý kiến: Bà T thừa nhận có làm ăn chung với bà M."
+        },
+        "asserted_by": [
+          "D1"
+        ],
+        "order": 8
+      },
+      {
+        "claim_id": "C8",
+        "section": "content",
+        "span": {
+          "text": "Ngày 15/01/2022 bà M có đưa cho bà số tiền 300.000.000 đồng, đến ngày 17/01/2022 bà M đưa tiếp cho bà số tiền 600.000.000 đồng và bà M nói số tiền này là của bà M chung mua đất với bà tại T. X."
+        },
+        "asserted_by": [
+          "D1"
+        ],
+        "order": 9
+      },
+      {
+        "claim_id": "C9",
+        "section": "content",
+        "span": {
+          "text": "Trong thời gian mua lô đất ở T. X chưa bán được, bà T bị bệnh phải nằm bệnh viện một thời gian sau đó bà về nhà thì bà M và con bà M là Q có đưa cho bà một số giấy tờ trong đó có hợp đồng chung đất 3 với ông Nguyễn Tuấn A, sinh năm 1994, khu phố 1, phường P. L, nói là số tiền 900.000.000 đồng, chứ thực sự bà M không biết ông T. A là ông nào và ông T. A cũng không đưa tiền cho bà."
+        },
+        "asserted_by": [
+          "D1"
+        ],
+        "order": 10
+      },
+      {
+        "claim_id": "C10",
+        "section": "content",
+        "span": {
+          "text": "Giữa lúc bà T đang bệnh hoạn bà M nói cứ ký vô tờ giấy này đề làm tin."
+        },
+        "asserted_by": [
+          "D1"
+        ],
+        "order": 11
+      },
+      {
+        "claim_id": "C11",
+        "section": "content",
+        "span": {
+          "text": "Bà T không ngờ giữa lúc này tình hình kinh tế suy thoái lô đất mua chung bán không được, mọi người phải thông cảm chia sẽ rũi ro với tình hình kinh tế hiện nay."
+        },
+        "asserted_by": [
+          "D1"
+        ],
+        "order": 12
+      },
+      {
+        "claim_id": "C12",
+        "section": "content",
+        "span": {
+          "text": "Bà M và bà Lê Thị Kinh T quen biết làm ăn, mua bán bất động sản trong thời gian dài."
+        },
+        "asserted_by": [
+          "I1"
+        ],
+        "order": 13
+      },
+      {
+        "claim_id": "C13",
+        "section": "content",
+        "span": {
+          "text": "Sau khi bà T ông T có một số diện tích đất giới thiệu cho bà M mua để đầu tư, bà M còn hỗ trợ cho bà T vay tiền để làm ăn."
+        },
+        "asserted_by": [
+          "I1"
+        ],
+        "order": 14
+      },
+      {
+        "claim_id": "C14",
+        "section": "content",
+        "span": {
+          "text": "Khoảng thời gian đầu tháng 01/2022, bà T có gọi cho bà M cùng hùn tiền để mua lô đất tại T. X, vì bà M không lo kịp tiền nên có nói với ông T. A (là bạn của con trai bà ) hùn vào một phần để mua diện tích đất tại T. X, ông T. A đồng ý việc góp một phần là 900.000.000 đồng."
+        },
+        "asserted_by": [
+          "I1"
+        ],
+        "order": 15
+      },
+      {
+        "claim_id": "C15",
+        "section": "content",
+        "span": {
+          "text": "Do ông T. A bận công tác tại thành phố H. C. M không trực tiếp đưa tiền cho bà T ông T mà ông T. A chuyển khoản vào tài khoản của bà M và nhờ bà M giao cho vợ chồng ông T bà T, bà T có ký xác nhận việc góp vốn trực tiếp cho ông T. A và bà M là người làm chứng cho việc ký phần góp vốn."
+        },
+        "asserted_by": [
+          "I1"
+        ],
+        "order": 16
+      },
+      {
+        "claim_id": "C16",
+        "section": "content",
+        "span": {
+          "text": "Sau thời gian góp vốn mua chung diện tích đất trên có người trả giá cao nhưng bà T ông T không chuyển nhượng."
+        },
+        "asserted_by": [
+          "I1"
+        ],
+        "order": 17
+      },
+      {
+        "claim_id": "C17",
+        "section": "content",
+        "span": {
+          "text": "Bà M có nghe nói ông bà lấy giấy chứng nhận quyền sử dụng đất thế chấp để vay tiền bên ngoài mà không thông qua ý kiến của ông T. A."
+        },
+        "asserted_by": [
+          "I1"
+        ],
+        "order": 18
+      },
+      {
+        "claim_id": "C18",
+        "section": "content",
+        "span": {
+          "text": "Nhiều lần bà M và ông T. A có gặp mặt ông T bà T để tìm cách trả phần góp vốn cho ông T. A nhưng ông T bà T không hợp tác."
+        },
+        "asserted_by": [
+          "I1"
+        ],
+        "order": 19
+      },
+      {
+        "claim_id": "C19",
+        "section": "content",
+        "span": {
+          "text": "Bà M nhận thấy yêu cầu khởi kiện của ông T. A là đúng, ông T bà T phải trả lại số tiền góp vốn cho ông T.A."
+        },
+        "asserted_by": [
+          "I1"
+        ],
+        "order": 20
+      },
+      {
+        "claim_id": "C20",
+        "section": "content",
+        "span": {
+          "text": "Ngày 16/01/2022, bà có chuyển đến số tài khoản 12391067 – Ngân hàng TMCP Á .C chủ tài khoản là ông Lê Nguyễn Quốc K - là con của bà Nguyễn Thị Thanh M số tiền 650.000.000 đồng thay ông T. A để góp vốn đầu tư chung cùng bà M và bà Lê Thị Kinh T."
+        },
+        "asserted_by": [
+          "I1"
+        ],
+        "order": 21
+      },
+      {
+        "claim_id": "C21",
+        "section": "content",
+        "span": {
+          "text": "Số tiền góp vốn này là tài sản riêng trước hôn nhân của ông T.A."
+        },
+        "asserted_by": [
+          "I1"
+        ],
+        "order": 22
+      },
+      {
+        "claim_id": "C22",
+        "section": "content",
+        "span": {
+          "text": "Ông V thừa nhận có chuyển nhượng cho vợ chồng bà Lê Thị Kinh T và ông T một thửa đất có diện tích 3.315,9 m2 tại thôn Láng Gòn 2, xã Tân Xuân, huyện H. T, tỉnh Bình Thuận, với giá hơn 3.000.000.000 đồng (ba tỷ đồng)."
+        },
+        "asserted_by": [
+          "I2"
+        ],
+        "order": 23
+      },
+      {
+        "claim_id": "C23",
+        "section": "content",
+        "span": {
+          "text": "Vợ chồng bà T đã đưa đủ tiền cho ông V, hai bên có làm hợp đồng tại Phòng công chứng N. L."
+        },
+        "asserted_by": [
+          "I2"
+        ],
+        "order": 24
+      },
+      {
+        "claim_id": "C24",
+        "section": "content",
+        "span": {
+          "text": "Thửa đất này là tài sản chung của vợ chồng ông nhưng vợ ông để cho ông đứng tên trên giấy tờ."
+        },
+        "asserted_by": [
+          "I2"
+        ],
+        "order": 25
+      },
+      {
+        "claim_id": "C25",
+        "section": "content",
+        "span": {
+          "text": "Bà T đã làm thủ tục sang tên thửa đất này, bản chính giấy chứng nhận quyền sử dụng đất ông đã giao cho bà T."
+        },
+        "asserted_by": [
+          "I2"
+        ],
+        "order": 26
+      }
+    ],
+    "requests": [
+      {
+        "request_id": "R1",
+        "section": "content",
+        "span": {
+          "text": "Nay ông Nguyễn Tuấn A yêu cầu Tòa án giải quyết buộc vợ chồng ông Nguyễn Quang T và bà Lê Thị Kinh T phải trả cho ông số tiền vốn góp là 900.000.000 đồng."
+        },
+        "requested_by": [
+          "P1"
+        ],
+        "modification_spans": [],
+        "order": 7
+      }
+    ],
+    "reasonings": [
+      {
+        "reasoning_id": "RE1",
+        "section": "assessment",
+        "span": {
+          "text": "Căn cứ hợp đồng góp vốn mua đất ngày 17/01/2022, cụ thể được lập giữa bên A: Ông Nguyễn Quang T và bà Lê Thị Kinh T, bên B: Ông Nguyễn T. A và bên C: Người làm chứng bà Nguyễn Thị Thanh M."
+        },
+        "order": 27
+      },
+      {
+        "reasoning_id": "RE2",
+        "section": "assessment",
+        "span": {
+          "text": "Nội dung hợp đồng ghi: Các bên góp vốn để mua thửa đất số 197, tờ bản đồ số 8, diện tích 3.315,9 m2; Địa chỉ thửa đất: Thôn Láng Gòn 2, xã Tân Xuân, huyện H. T, tỉnh Bình Thuận, số vào sổ cấp GCN: CS 02908 do Sở Tài nguyên và Môi trường tỉnh Bình Thuận cấp ngày 22/5/2019; 5 Giá trị góp vốn: Hai bên thỏa thuận việc góp vốn được thực hiện như sau: Tiền góp vốn và tỷ lệ góp vốn: Tổng số tiền góp vốn: 3.600.000.000 đồng tương ứng 100%; Số tiền góp vốn bên A: 2.700.000.000 đồng tương ứng 75%; Số tiền góp vốn bên B: 900.000.000 đồng tương ứng 25%; Địa điểm góp vốn: Thị xã L, tỉnh Bình Thuận; Phương thức góp vốn: Bên B giao cho bên A tiền mặt 900.000.000 đồng."
+        },
+        "order": 28
+      },
+      {
+        "reasoning_id": "RE3",
+        "section": "assessment",
+        "span": {
+          "text": "Hợp đồng góp vốn mua đất ngày 17/01/2022 có chữ ký và chữ viết của ông Nguyễn T. A, bà Lê Thị Kinh T và bà Nguyễn Thị Thanh M là người làm chứng."
+        },
+        "order": 29
+      },
+      {
+        "reasoning_id": "RE4",
+        "section": "assessment",
+        "span": {
+          "text": "Mặc dù, không có chữ ký của ông T, nhưng trong nội dung hợp đồng có ghi tên ông Nguyễn Quang T và ông T đã nhận Thông báo thụ lý vụ án nhưng không có ý kiến gì."
+        },
+        "order": 30
+      },
+      {
+        "reasoning_id": "RE5",
+        "section": "assessment",
+        "span": {
+          "text": "Lời khai của người làm chứng bà Nguyễn Thị Thanh M cũng thừa nhận do ông T. A bận công tác tại thành phố H. C. M không trực tiếp đưa tiền cho bà T ông T nên ông T. A có nhờ bà M đưa số tiền 900.000.000 đồng cho vợ chồng bà T ông T bằng hình thức: Bà T – vợ ông T. A có chuyển khoản 650.000.000 đồng từ tài khoản Techcombank đến tài khoản Ngân hàng ACB của ông Lê Nguyễn Quốc K (con bà M) và đưa tiền mặt là 250.000.000 đồng."
+        },
+        "order": 31
+      },
+      {
+        "reasoning_id": "RE6",
+        "section": "assessment",
+        "span": {
+          "text": "Lời khai của bà T thừa nhận có nhận số tiền 900.000.000 đồng từ bà M để hùn mua đất, lời khai của ông Nguyễn Văn V thừa nhận có chuyển nhượng cho bà T ông T thửa đất số 197, tờ bản đồ số 8, diện tích 3.315,9 m2; Địa chỉ thửa đất: Thôn Láng Gòn 2, xã Tân Xuân, huyện H. T, tỉnh Bình Thuận với giá hơn 03 tỷ đồng và ông đã nhận đủ tiền từ bà T ông T."
+        },
+        "order": 32
+      },
+      {
+        "reasoning_id": "RE7",
+        "section": "assessment",
+        "span": {
+          "text": "Điều này thể hiện, ông Nguyễn T. A có góp vốn số tiền 900.000.000 đồng với ông T bà T để chuyển nhượng thửa đất số 197 của ông Nguyễn Văn V là có thật."
+        },
+        "order": 33
+      },
+      {
+        "reasoning_id": "RE8",
+        "section": "assessment",
+        "span": {
+          "text": "Sau khi hai bên thực hiện việc góp vốn thì do vợ chồng bà T góp 03 phần nên ông A đồng ý để bà T đứng tên trên hợp đồng chuyển nhượng."
+        },
+        "order": 34
+      },
+      {
+        "reasoning_id": "RE9",
+        "section": "assessment",
+        "span": {
+          "text": "Căn cứ các tài liệu thu thập từ Chi nhánh Văn phòng đăng ký đất đai H T thể hiện: Vợ chồng ông Nguyễn Văn V đã uỷ quyền cho bà Lê Thị Kinh T, bà T uỷ quyền cho bà Nguyễn Thị Thanh T để chuyển nhượng thửa đất số 197 cho bà Bùi Nguyễn Gia P, hợp đồng được ký kết vào ngày 14/4/2023 và đã được cập nhật biến động vào ngày 04/5/2023."
+        },
+        "order": 35
+      },
+      {
+        "reasoning_id": "RE10",
+        "section": "assessment",
+        "span": {
+          "text": "Như vậy, việc bà T khai hiện nay tình hình kinh tế suy thoái lô đất mua chung bán không được là không đúng sự thật."
+        },
+        "order": 36
+      },
+      {
+        "reasoning_id": "RE11",
+        "section": "assessment",
+        "span": {
+          "text": "Vì vậy, từ những căn cứ trên yêu cầu khởi kiện của nguyên đơn có căn cứ để chấp nhận."
+        },
+        "order": 37
+      }
+    ],
+    "decisions": [
+      {
+        "decision_id": "DE1",
+        "section": "decision",
+        "span": {
+          "text": "Chấp nhận yêu cầu khởi kiện của nguyên đơn."
+        },
+        "order": 38
+      },
+      {
+        "decision_id": "DE2",
+        "section": "decision",
+        "span": {
+          "text": "Buộc vợ chồng ông Nguyễn Quang T và bà Lê Thị Kinh T phải trả cho ông Nguyễn T. A số tiền 900.000.000 đồng (Chín trăm triệu đồng)."
+        },
+        "order": 39
+      },
+      {
+        "decision_id": "DE3",
+        "section": "decision",
+        "span": {
+          "text": "Về án phí: Ông Nguyễn Quang T và bà Lê Thị Kinh T phải chịu 39.000.000 đồng (Ba mươi chín triệu đồng) án phí dân sự sơ thẩm. Hoàn trả cho ông Nguyễn T. A số tiền 19.500.000 đồng tạm ứng án phí dân sự sơ thẩm tại biên lai số 0013219 ngày 12/4/2023 của Chi cục Thi hành án dân sự thị xã L."
+        },
+        "order": 40
+      }
+    ],
+    "request_decision_links": [
+      {
+        "request_id": "R1",
+        "decision_id": "DE2"
+      }
+    ],
+    "request_reasoning_links": [
+      {
+        "request_id": "R1",
+        "reasoning_id": "RE7"
+      },
+      {
+        "request_id": "R1",
+        "reasoning_id": "RE11"
+      }
+    ],
+    "request_outcomes": [
+      {
+        "request_id": "R1",
+        "outcome": "ACCEPTED"
+      }
+    ]
+  },
+  {
+    "case_id": 10740,
+    "parties": [
+      {
+        "party_id": "P1",
+        "name": "Trần Thị Ch",
+        "procedural_role": "PLAINTIFF"
+      },
+      {
+        "party_id": "D1",
+        "name": "Mai Thành T",
+        "procedural_role": "DEFENDANT"
+      },
+      {
+        "party_id": "D2",
+        "name": "Trần Thị Hà",
+        "procedural_role": "DEFENDANT"
+      }
+    ],
+    "claims": [
+      {
+        "claim_id": "C1",
+        "section": "content",
+        "span": {
+          "text": "Do mối quan hệ quen biết nên bà Ch đã nhiều lần cho bị đơn là ông Mai Thành T và bà Trần Thị Hà vay tiền về kinh doanh, cụ thể: - Lần 1: Ngày 16/3/2020 cho vay 20.000.000 đồng (Hai mươi triệu đồng), hai bên thoả thuận 02 tháng sau sẽ trả hết. 2 - Lần 2: Ngày 07/4/2022 cho vay 140.000.000 đồng (Một trăm bốn mươi triệu đồng), hai bên thoả thuận 03 tháng sau sẽ trả hết."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 1
+      },
+      {
+        "claim_id": "C2",
+        "section": "content",
+        "span": {
+          "text": "Tổng cộng bà Ch cho ông T, bà Hà vay số tiền là 160.000.000 đồng (Một trăm sáu mươi triệu đồng)."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 2
+      },
+      {
+        "claim_id": "C3",
+        "section": "content",
+        "span": {
+          "text": "Khi vay, ông T, bà Hà đều viết giấy biên nhận và thỏa thuận lãi suất."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 3
+      },
+      {
+        "claim_id": "C4",
+        "section": "content",
+        "span": {
+          "text": "Đến thời hạn trả, bà Ch đòi nợ thì vợ chồng ông T, bà Hà khất lần, không chịu trả và không có mặt tại địa phương."
+        },
+        "asserted_by": [
+          "P1"
+        ],
+        "order": 4
+      }
+    ],
+    "requests": [
+      {
+        "request_id": "R1",
+        "section": "content",
+        "span": {
+          "text": "Nên nay, bà Ch khởi kiện yêu cầu Toà án buộc ông T, bà Hà phải trả cho bà Ch số tiền nợ gốc là 160.000.000 đồng (một trăm sáu mươi triệu đồng), không yêu cầu tính lãi."
+        },
+        "requested_by": [
+          "P1"
+        ],
+        "modification_spans": [],
+        "order": 5
+      }
+    ],
+    "reasonings": [
+      {
+        "reasoning_id": "RE1",
+        "section": "assessment",
+        "span": {
+          "text": "Bị đơn là ông Mai Thành T, bà Trần Thị Hà đã được Tòa án triệu tập hợp lệ tham gia phiên tòa nhưng vắng mặt lần thứ hai không có lý do nên Tòa án xét xử vắng mặt các đương sự trên theo quy định tại điểm b khoản 2 Điều 227, khoản 1 và khoản 3 Điều 228 Bộ luật Tố tụng dân sự năm 2015. [4] Về yêu cầu đòi nợ của nguyên đơn: [4.1] Về số nợ gốc: Nguyên đơn khai nhận do quan hệ quen biết nên đã cho ông T, bà Hà vay tiền nhiều lần; tổng số nợ là 160.000.000 đồng (một trăm sáu mươi triệu đồng)."
+        },
+        "order": 6
+      },
+      {
+        "reasoning_id": "RE2",
+        "section": "assessment",
+        "span": {
+          "text": "Tài liệu, chứng cứ do nguyên đơn cung cấp để chứng minh cho yêu cầu của mình là bản gốc Giấy vay tiền ngày 16/3/2020 số tiền 20.000.000 đồng (Hai mươi triệu đồng) và bản gốc Giấy vay tiền ngày 07/4/2022 số tiền 140.000.000 đồng (Một trăm bốn mươi triệu đồng)."
+        },
+        "order": 7
+      },
+      {
+        "reasoning_id": "RE3",
+        "section": "assessment",
+        "span": {
+          "text": "HĐXX nhận thấy, đối với giấy vay tiền ngày 16/3/2020 mặc dù phần người vay chỉ có chữ viết Mai Thành T ở khu 3, thị trấn Yên Định, bà Hà không ký nhận nhưng có ghi mục đích vay để lấy tiền làm vốn kinh doanh cát đá; đối với Giấy vay tiền ngày 07/4/2022 có chữ viết phần người vay là Mai Thành T và Trần Thị Hà (không có năm sinh, địa chỉ cụ thể)."
+        },
+        "order": 8
+      },
+      {
+        "reasoning_id": "RE4",
+        "section": "assessment",
+        "span": {
+          "text": "Như vậy, cần xác định ông T, bà Hà vay về để chi tiêu, phát triển kinh tế chung cho gia đình nên có cơ sở khẳng định cả hai khoản vay này là khoản vay chung của ông T, bà Hà."
+        },
+        "order": 9
+      },
+      {
+        "reasoning_id": "RE5",
+        "section": "assessment",
+        "span": {
+          "text": "Bị đơn mặc dù đã được thông báo hợp lệ các văn bản tố tụng của Tòa án bằng các hình thức tống đạt niêm yết công khai văn bản tố tụng tại địa chỉ cư trú, thông báo tìm kiếm trên các phương tiện thông tin đại chúng, do ông Mai Thành T, bà Trần Thị Hà không có mặt ở địa phương nên Tòa án nhân dân huyện Hải Hậu đã đăng thông tin tìm kiếm vợ chồng ông T, bà Hà trên các phương tiện thông tin đại chúng gồm: đăng thông tin tìm kiếm trên báo Công lý 3 số liên tiếp 88, 89, 90 ra các ngày 03, 08, 10 tháng 11 năm 2023; trên đài VOV AMS của Trung T quảng cáo và dịch vụ truyền thông phát VOV2 vào hồi 17 giờ 30 phút các ngày 09, 10, 11 tháng 11 năm 2023 và trên Cổng thông tin điện tử của Tòa án về việc bà Ch có đơn khởi kiện vợ chồng ông T, bà Hà về việc trả các khoản gốc, lãi vay đã ký kết nhưng đến nay vợ chồng ông T, bà Hà không đến Tòa án làm việc, vắng mặt không có lý do cũng không có văn bản thể hiện ý kiến về yêu cầu khởi kiện của bà Ch; không có ý kiến gì về yêu cầu khởi kiện của nguyên đơn và không cung cấp tài liệu, chứng cứ để bảo vệ quyền và lợi ích hợp pháp của mình."
+        },
+        "order": 10
+      },
+      {
+        "reasoning_id": "RE6",
+        "section": "assessment",
+        "span": {
+          "text": "Căn cứ Điều 91 của Bộ luật Tố tụng dân sự năm 2015, Tòa án căn cứ vào các chứng cứ đã thu thập được có trong hồ sơ vụ án để giải quyết vụ án. [4.2] Như vậy có cơ sở xác định giữa bà Ch và vợ chồng ông T, bà Hà đã có giao dịch hợp đồng vay tài sản xác định thời hạn theo quy định tại Điều 463, 4 470 Bộ luật Dân sự năm"
+        },
+        "order": 11
+      },
+      {
+        "reasoning_id": "RE7",
+        "section": "assessment",
+        "span": {
+          "text": "Nguyên đơn khai đã đòi nợ nhiều lần nhưng ông T, bà Hà không trả nợ và đã bỏ đi khỏi nơi cư trú; cắt đứt liên lạc với bà Ch."
+        },
+        "order": 12
+      },
+      {
+        "reasoning_id": "RE8",
+        "section": "assessment",
+        "span": {
+          "text": "Do đó căn cứ Điều 466 của Bộ luật Dân sự năm 2015, cần buộc ông T, bà Hà phải trả cho bà Ch số tiền 160.000.000 đồng (một trăm sáu mươi triệu đồng) là phù hợp pháp luật. [4.3] Về tiền lãi: Nguyên đơn không yêu cầu tính lãi, Hội đồng xét xử không xem xét giải quyết. [5] Về án phí: Bị đơn có nghĩa vụ trả nợ theo yêu cầu khởi kiện của nguyên đơn nên phải nộp toàn bộ án phí dân sự sơ thẩm có giá ngạch theo quy định tại khoản 1 Điều 147 của Bộ luật Tố tụng dân sự năm 2015; khoản 2 Điều 26 Nghị quyết số 326/2016/UBTVQH14 ngày 30/12/2016 của Uỷ ban Thường vụ Quốc hội quy định về mức thu, miễn, giảm, thu, nộp, quản lý và sử dụng án phí, lệ phí Toà án. [6] Về"
+        },
+        "order": 13
+      }
+    ],
+    "decisions": [
+      {
+        "decision_id": "DE1",
+        "section": "decision",
+        "span": {
+          "text": "Chấp nhận yêu cầu khởi kiện của bà Trần Thị Ch về việc Tranh chấp hợp đồng vay tài sản với ông Mai Thành T và bà Trần Thị Hà."
+        },
+        "order": 14
+      },
+      {
+        "decision_id": "DE2",
+        "section": "decision",
+        "span": {
+          "text": "Buộc vợ chồng ông Mai Thành T và bà Trần Thị Hà có nghĩa vụ trả cho bà Trần Thị Ch số nợ gốc là 160.000.000 đồng (một trăm sáu mươi triệu đồng)."
+        },
+        "order": 15
+      },
+      {
+        "decision_id": "DE3",
+        "section": "decision",
+        "span": {
+          "text": "Về án phí: Căn cứ khoản 1 Điều 147 của Bộ luật Tố tụng dân sự; khoản 2 Điều 26 Nghị quyết số 326/2016/UBTVQH14 ngày 30/12/2016 của Uỷ ban Thường vụ Quốc hội quy định về mức thu, miễn, giảm, thu, nộp, quản lý và sử dụng án phí, lệ phí Toà án: - Buộc ông Mai Thành T và bà Trần Thị Hà phải nộp 8.000.000 đồng (tám triệu đồng) án phí dân sự sơ thẩm. 5 - Bà Trần Thị Ch được nhận lại số tiền tạm ứng án phí đã nộp là 4.000.000 đồng (bốn triệu đồng) tại biên lai số 0002776 ngày 06/10/2023 tại Chi cục Thi hành án dân sự huyện Hải Hậu."
+        },
+        "order": 16
+      }
+    ],
+    "request_decision_links": [
+      {
+        "request_id": "R1",
+        "decision_id": "DE2"
+      }
+    ],
+    "request_reasoning_links": [
+      {
+        "request_id": "R1",
+        "reasoning_id": "RE4"
+      },
+      {
+        "request_id": "R1",
+        "reasoning_id": "RE6"
+      },
+      {
+        "request_id": "R1",
+        "reasoning_id": "RE8"
+      }
+    ],
+    "request_outcomes": [
+      {
+        "request_id": "R1",
+        "outcome": "ACCEPTED"
+      }
+    ]
+  }
+]
