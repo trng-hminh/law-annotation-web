@@ -326,14 +326,22 @@ class MongoStorage:
 
 
 # choose backend
+_client = None
 if MONGODB_URI:
     import certifi
     from pymongo import MongoClient
 
     # certifi.wheres() ships a trusted CA bundle that works on macOS, Linux and
     # container runtimes alike, avoiding "CERTIFICATE_VERIFY_FAILED" on macOS.
-    _client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=8000, tlsCAFile=certifi.where())
-    _client.admin.command("ping")  # fail fast if the DB is unreachable
+    _client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=10000, tlsCAFile=certifi.where())
+    # KHÔNG crash nếu MongoDB đang ngủ/chưa sẵn sàng (M0 free tier ngủ sau 60 phút
+    # không truy cập và có thể lỗi TLS tạm thời khi thức dậy). Backend vẫn khởi động
+    # và tự kết nối lại ở các request sau.
+    try:
+        _client.admin.command("ping", serverSelectionTimeoutMS=10000)
+    except Exception as exc:
+        print(f"WARNING: MongoDB chưa sẵn sàng lúc khởi động: {exc}")
+        print("Backend vẫn chạy; kết nối sẽ tự phục hồi khi MongoDB hoạt động lại.")
     try:
         _db = _client.get_default_database()
     except Exception:
@@ -485,10 +493,28 @@ def _set_case_status(case_id, status, completed_by=None):
     storage.save_cases(registry)
 
 
-_ensure_admins()
+try:
+    _ensure_admins()
+except Exception as exc:
+    # MongoDB chưa sẵn sàng -> bỏ qua lúc khởi động, sẽ tự khởi tạo lại khi có request
+    print(f"WARNING: Chưa thể khởi tạo admin lúc này (MongoDB chưa sẵn sàng): {exc}")
 
 
 # ------------------------------ public ------------------------------
+
+@app.get("/api/health")
+def health():
+    """Dùng cho uptime monitor — ping DB để giữ cả Render lẫn MongoDB thức."""
+    ok = True
+    detail = "ok"
+    if _STORAGE_NAME == "mongodb" and _client is not None:
+        try:
+            _client.admin.command("ping", serverSelectionTimeoutMS=5000)
+        except Exception as exc:
+            ok = False
+            detail = str(exc)[:200]
+    return {"status": "ok" if ok else "degraded", "storage": _STORAGE_NAME, "detail": detail}
+
 
 @app.get("/")
 def root():
