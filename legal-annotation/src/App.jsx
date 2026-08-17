@@ -5,7 +5,7 @@ import {
   ZoomIn, ZoomOut, X, GripVertical, ScrollText, Gavel, ListChecks,
   Scale, CircleCheck, Circle, UserRound, LogOut,
   FolderOpen, Shield, Loader2, LayoutDashboard, RefreshCw,
-  Users, Download, ClipboardList
+  Users, Download, ClipboardList, Activity
 } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
@@ -493,6 +493,15 @@ function LinksTab({ caseData, updateCase }) {
 
 /* ---------------------------- document (PDF) panel ---------------------------- */
 
+/* Data source for this panel:
+   1. If `caseData.pages` holds real OCR page content (an object keyed "1".."N" or an
+      array of page strings), those pages are concatenated into one continuous document.
+   2. Otherwise — which is the case for the current corpus — there is no page-level
+      text, so we synthesize a plain-text "document" from the annotation data itself:
+      title, parties, and the ordered claims / requests / reasoning / decisions.
+   The text is rendered on a single continuous page that wraps naturally and scrolls
+   vertically, so it never escapes the panel.
+*/
 function buildDocumentText(caseData) {
   const lines = [];
   const title = (caseData.title || `Case ${caseData.id}`).trim();
@@ -530,58 +539,58 @@ function buildDocumentText(caseData) {
   return lines.join("\n").trim() || "(Chưa có nội dung số hoá cho case này)";
 }
 
-function resolvePages(caseData) {
+function documentText(caseData) {
   const raw = caseData.pages;
   if (raw && typeof raw === "object" && !Array.isArray(raw)) {
     const keys = Object.keys(raw)
       .filter((k) => /^\d+$/.test(k))
       .sort((a, b) => Number(a) - Number(b));
-    if (keys.length) return keys.map((k) => raw[k]);
+    if (keys.length) return keys.map((k) => raw[k]).join("\n\n");
   }
-  if (Array.isArray(raw) && raw.length) return raw.map((x) => String(x));
-  return [buildDocumentText(caseData)];
+  if (Array.isArray(raw) && raw.length) return raw.map((x) => String(x)).join("\n\n");
+  return buildDocumentText(caseData);
 }
 
 function DocumentPanel({ caseData }) {
-  const pages = useMemo(() => resolvePages(caseData), [caseData]);
-  const [page, setPage] = useState(1);
   const [zoom, setZoom] = useState(100);
-  const maxPage = Math.max(1, pages.length);
-  const safePage = Math.min(Math.max(1, page), maxPage);
-  const content = pages[safePage - 1] || "(Trang này chưa có nội dung số hoá)";
+  const text = useMemo(() => documentText(caseData), [caseData]);
+  const fontSize = 13.5 * (zoom / 100);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", background: T.paperDim }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", minWidth: 0, background: T.paperDim }}>
       <div style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
+        display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
         padding: "8px 14px", borderBottom: `1px solid ${T.line}`, background: T.paperCard, flexShrink: 0,
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <ScrollText size={15} color={T.inkSoft} />
-          <span style={{ fontSize: 12.5, fontWeight: 600, color: T.ink }}>{caseData.sourceFile || `Case ${caseData.id}`}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+          <ScrollText size={15} color={T.inkSoft} style={{ flexShrink: 0 }} />
+          <span style={{
+            fontSize: 12.5, fontWeight: 600, color: T.ink,
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+          }}>
+            {caseData.sourceFile || `Case ${caseData.id}`}
+          </span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
           <IconBtn size={24} onClick={() => setZoom((z) => Math.max(60, z - 10))} title="Thu nhỏ"><ZoomOut size={14} /></IconBtn>
           <span style={{ fontSize: 11.5, color: T.inkSoft, width: 36, textAlign: "center" }}>{zoom}%</span>
           <IconBtn size={24} onClick={() => setZoom((z) => Math.min(180, z + 10))} title="Phóng to"><ZoomIn size={14} /></IconBtn>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <IconBtn size={24} onClick={() => setPage(Math.max(1, safePage - 1))} title="Trang trước"><ChevronLeft size={15} /></IconBtn>
-          <span style={{ fontSize: 12, color: T.inkSoft }}>Trang {safePage} / {maxPage}</span>
-          <IconBtn size={24} onClick={() => setPage(Math.min(maxPage, safePage + 1))} title="Trang sau"><ChevronRight size={15} /></IconBtn>
-        </div>
       </div>
 
-      <div style={{ flex: 1, overflowY: "auto", padding: "22px 24px", display: "flex", justifyContent: "center" }}>
+      <div style={{
+        flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden",
+        padding: "22px 24px", boxSizing: "border-box",
+      }}>
         <div style={{
-          width: "100%", maxWidth: 640, background: "#fff",
+          maxWidth: 760, margin: "0 auto", background: "#fff",
           boxShadow: "0 1px 3px rgba(28,38,36,0.12), 0 1px 1px rgba(28,38,36,0.08)",
-          borderRadius: 2, padding: "34px 30px", fontFamily: "Georgia, 'Times New Roman', serif",
-          fontSize: 13.5 * (zoom / 100), lineHeight: 1.85, color: "#22201A", whiteSpace: "pre-wrap",
-          minHeight: 780, boxSizing: "border-box",
+          borderRadius: 2, padding: "40px 44px", boxSizing: "border-box",
+          fontFamily: "Georgia, 'Times New Roman', serif",
+          fontSize, lineHeight: 1.85, color: "#22201A",
+          whiteSpace: "pre-wrap", overflowWrap: "break-word", wordBreak: "break-word",
         }}>
-          {content}
-          <div style={{ textAlign: "center", marginTop: 24, fontSize: 11, color: "#948C74" }}>— {safePage} / {maxPage} —</div>
+          {text}
         </div>
       </div>
     </div>
@@ -874,6 +883,9 @@ function AnnotatorDashboard({ cases, stats, onOpen, onRefresh, refreshing, flash
           <div key={c.case_id} style={{ background: T.paperCard, border: `1px solid ${T.line}`, borderRadius: 12, padding: "13px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
               <span style={{ fontFamily: "ui-monospace, Menlo, monospace", fontSize: 13, fontWeight: 700, background: T.paperDim, padding: "3px 8px", borderRadius: 6 }}>Case {c.case_id}</span>
+              {c.submitted && (
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#3D6944", background: "#E9F2E7", padding: "2px 8px", borderRadius: 20, flexShrink: 0 }}>Đã nộp</span>
+              )}
               <span style={{ fontSize: 12.5, color: T.inkSoft, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.title}</span>
             </div>
             <button onClick={() => onOpen(c.case_id)} style={{ ...btnPrimaryStyle, flexShrink: 0 }}>Mở case</button>
@@ -897,7 +909,7 @@ function AnnotatorDashboard({ cases, stats, onOpen, onRefresh, refreshing, flash
    ============================================================================ */
 
 function AdminDashboard({
-  overview, annotators, admins, currentUsername,
+  overview, annotators, admins, progress, currentUsername,
   onOpenCase, onAssign, onReopen, onAutoAssign,
   onImportFile, onImportPrototype, importMessage,
   onCreateAnnotator, onResetPasscode, onDeleteAnnotator,
@@ -906,7 +918,7 @@ function AdminDashboard({
   onClearAssignments,
   onRefresh, refreshing, flash, onExport,
 }) {
-  const [section, setSection] = useState("cases"); // "cases" | "annotators"
+  const [section, setSection] = useState("cases"); // "cases" | "annotators" | "admins" | "progress"
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all"); // all | open | completed | unassigned
   const [page, setPage] = useState(1);
@@ -997,6 +1009,9 @@ function AdminDashboard({
         </button>
         <button onClick={() => setSection("admins")} style={{ ...tabBase, color: section === "admins" ? T.ink : T.inkSoft, borderBottom: section === "admins" ? `2px solid ${T.gold}` : "2px solid transparent" }}>
           <Shield size={14} /> Admin ({admins.length})
+        </button>
+        <button onClick={() => setSection("progress")} style={{ ...tabBase, color: section === "progress" ? T.ink : T.inkSoft, borderBottom: section === "progress" ? `2px solid ${T.gold}` : "2px solid transparent" }}>
+          <Activity size={14} /> Tiến độ ({progress.length})
         </button>
       </div>
 
@@ -1246,6 +1261,62 @@ function AdminDashboard({
           </div>
         </>
       )}
+
+      {section === "progress" && (
+        <div>
+          {progress.length === 0 && (
+            <p style={{ color: T.inkSoft, fontSize: 13 }}>Chưa có annotator hoặc chưa có phân công case nào.</p>
+          )}
+          {progress.map((a) => {
+            const pct = Math.max(0, Math.min(100, a.progress_pct || 0));
+            const done = pct >= 100;
+            const statusStyle = (s) =>
+              s === "completed"
+                ? { background: "#E9F2E7", color: "#3D6944", borderColor: "#5C8A63" }
+                : s === "in_progress"
+                  ? { background: T.goldTint, color: T.gold, borderColor: T.gold }
+                  : { background: T.paperDim, color: T.inkSoft, borderColor: T.line };
+            return (
+              <div key={a.id} style={{ background: T.paperCard, border: `1px solid ${T.line}`, borderRadius: 12, padding: "14px 16px", marginBottom: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <UserRound size={15} color={T.inkSoft} />
+                    <span style={{ fontSize: 13.5, fontWeight: 700 }}>{a.name}</span>
+                    <span style={{ fontSize: 11.5, color: T.inkSoft }}>{a.id}</span>
+                  </div>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: done ? "#3D6944" : T.gold }}>
+                    {a.completed}/{a.assigned} hoàn thành · {pct}%
+                  </span>
+                </div>
+                <div style={{ height: 8, background: T.paperDim, borderRadius: 4, overflow: "hidden", marginBottom: 10 }}>
+                  <div style={{ width: `${pct}%`, height: "100%", background: done ? "#5C8A63" : T.gold, transition: "width 200ms ease" }} />
+                </div>
+                <div style={{ display: "flex", gap: 18, flexWrap: "wrap", fontSize: 12, color: T.inkSoft, marginBottom: 10 }}>
+                  <span><strong style={{ color: "#3D6944" }}>{a.completed}</strong> đã nộp</span>
+                  <span><strong style={{ color: T.gold }}>{a.in_progress}</strong> đang làm</span>
+                  <span><strong>{a.not_started}</strong> chưa bắt đầu</span>
+                  <span><strong>{a.assigned}</strong> được giao</span>
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {a.cases.map((c) => {
+                    const st = statusStyle(c.status);
+                    return (
+                      <span key={c.case_id} title={`${c.case_id} — ${c.status}`} style={{
+                        display: "inline-flex", alignItems: "center", gap: 4,
+                        fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 12,
+                        background: st.background, color: st.color, border: `1px solid ${st.borderColor}`,
+                      }}>
+                        Case {c.case_id}
+                      </span>
+                    );
+                  })}
+                  {a.cases.length === 0 && <span style={{ fontSize: 12, color: T.inkSoft }}>Chưa được phân công case nào.</span>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -1297,6 +1368,7 @@ export default function LegalAnnotationApp() {
   const [adminOverview, setAdminOverview] = useState([]);
   const [adminAnnotators, setAdminAnnotators] = useState([]);
   const [adminAdmins, setAdminAdmins] = useState([]);
+  const [adminProgress, setAdminProgress] = useState([]);
   const [importMessage, setImportMessage] = useState("");
 
   const api = async (path, { method = "GET", body } = {}) => {
@@ -1326,10 +1398,16 @@ export default function LegalAnnotationApp() {
 
   const loadAdminData = async () => {
     try {
-      const [ov, ann, adm] = await Promise.all([api("/api/cases"), api("/api/annotators"), api("/api/admins")]);
+      const [ov, ann, adm, prog] = await Promise.all([
+        api("/api/cases"),
+        api("/api/annotators"),
+        api("/api/admins"),
+        api("/api/admin/progress"),
+      ]);
       setAdminOverview(ov);
       setAdminAnnotators(ann);
       setAdminAdmins(adm);
+      setAdminProgress(prog.annotators || []);
       setBackendOk(true);
     } catch (e) {
       setBackendOk(false);
@@ -1357,6 +1435,13 @@ export default function LegalAnnotationApp() {
     dirtyRef.current = false;
     if (auth.type === "admin") loadAdminData();
     else loadMyCases();
+  }, [auth?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* tự động cập nhật tiến độ cho admin (real-time) */
+  useEffect(() => {
+    if (!auth || auth.type !== "admin") return;
+    const id = setInterval(() => { loadAdminData(); }, 15000);
+    return () => clearInterval(id);
   }, [auth?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleLogin = async ({ mode, username, password, name, passcode }) => {
@@ -1404,14 +1489,31 @@ export default function LegalAnnotationApp() {
       setDraftLoadedAt(null);
       setView("annotation");
       if (auth?.type === "annotator") {
+        let restored = false;
         try {
           const d = await api(`/api/cases/${caseId}/draft`);
           if (d?.saved_at) {
             const { saved_at, ...clean } = d;
             setCaseData(clean);
             setDraftLoadedAt(saved_at);
+            restored = true;
           }
         } catch { /* chưa có nháp */ }
+        if (!restored) {
+          try {
+            const sub = await api(`/api/cases/${caseId}/submission`);
+            setCaseData({
+              ...doc,
+              title: sub.title || doc.title,
+              parties: sub.parties ?? doc.parties ?? [],
+              units: sub.units ?? [],
+              reasoning: sub.reasoning ?? [],
+              decisions: sub.decisions ?? [],
+            });
+            setSubmitted(true);
+            setSubmitMessage("Đã tải lại bài nộp trước đó — bạn có thể chỉnh sửa và gửi lại.");
+          } catch { /* chưa có bài nộp */ }
+        }
       }
     } catch (e) {
       setFlash(e.message || "Không tải được case.");
@@ -1559,7 +1661,7 @@ export default function LegalAnnotationApp() {
     setSubmitError("");
     setSubmitMessage("");
     try {
-      const result = await api("/api/submit", {
+      await api("/api/submit", {
         method: "POST",
         body: {
           case_id: caseData.id,
@@ -1575,7 +1677,7 @@ export default function LegalAnnotationApp() {
       setDraftStatus("idle");
       setDraftLoadedAt(null);
       setSubmitted(true);
-      setSubmitMessage(`Đã hoàn tất case ${caseData.id}. ${result.file}`);
+      setSubmitMessage(`Đã gửi bài nộp cho case ${caseData.id}. Bạn vẫn có thể chỉnh sửa và gửi lại.`);
       if (auth?.type === "annotator") loadMyCases();
       else loadAdminData();
     } catch (e) {
@@ -1857,8 +1959,8 @@ export default function LegalAnnotationApp() {
               {identityChip}
               <IconBtn title="Đăng xuất" onClick={handleLogout}><LogOut size={14} /></IconBtn>
 
-              <button onClick={submitCase} disabled={submitting || submitted} style={btnPrimaryStyle}>
-                {submitting ? "Đang gửi…" : submitted ? "Đã gửi ✓" : "Hoàn tất case"}
+              <button onClick={submitCase} disabled={submitting} style={btnPrimaryStyle}>
+                {submitting ? "Đang gửi…" : submitted ? "Cập nhật bài nộp" : "Hoàn tất case"}
               </button>
             </div>
           </div>
@@ -2040,6 +2142,7 @@ export default function LegalAnnotationApp() {
           overview={adminOverview}
           annotators={adminAnnotators}
           admins={adminAdmins}
+          progress={adminProgress}
           currentUsername={auth?.id}
           onOpenCase={openCase}
           onAssign={assignCase}

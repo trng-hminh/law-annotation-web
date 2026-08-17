@@ -200,6 +200,18 @@ class FileStorage:
             self.index_file.unlink()  # index tự dựng lại từ disk lần đọc sau
         return removed
 
+    def delete_submitter_submissions(self, case_id, submitter_id):
+        """Xoá bài nộp của MỘT người (annotator hoặc admin) cho một case."""
+        removed = 0
+        for f in list(self.submissions_dir.glob(f"case_{case_id}_*.json")):
+            data = _read_json_file(f, {})
+            if data.get("annotator_id") == submitter_id:
+                f.unlink()
+                removed += 1
+        if removed and self.index_file.exists():
+            self.index_file.unlink()  # index tự dựng lại từ disk lần đọc sau
+        return removed
+
     def read_config(self):
         return _read_json_file(self.config_file, {})
 
@@ -310,6 +322,14 @@ class MongoStorage:
         res = self.db.submissions.delete_many({"case_id": str(case_id)})
         return res.deleted_count
 
+    def delete_submitter_submissions(self, case_id, submitter_id):
+        """Xoá bài nộp của MỘT người (annotator hoặc admin) cho một case."""
+        res = self.db.submissions.delete_many({
+            "case_id": str(case_id),
+            "annotator_id": submitter_id,
+        })
+        return res.deleted_count
+
     def read_config(self):
         doc = self.db.config.find_one({"_id": "admin"})
         return {k: v for k, v in (doc or {}).items() if k != "_id"}
@@ -362,6 +382,10 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    # Dev convenience: cho phép mọi cổng localhost/127.0.0.1 (Vite có thể chạy ở
+    # 5173, 5174, ... tuỳ cổng trống). Production vẫn chỉ cho các origin trong
+    # ALLOWED_ORIGINS (thêm qua biến môi trường trên Render).
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
 )
 
 
@@ -539,6 +563,7 @@ def root():
             "PUT/DELETE /api/annotators/{id} (admin)",
             "POST /api/cases (admin, import corpus)",
             "GET  /api/cases (admin, overview)",
+            "GET  /api/admin/progress (admin, tiến độ annotator)",
             "GET  /api/cases/{id}/doc",
             "GET  /api/annotator/cases (annotator)",
             "POST /api/cases/{id}/assign (admin)",
@@ -930,38 +955,34 @@ def auto_assign(request: Request):
 @app.get("/api/annotator/cases")
 def annotator_cases(request: Request):
     """Annotator's own cases only — no visibility into other annotators.
-    Case hiển thị cho annotator tới khi CHÍNH annotator đó submit
-    (case có nhiều annotator sẽ còn lại cho người kia tới khi họ submit)."""
+    Case đã nộp vẫn hiển thị (đánh dấu submitted) để annotator có thể mở lại,
+    chỉnh sửa và nộp lại (resubmit) nếu nộp nhầm hoặc muốn làm lại."""
     auth = _require_annotator(request)
     assignments = _norm_assignments(storage.read_assignments())
     registry = _registry_by_id()
     submissions_index = storage.submissions_index()
 
-    open_cases = []
-    all_assigned = 0
-    done = 0
+    cases = []
     for cid, ids in assignments.items():
         if auth["id"] not in ids:
             continue
-        all_assigned += 1
         reg = registry.get(cid)
         if reg is None:
             continue
         submitted_ids = {s.get("annotator_id") for s in submissions_index.get(cid, [])}
-        if reg.get("status") == "completed" or auth["id"] in submitted_ids:
-            done += 1
-        else:
-            open_cases.append({
-                "case_id": cid,
-                "title": reg.get("title", f"Case {cid}"),
-            })
-    open_cases.sort(key=lambda c: c["case_id"])
+        cases.append({
+            "case_id": cid,
+            "title": reg.get("title", f"Case {cid}"),
+            "submitted": auth["id"] in submitted_ids,
+        })
+    cases.sort(key=lambda c: c["case_id"])
+    submitted_count = sum(1 for c in cases if c["submitted"])
     return {
-        "cases": open_cases,
+        "cases": cases,
         "stats": {
-            "assigned": all_assigned,
-            "completed": done,
-            "remaining": len(open_cases),
+            "assigned": len(cases),
+            "completed": submitted_count,
+            "remaining": len(cases) - submitted_count,
         },
     }
 
@@ -995,6 +1016,61 @@ def admin_overview(request: Request):
             "drafts": drafts_by_case.get(cid, []),
         })
     return result
+
+
+@app.get("/api/admin/progress")
+def admin_progress(request: Request):
+    """Tiến độ theo từng annotator: case được giao, đã nộp, đang làm, chưa bắt đầu."""
+    _require_admin(request)
+    annotators = storage.list_annotators()
+    assignments = _norm_assignments(storage.read_assignments())
+    registry = _registry_by_id()
+    submissions_index = storage.submissions_index()
+    drafts = storage.list_drafts()
+
+    drafts_by_annotator = {}
+    for d in drafts:
+        drafts_by_annotator.setdefault(d["annotator_id"], {})[d["case_id"]] = d.get("updated_at")
+
+    result = []
+    for a in annotators:
+        aid = a["id"]
+        assigned = sorted(cid for cid, ids in assignments.items() if aid in ids)
+        cases = []
+        completed = in_progress = not_started = 0
+        for cid in assigned:
+            reg = registry.get(cid)
+            updated = (drafts_by_annotator.get(aid) or {}).get(cid)
+            submitted = any(s.get("annotator_id") == aid for s in submissions_index.get(cid, []))
+            if submitted:
+                status = "completed"
+                completed += 1
+            elif updated:
+                status = "in_progress"
+                in_progress += 1
+            else:
+                status = "not_started"
+                not_started += 1
+            cases.append({
+                "case_id": cid,
+                "title": reg.get("title", f"Case {cid}") if reg else f"Case {cid}",
+                "status": status,
+                "updated_at": updated,
+            })
+        total = len(assigned)
+        result.append({
+            "id": aid,
+            "name": a["name"],
+            "assigned": total,
+            "completed": completed,
+            "in_progress": in_progress,
+            "not_started": not_started,
+            "progress_pct": round(completed / total * 100) if total else 0,
+            "cases": cases,
+        })
+
+    result.sort(key=lambda x: x["id"])
+    return {"annotators": result}
 
 
 @app.get("/api/cases/{case_id}/doc")
@@ -1039,6 +1115,24 @@ def delete_draft(case_id: str, request: Request):
     return {"success": True}
 
 
+@app.get("/api/cases/{case_id}/submission")
+def get_my_submission(case_id: str, request: Request):
+    """Bài nộp gần nhất của chính annotator cho case này (để xem lại / sửa lại)."""
+    auth = _require_annotator(request)
+    case_id = _safe_id(case_id)
+    assignments = _norm_assignments(storage.read_assignments())
+    if auth["id"] not in assignments.get(case_id, []):
+        raise HTTPException(status_code=403, detail="Case này không được phân công cho bạn.")
+    subs = [
+        s for s in storage.list_submissions()
+        if str(s.get("case_id")) == case_id and s.get("annotator_id") == auth["id"]
+    ]
+    if not subs:
+        raise HTTPException(status_code=404, detail="Chưa có bài nộp.")
+    subs.sort(key=lambda s: s.get("submitted_at") or s.get("received_at") or "", reverse=True)
+    return subs[0]
+
+
 # ------------------------------ submission ------------------------------
 
 @app.post("/api/submit")
@@ -1060,6 +1154,9 @@ def submit_case(payload: dict, request: Request):
 
     annotator_id = auth["id"]
     annotator_name = _admin_name(auth["id"]) if auth["type"] == "admin" else _annotator_name(auth["id"])
+
+    # resubmit: thay thế bài nộp cũ của chính người này (tránh trùng lặp khi nộp lại)
+    storage.delete_submitter_submissions(case_id, annotator_id)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     filename = f"case_{case_id}_{timestamp}.json"
