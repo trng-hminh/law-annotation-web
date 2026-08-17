@@ -478,6 +478,14 @@ def _registry_by_id():
     return {c["case_id"]: c for c in storage.read_cases()}
 
 
+def _norm_assignments(raw):
+    """Chuẩn hoá assignments: {cid: str|list} -> {cid: [str,...]} (hỗ trợ dữ liệu cũ)."""
+    out = {}
+    for cid, v in (raw or {}).items():
+        out[cid] = v if isinstance(v, list) else ([v] if v else [])
+    return out
+
+
 def _set_case_status(case_id, status, completed_by=None):
     registry = storage.read_cases()
     for c in registry:
@@ -539,6 +547,7 @@ def root():
             "GET/PUT/DELETE /api/cases/{id}/draft (annotator)",
             "POST /api/submit",
             "DELETE /api/cases/{id}/submissions (admin)",
+            "DELETE /api/assignments (admin, xoá toàn bộ phân công)",
         ],
     }
 
@@ -760,11 +769,15 @@ def delete_annotator(annotator_id: str, request: Request):
     annotators = storage.list_annotators()
     annotators = [a for a in annotators if a["id"] != annotator_id]
     storage.save_annotators(annotators)
-    assignments = storage.read_assignments()
+    assignments = _norm_assignments(storage.read_assignments())
     changed = False
-    for cid, aid in list(assignments.items()):
-        if aid == annotator_id:
-            del assignments[cid]
+    for cid, ids in list(assignments.items()):
+        if annotator_id in ids:
+            new_ids = [x for x in ids if x != annotator_id]
+            if new_ids:
+                assignments[cid] = new_ids
+            else:
+                del assignments[cid]
             changed = True
     if changed:
         storage.save_assignments(assignments)
@@ -807,19 +820,39 @@ def import_cases(payload: dict, request: Request):
 
 @app.post("/api/cases/{case_id}/assign")
 def assign_case(case_id: str, payload: dict, request: Request):
+    """Thêm/bớt annotator cho một case. Mỗi annotator chỉ xuất hiện 1 lần/case."""
     _require_admin(request)
     case_id = _safe_id(case_id)
     annotator_id = payload.get("annotator_id")
-    assignments = storage.read_assignments()
+    remove = bool(payload.get("remove"))
+    assignments = _norm_assignments(storage.read_assignments())
+
     if annotator_id:
         annotator_id = _safe_id(str(annotator_id))
         if not any(a["id"] == annotator_id for a in storage.list_annotators()):
             raise HTTPException(status_code=400, detail="Annotator không tồn tại.")
-        assignments[case_id] = annotator_id
+        cur = assignments.get(case_id, [])
+        if remove:
+            cur = [x for x in cur if x != annotator_id]
+        elif annotator_id not in cur:
+            cur.append(annotator_id)
+        if cur:
+            assignments[case_id] = cur
+        else:
+            assignments.pop(case_id, None)
     else:
+        # annotator_id = null -> xoá toàn bộ phân công của case
         assignments.pop(case_id, None)
     storage.save_assignments(assignments)
-    return {"case_id": case_id, "annotator_id": assignments.get(case_id)}
+    return {"case_id": case_id, "annotator_ids": assignments.get(case_id, [])}
+
+
+@app.delete("/api/assignments")
+def clear_all_assignments(request: Request):
+    """Xoá toàn bộ phân công của tất cả case."""
+    _require_admin(request)
+    storage.save_assignments({})
+    return {"success": True, "cleared": True}
 
 
 @app.post("/api/cases/{case_id}/reopen")
@@ -843,55 +876,71 @@ def reopen_case(case_id: str, request: Request):
 
 @app.post("/api/cases/auto-assign")
 def auto_assign(request: Request):
-    """Evenly distribute open, unassigned cases across annotators,
-    favouring annotators with the lightest current workload."""
+    """Tự phân công: mỗi case open nhận TỐI ĐA 2 annotator KHÁC NHAU.
+    Case chưa có ai -> gán 1; case đã có 1 -> gán thêm 1 (annotator khác).
+    Cân bằng theo khối lượng công việc; không bao giờ lặp annotator trong cùng case."""
     _require_admin(request)
     annotators = storage.list_annotators()
     if not annotators:
         raise HTTPException(status_code=400, detail="Chưa có annotator nào. Hãy tạo annotator trước.")
+    annotator_ids = [a["id"] for a in annotators]
     registry = storage.read_cases()
-    assignments = storage.read_assignments()
+    assignments = _norm_assignments(storage.read_assignments())
 
-    open_ids = {c["case_id"] for c in registry if c.get("status") != "completed"}
-    pending = sorted(open_ids - set(assignments.keys()))
+    open_cases = sorted(
+        c["case_id"] for c in registry if c.get("status") != "completed"
+    )
 
-    workload = {a["id"]: 0 for a in annotators}
-    for cid, aid in assignments.items():
-        if cid in open_ids and aid in workload:
+    def workload_of(aid):
+        return sum(1 for cid in open_cases if aid in assignments.get(cid, []))
+
+    workload = {aid: workload_of(aid) for aid in annotator_ids}
+
+    TARGET = 2  # annotators tối đa cho mỗi case
+    added = 0
+    for cid in open_cases:
+        cur = [x for x in assignments.get(cid, []) if x in annotator_ids]
+        while len(cur) < TARGET:
+            candidates = [aid for aid in annotator_ids if aid not in cur]
+            if not candidates:
+                break
+            aid = min(candidates, key=lambda a: workload[a])
+            cur.append(aid)
             workload[aid] += 1
-
-    assigned = 0
-    for cid in pending:
-        aid = min(workload, key=workload.get)
-        assignments[cid] = aid
-        workload[aid] += 1
-        assigned += 1
+            added += 1
+        if cur:
+            assignments[cid] = cur
 
     storage.save_assignments(assignments)
-    return {"assigned": assigned, "pending": len(pending) - assigned}
+    cases_with_2 = sum(1 for cid in open_cases if len(assignments.get(cid, [])) >= 2)
+    return {"assigned": added, "cases_with_2": cases_with_2, "total_open": len(open_cases)}
 
 
 # ------------------------------ views ------------------------------
 
 @app.get("/api/annotator/cases")
 def annotator_cases(request: Request):
-    """Annotator's own open cases only — no visibility into other annotators."""
+    """Annotator's own cases only — no visibility into other annotators.
+    Case hiển thị cho annotator tới khi CHÍNH annotator đó submit
+    (case có nhiều annotator sẽ còn lại cho người kia tới khi họ submit)."""
     auth = _require_annotator(request)
-    assignments = storage.read_assignments()
+    assignments = _norm_assignments(storage.read_assignments())
     registry = _registry_by_id()
+    submissions_index = storage.submissions_index()
 
     open_cases = []
     all_assigned = 0
-    completed = 0
-    for cid, aid in assignments.items():
-        if aid != auth["id"]:
+    done = 0
+    for cid, ids in assignments.items():
+        if auth["id"] not in ids:
             continue
         all_assigned += 1
         reg = registry.get(cid)
         if reg is None:
             continue
-        if reg.get("status") == "completed":
-            completed += 1
+        submitted_ids = {s.get("annotator_id") for s in submissions_index.get(cid, [])}
+        if reg.get("status") == "completed" or auth["id"] in submitted_ids:
+            done += 1
         else:
             open_cases.append({
                 "case_id": cid,
@@ -902,7 +951,7 @@ def annotator_cases(request: Request):
         "cases": open_cases,
         "stats": {
             "assigned": all_assigned,
-            "completed": completed,
+            "completed": done,
             "remaining": len(open_cases),
         },
     }
@@ -912,7 +961,7 @@ def annotator_cases(request: Request):
 def admin_overview(request: Request):
     _require_admin(request)
     registry = storage.read_cases()
-    assignments = storage.read_assignments()
+    assignments = _norm_assignments(storage.read_assignments())
     submissions_index = storage.submissions_index()
     drafts = storage.list_drafts()
 
@@ -932,7 +981,7 @@ def admin_overview(request: Request):
             "status": c.get("status", "open"),
             "completed_at": c.get("completed_at"),
             "completed_by": c.get("completed_by"),
-            "assigned_to": assignments.get(cid),
+            "assigned_to": assignments.get(cid) or [],
             "submissions": submissions_index.get(cid, []),
             "drafts": drafts_by_case.get(cid, []),
         })
@@ -947,8 +996,8 @@ def get_case_doc(case_id: str, request: Request):
     if doc is None:
         raise HTTPException(status_code=404, detail="Không tìm thấy case.")
     if auth["type"] == "annotator":
-        assignments = storage.read_assignments()
-        if assignments.get(case_id) != auth["id"]:
+        assignments = _norm_assignments(storage.read_assignments())
+        if auth["id"] not in assignments.get(case_id, []):
             raise HTTPException(status_code=403, detail="Case này không được phân công cho bạn.")
     return doc
 
@@ -993,9 +1042,11 @@ def submit_case(payload: dict, request: Request):
         raise HTTPException(status_code=404, detail="Không tìm thấy case.")
 
     # annotators may only submit cases assigned to them; admin may submit any
+    assigned_ids = []
     if auth["type"] == "annotator":
-        assignments = storage.read_assignments()
-        if assignments.get(case_id) != auth["id"]:
+        assignments = _norm_assignments(storage.read_assignments())
+        assigned_ids = assignments.get(case_id, [])
+        if auth["id"] not in assigned_ids:
             raise HTTPException(status_code=403, detail="Case này không được phân công cho bạn.")
 
     annotator_id = auth["id"]
@@ -1010,16 +1061,26 @@ def submit_case(payload: dict, request: Request):
         "file": filename,
     }
     storage.record_submission(case_id, summary, payload)
-    _set_case_status(case_id, "completed", completed_by=annotator_id)
+
+    if auth["type"] == "admin":
+        # admin submit -> luôn hoàn thành
+        _set_case_status(case_id, "completed", completed_by=annotator_id)
+    else:
+        # annotator: case hoàn thành khi TẤT CẢ annotator được giao đã submit
+        submitted_ids = {s.get("annotator_id") for s in storage.submissions_index().get(case_id, [])}
+        if all(aid in submitted_ids for aid in assigned_ids):
+            _set_case_status(case_id, "completed", completed_by=annotator_id)
+
     storage.delete_draft(annotator_id, case_id)
 
+    final_status = _registry_by_id().get(case_id, {}).get("status", "open")
     return {
         "success": True,
         "case_id": case_id,
         "annotator_id": annotator_id,
         "annotator_name": annotator_name,
         "file": filename,
-        "status": "completed",
+        "status": final_status,
     }
 
 

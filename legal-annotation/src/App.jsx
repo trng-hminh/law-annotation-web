@@ -5,7 +5,7 @@ import {
   ZoomIn, ZoomOut, X, GripVertical, ScrollText, Gavel, ListChecks,
   Scale, CircleCheck, Circle, UserRound, LogOut,
   FolderOpen, Shield, Loader2, LayoutDashboard, RefreshCw,
-  Users, Download
+  Users, Download, ClipboardList
 } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
@@ -851,6 +851,7 @@ function AdminDashboard({
   onCreateAnnotator, onResetPasscode, onDeleteAnnotator,
   onCreateAdmin, onResetAdminPassword, onDeleteAdmin,
   onDeleteSubmissions,
+  onClearAssignments,
   onRefresh, refreshing, flash, onExport,
 }) {
   const [section, setSection] = useState("cases"); // "cases" | "annotators"
@@ -877,7 +878,7 @@ function AdminDashboard({
       if (q && !c.case_id.toLowerCase().includes(q) && !c.title.toLowerCase().includes(q)) return false;
       if (filter === "open" && c.status !== "open") return false;
       if (filter === "completed" && c.status !== "completed") return false;
-      if (filter === "unassigned" && c.assigned_to) return false;
+      if (filter === "unassigned" && (c.assigned_to || []).length) return false;
       return true;
     });
   }, [overview, search, filter]);
@@ -888,7 +889,7 @@ function AdminDashboard({
 
   const openCount = overview.filter((c) => c.status === "open").length;
   const completedCount = overview.length - openCount;
-  const unassignedCount = overview.filter((c) => c.status === "open" && !c.assigned_to).length;
+  const unassignedCount = overview.filter((c) => c.status === "open" && !(c.assigned_to || []).length).length;
 
   const tabBase = {
     display: "flex", alignItems: "center", gap: 6, padding: "8px 12px",
@@ -910,6 +911,7 @@ function AdminDashboard({
           {section === "cases" && (
             <>
               <button onClick={onAutoAssign} style={btnPrimaryStyle}>Phân công tự động</button>
+              <button onClick={onClearAssignments} style={{ ...btnGhostStyle, color: T.danger, borderColor: T.danger + "66" }}>Xoá toàn bộ phân công</button>
               <button onClick={onImportPrototype} style={btnGhostStyle}>Nạp 10 case mẫu</button>
               <button onClick={() => importRef.current?.click()} style={btnGhostStyle}>Import JSON</button>
             </>
@@ -979,18 +981,31 @@ function AdminDashboard({
                     </div>
 
                     <div style={{ display: "flex", gap: 22, flexWrap: "wrap", marginTop: 8, fontSize: 12 }}>
-                      <div>
-                        <div style={{ fontSize: 10.5, fontWeight: 700, color: T.inkSoft, textTransform: "uppercase" }}>Phân công</div>
-                        <select
-                          value={c.assigned_to || ""}
-                          onChange={(e) => onAssign(c.case_id, e.target.value || null)}
-                          style={{ ...inputStyle, marginTop: 3, padding: "4px 8px", fontSize: 12, width: 190 }}
-                        >
-                          <option value="">— chưa giao —</option>
-                          {annotators.map((a) => (
-                            <option key={a.id} value={a.id}>{a.name} ({a.id})</option>
+                      <div style={{ minWidth: 200 }}>
+                        <div style={{ fontSize: 10.5, fontWeight: 700, color: T.inkSoft, textTransform: "uppercase" }}>Phân công ({c.assigned_to?.length || 0})</div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 3 }}>
+                          {(c.assigned_to || []).length === 0 && <span style={{ color: T.inkSoft }}>Chưa phân công</span>}
+                          {(c.assigned_to || []).map((id) => (
+                            <span key={id} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, background: T.paperDim, borderRadius: 12, padding: "2px 8px", alignSelf: "flex-start" }}>
+                              {nameOf(id)}
+                              <button
+                                onClick={() => onAssign(c.case_id, id, true)}
+                                title="Bỏ annotator này"
+                                style={{ border: "none", background: "transparent", cursor: "pointer", color: T.danger, fontSize: 12, padding: 0, lineHeight: 1 }}
+                              >✕</button>
+                            </span>
                           ))}
-                        </select>
+                          <select
+                            value=""
+                            onChange={(e) => { const v = e.target.value; if (v) onAssign(c.case_id, v); }}
+                            style={{ ...inputStyle, padding: "4px 8px", fontSize: 12, width: 200 }}
+                          >
+                            <option value="">+ thêm annotator…</option>
+                            {annotators.map((a) => (
+                              <option key={a.id} value={a.id}>{a.name} ({a.id})</option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
                       <div>
                         <div style={{ fontSize: 10.5, fontWeight: 700, color: T.inkSoft, textTransform: "uppercase" }}>Đã gửi</div>
@@ -1511,12 +1526,23 @@ export default function LegalAnnotationApp() {
 
   /* -------------------- admin actions -------------------- */
 
-  const assignCase = async (caseId, annotatorId) => {
+  const assignCase = async (caseId, annotatorId, remove = false) => {
     try {
-      await api(`/api/cases/${caseId}/assign`, { method: "POST", body: { annotator_id: annotatorId || null } });
+      await api(`/api/cases/${caseId}/assign`, { method: "POST", body: { annotator_id: annotatorId || null, remove } });
       loadAdminData();
     } catch (e) {
       setFlash(e.message || "Phân công thất bại.");
+    }
+  };
+
+  const clearAllAssignments = async () => {
+    if (!window.confirm("Xoá toàn bộ phân công của tất cả case? Case sẽ trở về chưa phân công.")) return;
+    try {
+      await api("/api/assignments", { method: "DELETE" });
+      setFlash("Đã xoá toàn bộ phân công.");
+      loadAdminData();
+    } catch (e) {
+      setFlash(e.message || "Xoá phân công thất bại.");
     }
   };
 
@@ -1542,7 +1568,7 @@ export default function LegalAnnotationApp() {
   const autoAssign = async () => {
     try {
       const res = await api("/api/cases/auto-assign", { method: "POST" });
-      setFlash(`Đã tự phân công ${res.assigned} case.`);
+      setFlash(`Đã tự phân công ${res.assigned} lượt (${res.cases_with_2} case có 2 annotator).`);
       loadAdminData();
     } catch (e) {
       setFlash(e.message || "Phân công thất bại.");
@@ -1688,7 +1714,8 @@ export default function LegalAnnotationApp() {
   const onMouseUp = () => { draggingRef.current = false; };
 
   const TABS = caseData ? [
-    { key: "units", label: "Claims & Requests", count: caseData.units.length, icon: ListChecks },
+    { key: "claims", label: "Claims", count: caseData.units.filter((u) => u.type !== "request").length, icon: ListChecks },
+    { key: "requests", label: "Requests", count: caseData.units.filter((u) => u.type === "request").length, icon: ClipboardList },
     { key: "reasoning", label: "Reasoning", count: caseData.reasoning.length, icon: Scale },
     { key: "decisions", label: "Decisions", count: caseData.decisions.length, icon: Gavel },
     { key: "links", label: "Links", count: caseData.units.filter((u) => u.type === "request" && ((u.linkedDecisions?.length || 0) + (u.linkedReasoning?.length || 0) > 0)).length, icon: Link2 },
@@ -1813,19 +1840,44 @@ export default function LegalAnnotationApp() {
               })}
             </div>
 
-            {tab === "units" && (
+            {tab === "claims" && (
               <div>
                 <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
                   <button onClick={() => setAddingType("claim")} style={{ ...btnGhostStyle, display: "inline-flex", alignItems: "center", gap: 5 }}><Plus size={13} /> Thêm claim</button>
-                  <button onClick={() => setAddingType("request")} style={{ ...btnGhostStyle, display: "inline-flex", alignItems: "center", gap: 5 }}><Plus size={13} /> Thêm request</button>
                 </div>
                 {addingType === "claim" && (
                   <UnitForm parties={caseData.parties || []} initial={{ type: "claim", order: sortedUnits.length + 1 }} onSave={saveNewUnit} onCancel={() => setAddingType(null)} />
                 )}
+                {sortedUnits.filter((u) => u.type !== "request").map((u) => (
+                  <UnitCard
+                    key={u.id}
+                    unit={u}
+                    parties={caseData.parties || []}
+                    editing={editingId === u.id}
+                    modificationEditing={modificationEditId === u.id}
+                    onConfirm={() => toggleConfirm(u.id, "units")}
+                    onEditStart={() => setEditingId(u.id)}
+                    onEditSave={(data) => saveEditUnit(u.id, data)}
+                    onEditCancel={() => setEditingId(null)}
+                    onDelete={() => deleteUnit(u.id)}
+                    onModificationToggle={() => toggleModifications(u.id)}
+                    onAddModification={(m) => addModification(u.id, m)}
+                    onUpdateModification={(idx, m) => updateModification(u.id, idx, m)}
+                    onRemoveModification={(idx) => removeModification(u.id, idx)}
+                  />
+                ))}
+              </div>
+            )}
+
+            {tab === "requests" && (
+              <div>
+                <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                  <button onClick={() => setAddingType("request")} style={{ ...btnGhostStyle, display: "inline-flex", alignItems: "center", gap: 5 }}><Plus size={13} /> Thêm request</button>
+                </div>
                 {addingType === "request" && (
                   <UnitForm parties={caseData.parties || []} initial={{ type: "request", order: sortedUnits.length + 1 }} onSave={saveNewUnit} onCancel={() => setAddingType(null)} />
                 )}
-                {sortedUnits.map((u) => (
+                {sortedUnits.filter((u) => u.type === "request").map((u) => (
                   <UnitCard
                     key={u.id}
                     unit={u}
@@ -1933,6 +1985,7 @@ export default function LegalAnnotationApp() {
           onReopen={reopenCase}
           onDeleteSubmissions={deleteCaseSubmissions}
           onAutoAssign={autoAssign}
+          onClearAssignments={clearAllAssignments}
           onImportFile={importFromFile}
           onImportPrototype={importPrototype}
           importMessage={importMessage}
