@@ -1061,7 +1061,7 @@ def submit_case(payload: dict, request: Request):
     annotator_id = auth["id"]
     annotator_name = _admin_name(auth["id"]) if auth["type"] == "admin" else _annotator_name(auth["id"])
 
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     filename = f"case_{case_id}_{timestamp}.json"
     summary = {
         "annotator_id": annotator_id,

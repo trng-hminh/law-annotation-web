@@ -150,11 +150,11 @@ function ModificationList({ unit, onAdd, onUpdate, onRemove, onClose }) {
                 </div>
                 <textarea
                   value={m.text || ""}
-                  onChange={(e) => onUpdate(i, { ...m, text: e.target.value })}
+                  onChange={(e) => onUpdate(m, { ...m, text: e.target.value })}
                   style={{ width: "100%", minHeight: 55, resize: "vertical", border: `1px solid ${T.line}`, borderRadius: 5, padding: 7, font: "inherit", fontSize: 12.5, lineHeight: 1.5, boxSizing: "border-box" }}
                 />
               </div>
-              <IconBtn tone="danger" size={24} onClick={() => onRemove(i)} title="Xoá yêu cầu sửa đổi">
+              <IconBtn tone="danger" size={24} onClick={() => onRemove(m)} title="Xoá yêu cầu sửa đổi">
                 <X size={13} />
               </IconBtn>
             </div>
@@ -493,12 +493,62 @@ function LinksTab({ caseData, updateCase }) {
 
 /* ---------------------------- document (PDF) panel ---------------------------- */
 
-function DocumentPanel({ caseData }) {
-  const [page, setPage] = useState(2);
-  const [zoom, setZoom] = useState(100);
-  const maxPage = caseData.totalPages;
+function buildDocumentText(caseData) {
+  const lines = [];
+  const title = (caseData.title || `Case ${caseData.id}`).trim();
+  if (title) {
+    lines.push(title.toUpperCase());
+    lines.push("");
+  }
 
-  const content = caseData.pages[page] || "(Trang này chưa có nội dung số hoá)";
+  const parties = caseData.parties || [];
+  if (parties.length) {
+    parties.forEach((p) => lines.push(`${p.name} — ${p.role || "Đương sự"}`));
+    lines.push("");
+  }
+
+  const units = [...(caseData.units || [])].sort((a, b) => (a.order || 0) - (b.order || 0));
+  const claims = units.filter((u) => u.type !== "request");
+  const requests = units.filter((u) => u.type === "request");
+  const reasoning = [...(caseData.reasoning || [])].sort((a, b) => (a.order || 0) - (b.order || 0));
+  const decisions = [...(caseData.decisions || [])].sort((a, b) => (a.order || 0) - (b.order || 0));
+
+  const pushSection = (header, items) => {
+    const texts = items.map((it) => (it.text || "").trim()).filter(Boolean);
+    if (!texts.length) return;
+    lines.push(header);
+    lines.push("");
+    texts.forEach((t, i) => lines.push(`${i + 1}. ${t}`));
+    lines.push("");
+  };
+
+  pushSection("NỘI DUNG VỤ ÁN", claims);
+  pushSection("YÊU CẦU CỦA ĐƯƠNG SỰ", requests);
+  pushSection("NHẬN ĐỊNH CỦA TOÀ ÁN", reasoning);
+  pushSection("QUYẾT ĐỊNH", decisions);
+
+  return lines.join("\n").trim() || "(Chưa có nội dung số hoá cho case này)";
+}
+
+function resolvePages(caseData) {
+  const raw = caseData.pages;
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    const keys = Object.keys(raw)
+      .filter((k) => /^\d+$/.test(k))
+      .sort((a, b) => Number(a) - Number(b));
+    if (keys.length) return keys.map((k) => raw[k]);
+  }
+  if (Array.isArray(raw) && raw.length) return raw.map((x) => String(x));
+  return [buildDocumentText(caseData)];
+}
+
+function DocumentPanel({ caseData }) {
+  const pages = useMemo(() => resolvePages(caseData), [caseData]);
+  const [page, setPage] = useState(1);
+  const [zoom, setZoom] = useState(100);
+  const maxPage = Math.max(1, pages.length);
+  const safePage = Math.min(Math.max(1, page), maxPage);
+  const content = pages[safePage - 1] || "(Trang này chưa có nội dung số hoá)";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", background: T.paperDim }}>
@@ -508,7 +558,7 @@ function DocumentPanel({ caseData }) {
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <ScrollText size={15} color={T.inkSoft} />
-          <span style={{ fontSize: 12.5, fontWeight: 600, color: T.ink }}>{caseData.sourceFile}</span>
+          <span style={{ fontSize: 12.5, fontWeight: 600, color: T.ink }}>{caseData.sourceFile || `Case ${caseData.id}`}</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
           <IconBtn size={24} onClick={() => setZoom((z) => Math.max(60, z - 10))} title="Thu nhỏ"><ZoomOut size={14} /></IconBtn>
@@ -516,22 +566,22 @@ function DocumentPanel({ caseData }) {
           <IconBtn size={24} onClick={() => setZoom((z) => Math.min(180, z + 10))} title="Phóng to"><ZoomIn size={14} /></IconBtn>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <IconBtn size={24} onClick={() => setPage((p) => Math.max(1, p - 1))} title="Trang trước"><ChevronLeft size={15} /></IconBtn>
-          <span style={{ fontSize: 12, color: T.inkSoft }}>Trang {page} / {maxPage}</span>
-          <IconBtn size={24} onClick={() => setPage((p) => Math.min(maxPage, p + 1))} title="Trang sau"><ChevronRight size={15} /></IconBtn>
+          <IconBtn size={24} onClick={() => setPage(Math.max(1, safePage - 1))} title="Trang trước"><ChevronLeft size={15} /></IconBtn>
+          <span style={{ fontSize: 12, color: T.inkSoft }}>Trang {safePage} / {maxPage}</span>
+          <IconBtn size={24} onClick={() => setPage(Math.min(maxPage, safePage + 1))} title="Trang sau"><ChevronRight size={15} /></IconBtn>
         </div>
       </div>
 
       <div style={{ flex: 1, overflowY: "auto", padding: "22px 24px", display: "flex", justifyContent: "center" }}>
         <div style={{
-          width: `${zoom}%`, maxWidth: 640, minWidth: 280, background: "#fff",
+          width: "100%", maxWidth: 640, background: "#fff",
           boxShadow: "0 1px 3px rgba(28,38,36,0.12), 0 1px 1px rgba(28,38,36,0.08)",
           borderRadius: 2, padding: "34px 30px", fontFamily: "Georgia, 'Times New Roman', serif",
-          fontSize: 13.5, lineHeight: 1.85, color: "#22201A", whiteSpace: "pre-wrap",
-          minHeight: 780,
+          fontSize: 13.5 * (zoom / 100), lineHeight: 1.85, color: "#22201A", whiteSpace: "pre-wrap",
+          minHeight: 780, boxSizing: "border-box",
         }}>
           {content}
-          <div style={{ textAlign: "center", marginTop: 24, fontSize: 11, color: "#948C74" }}>— {page} —</div>
+          <div style={{ textAlign: "center", marginTop: 24, fontSize: 11, color: "#948C74" }}>— {safePage} / {maxPage} —</div>
         </div>
       </div>
     </div>
@@ -571,6 +621,8 @@ const normalizeCase = (source) => {
       ...source,
       id: String(source.id),
       title: source.title || `Case ${source.id}`,
+      sourceFile: source.sourceFile || `case_${source.id}`,
+      totalPages: source.totalPages != null ? Number(source.totalPages) : 0,
       parties: source.parties || [],
       units: source.units.map((u) => ({
         ...u,
@@ -608,7 +660,7 @@ const normalizeCase = (source) => {
     id: String(r.request_id),
     type: "request",
     order: Number(r.order) || 0,
-    assertedBy: (r.requested_by || []).map(String),
+    assertedBy: Array.isArray(r.requested_by) ? r.requested_by.map(String) : (r.requested_by ? [String(r.requested_by)] : []),
     text: normalizeText(r),
     status: "unconfirmed",
     section: r.section || "content",
@@ -1232,6 +1284,7 @@ export default function LegalAnnotationApp() {
   const [draftStatus, setDraftStatus] = useState("idle"); // idle | saving | saved | error
   const [draftLoadedAt, setDraftLoadedAt] = useState(null);
   const dirtyRef = useRef(false);
+  const dirtyVersionRef = useRef(0);
 
   const [flash, setFlash] = useState("");
   const [refreshing, setRefreshing] = useState(false);
@@ -1378,6 +1431,7 @@ export default function LegalAnnotationApp() {
   const updateCase = useCallback((fn) => {
     setCaseData((c) => (c ? fn(c) : c));
     dirtyRef.current = true;
+    dirtyVersionRef.current += 1;
     setSubmitted(false);
     setDraftStatus("idle");
     setSubmitMessage("");
@@ -1425,22 +1479,26 @@ export default function LegalAnnotationApp() {
     }));
   };
 
-  const updateModification = (unitId, idx, modification) => {
+  const updateModification = (unitId, target, modification) => {
     updateCase((c) => ({
       ...c,
       units: c.units.map((u) => {
         if (u.id !== unitId) return u;
         const list = [...(u.modification_spans || [])];
-        list[idx] = modification;
+        const idx = list.indexOf(target);
+        if (idx >= 0) list[idx] = modification;
         return { ...u, modification_spans: list };
       }),
     }));
   };
 
-  const removeModification = (unitId, idx) => {
+  const removeModification = (unitId, target) => {
     updateCase((c) => ({
       ...c,
-      units: c.units.map((u) => (u.id === unitId ? { ...u, modification_spans: (u.modification_spans || []).filter((_, i) => i !== idx) } : u)),
+      units: c.units.map((u) => {
+        if (u.id !== unitId) return u;
+        return { ...u, modification_spans: (u.modification_spans || []).filter((x) => x !== target) };
+      }),
     }));
   };
 
@@ -1474,13 +1532,16 @@ export default function LegalAnnotationApp() {
   useEffect(() => {
     if (!auth || auth.type !== "annotator" || view !== "annotation" || !caseData || submitted) return;
     if (!dirtyRef.current) return;
+    const version = dirtyVersionRef.current;
     const timer = setTimeout(async () => {
       try {
         setDraftStatus("saving");
         const res = await api(`/api/cases/${caseData.id}/draft`, { method: "PUT", body: caseData });
-        dirtyRef.current = false;
-        setDraftStatus("saved");
-        setDraftLoadedAt(res.saved_at || new Date().toISOString());
+        if (dirtyVersionRef.current === version) {
+          dirtyRef.current = false;
+          setDraftStatus("saved");
+          setDraftLoadedAt(res.saved_at || new Date().toISOString());
+        }
         setBackendOk(true);
       } catch {
         setDraftStatus("error");
@@ -1862,8 +1923,8 @@ export default function LegalAnnotationApp() {
                     onDelete={() => deleteUnit(u.id)}
                     onModificationToggle={() => toggleModifications(u.id)}
                     onAddModification={(m) => addModification(u.id, m)}
-                    onUpdateModification={(idx, m) => updateModification(u.id, idx, m)}
-                    onRemoveModification={(idx) => removeModification(u.id, idx)}
+                    onUpdateModification={(m, updated) => updateModification(u.id, m, updated)}
+                    onRemoveModification={(m) => removeModification(u.id, m)}
                   />
                 ))}
               </div>
@@ -1891,8 +1952,8 @@ export default function LegalAnnotationApp() {
                     onDelete={() => deleteUnit(u.id)}
                     onModificationToggle={() => toggleModifications(u.id)}
                     onAddModification={(m) => addModification(u.id, m)}
-                    onUpdateModification={(idx, m) => updateModification(u.id, idx, m)}
-                    onRemoveModification={(idx) => removeModification(u.id, idx)}
+                    onUpdateModification={(m, updated) => updateModification(u.id, m, updated)}
+                    onRemoveModification={(m) => removeModification(u.id, m)}
                   />
                 ))}
               </div>
