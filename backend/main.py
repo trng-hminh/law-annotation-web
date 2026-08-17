@@ -172,14 +172,10 @@ class FileStorage:
         data["submitted_at"] = summary["submitted_at"]
         data["received_at"] = datetime.now().isoformat()
         _write_json_file(self.submissions_dir / summary["file"], data)
-        index = self.submissions_index()
-        index.setdefault(str(case_id), []).append({
-            "annotator_id": summary["annotator_id"],
-            "annotator_name": summary["annotator_name"],
-            "submitted_at": summary["submitted_at"],
-            "file": summary["file"],
-        })
-        _write_json_file(self.index_file, index)
+        # Index được dựng lại hoàn toàn từ disk ở lần đọc sau, đảm bảo mỗi
+        # annotator chỉ có ĐÚNG 1 bài nộp cho một case (overwrite khi nộp lại).
+        if self.index_file.exists():
+            self.index_file.unlink()
 
     def list_submissions(self):
         """Toàn bộ submission đầy đủ (phục vụ export)."""

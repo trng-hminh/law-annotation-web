@@ -5,7 +5,8 @@ import {
   ZoomIn, ZoomOut, X, GripVertical, ScrollText, Gavel, ListChecks,
   Scale, CircleCheck, Circle, UserRound, LogOut,
   FolderOpen, Shield, Loader2, LayoutDashboard, RefreshCw,
-  Users, Download, ClipboardList, Activity
+  Users, Download, ClipboardList, Activity, CircleHelp, BookOpen,
+  GraduationCap, Lightbulb
 } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
@@ -729,6 +730,161 @@ const normalizeCasesPayload = (payload) => {
 const INITIAL_CASES = normalizeCasesPayload(rawPrototypeCases);
 
 /* ============================================================================
+   HƯỚNG DẪN SỬ DỤNG — nội dung theo tab + tổng quan (dành cho luật sư)
+   ============================================================================ */
+
+const HELP_OVERVIEW = {
+  title: "Quy trình gán nhãn vụ án",
+  steps: [
+    {
+      title: "1. Phân đoạn",
+      text: "Tách bản án thành Claims (tình tiết), Requests (yêu cầu), Reasoning (nhận định) và Decisions (quyết định) trong từng tab tương ứng.",
+    },
+    {
+      title: "2. Ghép nối",
+      text: "Trong tab Links, với mỗi Request hãy tích chọn các Reasoning và Decision làm căn cứ cho yêu cầu đó.",
+    },
+    {
+      title: "3. Gán Outcome",
+      text: "Cũng trong tab Links, chọn kết quả (Chấp nhận / Không chấp nhận / Chấp nhận một phần) rồi bấm 'Xác nhận links & outcome'.",
+    },
+  ],
+};
+
+const HELP_TABS = {
+  claims: {
+    title: "Phân đoạn Claim",
+    intro: "Claim là tình tiết, sự kiện, lời trình bày của đương sự (thuộc phần nội dung vụ án).",
+    steps: [
+      "Bấm 'Thêm claim'.",
+      "Chọn bên khởi xướng (Nguyên đơn / Bị đơn / Đương sự liên quan).",
+      "Nhập nội dung trích nguyên văn từ bản án ở khung bên phải.",
+      "Chỉnh 'Thứ tự' cho khớp trình tự bản án rồi bấm 'Lưu'.",
+      "Rà soát xong, bấm 'Xác nhận' để đánh dấu đã duyệt.",
+    ],
+  },
+  requests: {
+    title: "Phân đoạn Request",
+    intro: "Request là yêu cầu khởi kiện / yêu cầu cụ thể của đương sự.",
+    steps: [
+      "Bấm 'Thêm request'.",
+      "Chọn một hoặc nhiều bên yêu cầu.",
+      "Nhập nội dung yêu cầu từ bản án.",
+      "Nếu có yêu cầu sửa đổi/bổ sung phát sinh, bấm '+ yêu cầu sửa đổi/bổ sung' để thêm.",
+      "Bấm 'Xác nhận' khi đã hoàn chỉnh.",
+    ],
+  },
+  reasoning: {
+    title: "Phân đoạn Reasoning",
+    intro: "Reasoning là nhận định, lập luận của Toà án (phần 'xét thấy').",
+    steps: [
+      "Bấm 'Thêm reasoning'.",
+      "Nhập nội dung nhận định của Toà.",
+      "Chỉnh 'Thứ tự' rồi bấm 'Lưu'.",
+      "Bấm 'Xác nhận' sau khi rà soát.",
+    ],
+  },
+  decisions: {
+    title: "Phân đoạn Decision",
+    intro: "Decision là quyết định cuối cùng của Toà án.",
+    steps: [
+      "Bấm 'Thêm decision'.",
+      "Nhập nội dung quyết định.",
+      "Chỉnh 'Thứ tự' rồi bấm 'Lưu'.",
+      "Bấm 'Xác nhận' sau khi rà soát.",
+    ],
+  },
+  links: {
+    title: "Ghép nối & gán Outcome",
+    intro: "Với mỗi Request, xác định Reasoning/Decision làm căn cứ và gán kết quả.",
+    steps: [
+      "Chọn Request cần xử lý.",
+      "Ở 'Liên kết Decision': tích chọn quyết định tương ứng.",
+      "Ở 'Liên kết Reasoning': tích chọn nhận định làm căn cứ.",
+      "Ở 'Outcome': chọn 'Chấp nhận' / 'Không chấp nhận' / 'Chấp nhận một phần'.",
+      "Bấm 'Xác nhận links & outcome' để chốt.",
+    ],
+  },
+};
+
+function HelpPanel({ tab, onClose }) {
+  const h = HELP_TABS[tab] || {
+    title: "Hướng dẫn chung",
+    intro: "Xem từng tab để biết cách phân đoạn, ghép nối và gán kết quả.",
+    steps: HELP_OVERVIEW.steps.map((s) => `${s.title} — ${s.text}`),
+  };
+  return (
+    <div style={{
+      position: "absolute", top: 8, right: 8, width: 320, maxWidth: "calc(100% - 16px)",
+      background: T.paperCard, border: `1px solid ${T.line}`, borderRadius: 12,
+      boxShadow: "0 12px 40px rgba(28,38,36,0.18)", padding: "15px 16px 14px",
+      zIndex: 60, maxHeight: "calc(100% - 16px)", overflowY: "auto", boxSizing: "border-box",
+    }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <CircleHelp size={16} color={T.gold} />
+          <span style={{ fontSize: 13.5, fontWeight: 700 }}>{h.title}</span>
+        </div>
+        <IconBtn size={24} onClick={onClose} title="Đóng hướng dẫn"><X size={14} /></IconBtn>
+      </div>
+      {h.intro && <p style={{ margin: "0 0 10px", fontSize: 12.5, color: T.inkSoft, lineHeight: 1.55 }}>{h.intro}</p>}
+      <ol style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 7 }}>
+        {(h.steps || []).map((s, i) => (
+          <li key={i} style={{ fontSize: 12.5, color: T.ink, lineHeight: 1.5 }}>{s}</li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+function OnboardingModal({ onClose }) {
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed", inset: 0, background: "rgba(28,38,36,0.45)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        zIndex: 100, padding: 20, boxSizing: "border-box",
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: 560, maxWidth: "100%", background: T.paperCard, borderRadius: 14,
+          padding: "26px 28px", boxShadow: "0 20px 60px rgba(28,38,36,0.30)",
+          maxHeight: "90vh", overflowY: "auto", boxSizing: "border-box",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 6 }}>
+          <div style={{ width: 34, height: 34, borderRadius: 9, background: T.ink, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <GraduationCap size={17} />
+          </div>
+          <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>Hướng dẫn gán nhãn vụ án</h2>
+        </div>
+        <p style={{ margin: "0 0 16px", fontSize: 12.5, color: T.inkSoft }}>
+          Dành cho luật sư: quy trình gồm 3 bước chính.
+        </p>
+
+        {HELP_OVERVIEW.steps.map((s) => (
+          <div key={s.title} style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: T.gold, marginBottom: 3 }}>{s.title}</div>
+            <div style={{ fontSize: 12.5, color: T.ink, lineHeight: 1.6 }}>{s.text}</div>
+          </div>
+        ))}
+
+        <div style={{ background: T.paperDim, borderRadius: 8, padding: "10px 12px", fontSize: 12, color: T.inkSoft, lineHeight: 1.6, marginBottom: 16 }}>
+          Trong mỗi case, bấm biểu tượng <CircleHelp size={13} style={{ verticalAlign: "-2px" }} color={T.gold} /> ở góc trên phải để xem hướng dẫn theo từng tab.
+        </div>
+
+        <div style={{ textAlign: "right" }}>
+          <button onClick={onClose} style={btnPrimaryStyle}>Bắt đầu làm việc</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================================
    LOGIN — hai vai trò: Annotator (tên + mã) và Admin (user + mật khẩu)
    ============================================================================ */
 
@@ -740,6 +896,7 @@ function LoginScreen({ onLogin, offline }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
   const submit = async (e) => {
     if (e) e.preventDefault();
@@ -822,6 +979,25 @@ function LoginScreen({ onLogin, offline }) {
           {busy ? <Loader2 size={14} className="spin" /> : null}
           {busy ? "Đang đăng nhập…" : "Vào làm việc"}
         </button>
+
+        <div style={{ marginTop: 14, borderTop: `1px solid ${T.line}`, paddingTop: 12 }}>
+          <button
+            onClick={() => setShowHelp((v) => !v)}
+            style={{ ...btnGhostStyle, width: "100%", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "6px 10px", fontSize: 12 }}
+          >
+            <BookOpen size={13} /> {showHelp ? "Ẩn quy trình gán nhãn" : "Xem quy trình gán nhãn"}
+          </button>
+          {showHelp && (
+            <div style={{ marginTop: 10, background: T.paperDim, borderRadius: 8, padding: "10px 12px" }}>
+              {HELP_OVERVIEW.steps.map((s) => (
+                <div key={s.title} style={{ marginBottom: 8 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: T.gold }}>{s.title}</div>
+                  <div style={{ fontSize: 11.5, color: T.inkSoft, lineHeight: 1.55 }}>{s.text}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -831,9 +1007,10 @@ function LoginScreen({ onLogin, offline }) {
    DASHBOARD ANNOTATOR — chỉ thấy case được phân công, chưa hoàn thành
    ============================================================================ */
 
-function AnnotatorDashboard({ cases, stats, onOpen, onRefresh, refreshing, flash }) {
+function AnnotatorDashboard({ cases, stats, onOpen, onRefresh, refreshing, flash, onShowGuide }) {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [showGuide, setShowGuide] = useState(true);
   const pageSize = 20;
 
   const filtered = useMemo(() => {
@@ -857,6 +1034,28 @@ function AnnotatorDashboard({ cases, stats, onOpen, onRefresh, refreshing, flash
         <button onClick={onRefresh} disabled={refreshing} style={{ ...btnGhostStyle, display: "inline-flex", alignItems: "center", gap: 5 }}>
           {refreshing ? <Loader2 size={13} className="spin" /> : <RefreshCw size={13} />} Làm mới
         </button>
+      </div>
+
+      <div style={{ background: T.goldTint, border: `1px solid ${T.gold}55`, borderRadius: 10, padding: "11px 14px", marginBottom: 14 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+            <Lightbulb size={14} color={T.gold} />
+            <span style={{ fontSize: 12.5, fontWeight: 700, color: T.ink }}>Hướng dẫn nhanh</span>
+          </div>
+          <div style={{ display: "flex", gap: 6 }}>
+            <button onClick={() => onShowGuide?.()} style={{ ...btnGhostStyle, padding: "4px 9px", fontSize: 11.5 }}>Xem đầy đủ</button>
+            <button onClick={() => setShowGuide((v) => !v)} style={{ ...btnGhostStyle, padding: "4px 9px", fontSize: 11.5 }}>{showGuide ? "Ẩn" : "Hiện"}</button>
+          </div>
+        </div>
+        {showGuide && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+            {HELP_OVERVIEW.steps.map((s) => (
+              <div key={s.title} style={{ fontSize: 12, color: T.ink, lineHeight: 1.5 }}>
+                <strong style={{ color: T.gold }}>{s.title}.</strong> {s.text}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {flash && (
@@ -1360,6 +1559,10 @@ export default function LegalAnnotationApp() {
   const [flash, setFlash] = useState("");
   const [refreshing, setRefreshing] = useState(false);
 
+  // hướng dẫn (help panel trong case + onboarding lần đầu)
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
   // annotator dashboard
   const [myCases, setMyCases] = useState([]);
   const [myStats, setMyStats] = useState({ assigned: 0, completed: 0, remaining: 0 });
@@ -1443,6 +1646,19 @@ export default function LegalAnnotationApp() {
     const id = setInterval(() => { loadAdminData(); }, 15000);
     return () => clearInterval(id);
   }, [auth?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* hiển thị hướng dẫn lần đầu cho annotator (chỉ một lần) */
+  useEffect(() => {
+    if (!auth || auth.type !== "annotator") return;
+    if (!localStorage.getItem("legal-annotation-onboarded")) {
+      setShowOnboarding(true);
+    }
+  }, [auth?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const closeOnboarding = () => {
+    localStorage.setItem("legal-annotation-onboarded", "1");
+    setShowOnboarding(false);
+  };
 
   const handleLogin = async ({ mode, username, password, name, passcode }) => {
     const path = mode === "admin" ? "/api/auth/admin" : "/api/auth/annotator";
@@ -1958,6 +2174,7 @@ export default function LegalAnnotationApp() {
 
               {identityChip}
               <IconBtn title="Đăng xuất" onClick={handleLogout}><LogOut size={14} /></IconBtn>
+              <IconBtn title="Hướng dẫn" tone={helpOpen ? "gold" : "default"} onClick={() => setHelpOpen((v) => !v)}><CircleHelp size={15} /></IconBtn>
 
               <button onClick={submitCase} disabled={submitting} style={btnPrimaryStyle}>
                 {submitting ? "Đang gửi…" : submitted ? "Cập nhật bài nộp" : "Hoàn tất case"}
@@ -1976,6 +2193,7 @@ export default function LegalAnnotationApp() {
             userSelect: draggingRef.current ? "none" : "auto",
           }}
         >
+          {helpOpen && <HelpPanel tab={tab} onClose={() => setHelpOpen(false)} />}
           <div style={{ width: `${leftWidth}%`, overflowY: "auto", padding: "16px 16px 40px" }}>
             <div style={{ display: "flex", gap: 4, marginBottom: 14, borderBottom: `1px solid ${T.line}`, paddingBottom: 2 }}>
               {TABS.map((t) => {
@@ -2008,6 +2226,11 @@ export default function LegalAnnotationApp() {
                 <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
                   <button onClick={() => setAddingType("claim")} style={{ ...btnGhostStyle, display: "inline-flex", alignItems: "center", gap: 5 }}><Plus size={13} /> Thêm claim</button>
                 </div>
+                {sortedUnits.filter((u) => u.type !== "request").length === 0 && !addingType && (
+                  <p style={{ fontSize: 12.5, color: T.inkSoft, background: T.paperDim, borderRadius: 8, padding: "10px 12px", lineHeight: 1.55, margin: "0 0 12px" }}>
+                    Chưa có Claim. Bấm <strong>'Thêm claim'</strong> và trích tình tiết, sự kiện từ bản án ở khung bên phải.
+                  </p>
+                )}
                 {addingType === "claim" && (
                   <UnitForm parties={caseData.parties || []} initial={{ type: "claim", order: sortedUnits.length + 1 }} onSave={saveNewUnit} onCancel={() => setAddingType(null)} />
                 )}
@@ -2037,6 +2260,11 @@ export default function LegalAnnotationApp() {
                 <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
                   <button onClick={() => setAddingType("request")} style={{ ...btnGhostStyle, display: "inline-flex", alignItems: "center", gap: 5 }}><Plus size={13} /> Thêm request</button>
                 </div>
+                {sortedUnits.filter((u) => u.type === "request").length === 0 && !addingType && (
+                  <p style={{ fontSize: 12.5, color: T.inkSoft, background: T.paperDim, borderRadius: 8, padding: "10px 12px", lineHeight: 1.55, margin: "0 0 12px" }}>
+                    Chưa có Request. Bấm <strong>'Thêm request'</strong> và nhập yêu cầu khởi kiện của đương sự.
+                  </p>
+                )}
                 {addingType === "request" && (
                   <UnitForm parties={caseData.parties || []} initial={{ type: "request", order: sortedUnits.length + 1 }} onSave={saveNewUnit} onCancel={() => setAddingType(null)} />
                 )}
@@ -2064,6 +2292,11 @@ export default function LegalAnnotationApp() {
             {tab === "reasoning" && (
               <div>
                 <button onClick={() => setAddingType("reasoning")} style={{ ...btnGhostStyle, display: "inline-flex", alignItems: "center", gap: 5, marginBottom: 12 }}><Plus size={13} /> Thêm reasoning</button>
+                {(caseData.reasoning || []).length === 0 && !addingType && (
+                  <p style={{ fontSize: 12.5, color: T.inkSoft, background: T.paperDim, borderRadius: 8, padding: "10px 12px", lineHeight: 1.55, margin: "0 0 12px" }}>
+                    Chưa có Reasoning. Bấm <strong>'Thêm reasoning'</strong> và nhập nhận định, lập luận của Toà án.
+                  </p>
+                )}
                 {addingType === "reasoning" && (
                   <ReasonDecisionForm kind="reasoning" initial={{ order: (caseData.reasoning || []).length + 1 }} onSave={(d) => saveNewSimple("reasoning", d)} onCancel={() => setAddingType(null)} />
                 )}
@@ -2083,6 +2316,11 @@ export default function LegalAnnotationApp() {
             {tab === "decisions" && (
               <div>
                 <button onClick={() => setAddingType("decision")} style={{ ...btnGhostStyle, display: "inline-flex", alignItems: "center", gap: 5, marginBottom: 12 }}><Plus size={13} /> Thêm decision</button>
+                {(caseData.decisions || []).length === 0 && !addingType && (
+                  <p style={{ fontSize: 12.5, color: T.inkSoft, background: T.paperDim, borderRadius: 8, padding: "10px 12px", lineHeight: 1.55, margin: "0 0 12px" }}>
+                    Chưa có Decision. Bấm <strong>'Thêm decision'</strong> và nhập quyết định cuối cùng của Toà án.
+                  </p>
+                )}
                 {addingType === "decision" && (
                   <ReasonDecisionForm kind="decision" initial={{ order: (caseData.decisions || []).length + 1 }} onSave={(d) => saveNewSimple("decisions", d)} onCancel={() => setAddingType(null)} />
                 )}
@@ -2117,6 +2355,7 @@ export default function LegalAnnotationApp() {
             <DocumentPanel caseData={caseData} />
           </div>
         </div>
+        {showOnboarding && <OnboardingModal onClose={closeOnboarding} />}
       </div>
     );
   }
@@ -2172,8 +2411,10 @@ export default function LegalAnnotationApp() {
           onRefresh={refresh}
           refreshing={refreshing}
           flash={flash}
+          onShowGuide={() => setShowOnboarding(true)}
         />
       )}
+      {showOnboarding && <OnboardingModal onClose={closeOnboarding} />}
     </div>
   );
 }
