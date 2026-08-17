@@ -1568,7 +1568,7 @@ export default function LegalAnnotationApp() {
   const autoAssign = async () => {
     try {
       const res = await api("/api/cases/auto-assign", { method: "POST" });
-      setFlash(`Đã tự phân công ${res.assigned} lượt (${res.cases_with_2} case có 2 annotator).`);
+      setFlash(`Đã phân công thêm ${res.assigned} annotator. Bấm lại để thêm lượt tiếp theo.`);
       loadAdminData();
     } catch (e) {
       setFlash(e.message || "Phân công thất bại.");

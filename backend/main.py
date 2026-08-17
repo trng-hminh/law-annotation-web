@@ -876,9 +876,9 @@ def reopen_case(case_id: str, request: Request):
 
 @app.post("/api/cases/auto-assign")
 def auto_assign(request: Request):
-    """Tự phân công: mỗi case open nhận TỐI ĐA 2 annotator KHÁC NHAU.
-    Case chưa có ai -> gán 1; case đã có 1 -> gán thêm 1 (annotator khác).
-    Cân bằng theo khối lượng công việc; không bao giờ lặp annotator trong cùng case."""
+    """PHÂN CÔNG LŨY TIẾN — mỗi lần bấm chỉ thêm ĐÚNG 1 annotator cho mỗi case open:
+    lần 1: mỗi case 1 annotator; lần 2: thêm annotator khác (2/case); lần 3: thêm nữa...
+    Annotator trong cùng case luôn KHÁC NHAU, cân bằng theo khối lượng công việc."""
     _require_admin(request)
     annotators = storage.list_annotators()
     if not annotators:
@@ -896,24 +896,33 @@ def auto_assign(request: Request):
 
     workload = {aid: workload_of(aid) for aid in annotator_ids}
 
-    TARGET = 2  # annotators tối đa cho mỗi case
     added = 0
     for cid in open_cases:
         cur = [x for x in assignments.get(cid, []) if x in annotator_ids]
-        while len(cur) < TARGET:
-            candidates = [aid for aid in annotator_ids if aid not in cur]
-            if not candidates:
-                break
-            aid = min(candidates, key=lambda a: workload[a])
-            cur.append(aid)
-            workload[aid] += 1
-            added += 1
-        if cur:
-            assignments[cid] = cur
+        # case đã đủ mọi annotator hiện có -> bỏ qua
+        if len(cur) >= len(annotator_ids):
+            continue
+        candidates = [aid for aid in annotator_ids if aid not in cur]
+        if not candidates:
+            continue
+        aid = min(candidates, key=lambda a: workload[a])
+        cur.append(aid)
+        workload[aid] += 1
+        added += 1
+        assignments[cid] = cur
 
     storage.save_assignments(assignments)
-    cases_with_2 = sum(1 for cid in open_cases if len(assignments.get(cid, [])) >= 2)
-    return {"assigned": added, "cases_with_2": cases_with_2, "total_open": len(open_cases)}
+
+    per_case = {}
+    for cid in open_cases:
+        n = len(assignments.get(cid, []))
+        per_case[str(n)] = per_case.get(str(n), 0) + 1
+
+    return {
+        "assigned": added,           # số lượt gán thêm ở lần bấm này
+        "total_open": len(open_cases),
+        "distribution": per_case,    # VD {"1": 10} sau lần 1; {"2": 10} sau lần 2
+    }
 
 
 # ------------------------------ views ------------------------------
