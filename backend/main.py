@@ -27,8 +27,10 @@ Case lifecycle
   The admin can reopen it to put it back in rotation.
 """
 
+import csv
 import hashlib
 import hmac
+import io
 import json
 import os
 import re
@@ -37,9 +39,15 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request
+from bson import Binary
+from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
+
+
+def _safe_id(value):
+    """Sanitise ids coming from URLs to prevent path traversal."""
+    return re.sub(r"[^A-Za-z0-9_\-]", "", str(value))
 
 
 # ------------------------------ env configuration ------------------------------
@@ -83,7 +91,8 @@ class FileStorage:
         self.case_docs_dir = self.data_dir / "case_docs"
         self.drafts_dir = self.data_dir / "drafts"
         self.submissions_dir = self.base / "submissions"
-        for d in (self.submissions_dir, self.data_dir, self.case_docs_dir, self.drafts_dir):
+        self.pdfs_dir = self.data_dir / "case_pdfs"
+        for d in (self.submissions_dir, self.data_dir, self.case_docs_dir, self.drafts_dir, self.pdfs_dir):
             d.mkdir(parents=True, exist_ok=True)
         self.annotators_file = self.data_dir / "annotators.json"
         self.admins_file = self.data_dir / "admins.json"
@@ -220,6 +229,14 @@ class FileStorage:
     def set_secret(self, value):
         _write_json_file(self.secret_file, value)
 
+    def save_pdf(self, case_id, data: bytes):
+        path = self.pdfs_dir / f"{case_id}.pdf"
+        path.write_bytes(data)
+
+    def get_pdf(self, case_id):
+        path = self.pdfs_dir / f"{case_id}.pdf"
+        return path.read_bytes() if path.exists() else None
+
 
 class MongoStorage:
     """Persistent MongoDB storage for production deployment."""
@@ -228,28 +245,28 @@ class MongoStorage:
         self.db = db
 
     def list_annotators(self):
-        return [a for a in self.db.annotators.find({})]
+        return [{k: v for k, v in a.items() if k != "_id"} for a in self.db.annotators.find({})]
 
     def save_annotators(self, annotators):
         self.db.annotators.delete_many({})
         if annotators:
-            self.db.annotators.insert_many(annotators)
+            self.db.annotators.insert_many([dict(a) for a in annotators])
 
     def list_admins(self):
-        return [a for a in self.db.admins.find({})]
+        return [{k: v for k, v in a.items() if k != "_id"} for a in self.db.admins.find({})]
 
     def save_admins(self, admins):
         self.db.admins.delete_many({})
         if admins:
-            self.db.admins.insert_many(admins)
+            self.db.admins.insert_many([dict(a) for a in admins])
 
     def read_cases(self):
-        return [c for c in self.db.cases.find({})]
+        return [{k: v for k, v in c.items() if k != "_id"} for c in self.db.cases.find({})]
 
     def save_cases(self, cases):
         self.db.cases.delete_many({})
         if cases:
-            self.db.cases.insert_many(cases)
+            self.db.cases.insert_many([dict(c) for c in cases])
 
     def read_assignments(self):
         doc = self.db.assignments.find_one({"_id": "map"})
@@ -260,7 +277,7 @@ class MongoStorage:
 
     def get_case_doc(self, case_id):
         doc = self.db.case_docs.find_one({"_id": case_id})
-        return doc if doc else None
+        return {k: v for k, v in doc.items() if k != "_id"} if doc else None
 
     def save_case_doc(self, case_id, doc):
         self.db.case_docs.replace_one({"_id": case_id}, dict(doc, _id=case_id), upsert=True)
@@ -339,6 +356,18 @@ class MongoStorage:
 
     def set_secret(self, value):
         self.db.secrets.replace_one({"_id": "token"}, {"_id": "token", "value": value}, upsert=True)
+
+    def save_pdf(self, case_id, data: bytes):
+        from bson import Binary
+        self.db.case_pdfs.replace_one(
+            {"_id": case_id},
+            {"_id": case_id, "data": Binary(data)},
+            upsert=True,
+        )
+
+    def get_pdf(self, case_id):
+        doc = self.db.case_pdfs.find_one({"_id": case_id})
+        return bytes(doc["data"]) if doc else None
 
 
 # choose backend
@@ -1083,6 +1112,35 @@ def get_case_doc(case_id: str, request: Request):
     return doc
 
 
+@app.post("/api/cases/{case_id}/pdf")
+async def upload_case_pdf(case_id: str, request: Request, file: UploadFile = File(...)):
+    """Admin uploads a PDF for a case."""
+    _require_admin(request)
+    case_id = _safe_id(case_id)
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Chỉ chấp nhận file PDF.")
+    data = await file.read()
+    if len(data) > 50 * 1024 * 1024:  # 50 MB limit
+        raise HTTPException(status_code=413, detail="File quá lớn (tối đa 50 MB).")
+    storage.save_pdf(case_id, data)
+    return {"success": True, "case_id": case_id, "size": len(data)}
+
+
+@app.get("/api/cases/{case_id}/pdf")
+def get_case_pdf(case_id: str, request: Request):
+    """Stream the PDF for a case. Any authenticated user can access."""
+    _require_auth(request)
+    case_id = _safe_id(case_id)
+    data = storage.get_pdf(case_id)
+    if data is None:
+        raise HTTPException(status_code=404, detail="Chưa có PDF cho case này.")
+    return Response(
+        content=data,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="case_{case_id}.pdf"'},
+    )
+
+
 # ------------------------------ drafts (annotator only) ------------------------------
 
 @app.get("/api/cases/{case_id}/draft")
@@ -1256,8 +1314,3 @@ def delete_case_submissions(case_id: str, request: Request):
     # hết bài gửi -> case quay lại trạng thái mở
     _set_case_status(case_id, "open")
     return {"success": True, "case_id": case_id, "deleted": removed, "status": "open"}
-
-
-def _safe_id(value):
-    """Sanitise ids coming from URLs to prevent path traversal."""
-    return re.sub(r"[^A-Za-z0-9_\-]", "", str(value))

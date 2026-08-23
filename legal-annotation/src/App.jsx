@@ -44,6 +44,30 @@ const OUTCOME_LABEL = {
   partial: "Chấp nhận một phần",
 };
 
+/* ------------- sequential ordering (reasoning / decisions) -------------
+   Immutable helpers: mỗi hàm trả về mảng mới (an toàn cho React state).
+   - insertAtOrder: chèn item tại order n, đẩy mọi entry có order >= n lên +1.
+   - deleteAtOrder: xoá theo id, rồi giảm order của các entry phía sau đi 1
+     để lấp khoảng trống (giữ dãy liên tục 1..N như linked list). */
+
+function insertAtOrder(list, item, n = item.order) {
+  return [
+    ...list.map((e) => (e.order >= n ? { ...e, order: e.order + 1 } : e)),
+    { ...item, order: n },
+  ];
+}
+
+function deleteAtOrder(list, id) {
+  const target = list.find((e) => e.id === id);
+  if (!target) return list;
+  const n = target.order;
+  return list
+    .filter((e) => e.id !== id)
+    .map((e) => (e.order > n ? { ...e, order: e.order - 1 } : e));
+}
+
+const nextOrder = (list) => (list.length ? Math.max(...list.map((e) => e.order || 0)) : 0) + 1;
+
 /* ---------------------------- small pieces ---------------------------- */
 
 function PartyTag({ id, parties, size = "sm" }) {
@@ -1773,7 +1797,7 @@ export default function LegalAnnotationApp() {
       newUnit.linkedReasoning = [];
       newUnit.linksConfirmed = false;
     }
-    updateCase((c) => ({ ...c, units: [...c.units, newUnit] }));
+    updateCase((c) => ({ ...c, units: insertAtOrder(c.units, newUnit, newUnit.order) }));
     setAddingType(null);
   };
 
@@ -1783,7 +1807,7 @@ export default function LegalAnnotationApp() {
   };
 
   const deleteUnit = (id) => {
-    updateCase((c) => ({ ...c, units: c.units.filter((u) => u.id !== id) }));
+    updateCase((c) => ({ ...c, units: deleteAtOrder(c.units, id) }));
   };
 
   const toggleModifications = (unitId) => {
@@ -1832,7 +1856,7 @@ export default function LegalAnnotationApp() {
     const existingIds = list.map((u) => parseInt(u.id.replace(prefix, "")) || 0);
     const nextNum = (existingIds.length ? Math.max(...existingIds) : 0) + 1;
     const item = { id: `${prefix}${nextNum}`, status: "unconfirmed", ...data };
-    updateCase((c) => ({ ...c, [kind]: [...c[kind], item] }));
+    updateCase((c) => ({ ...c, [kind]: insertAtOrder(c[kind], item, item.order) }));
     setAddingType(null);
   };
 
@@ -1842,7 +1866,7 @@ export default function LegalAnnotationApp() {
   };
 
   const deleteSimple = (kind, id) => {
-    updateCase((c) => ({ ...c, [kind]: c[kind].filter((u) => u.id !== id) }));
+    updateCase((c) => ({ ...c, [kind]: deleteAtOrder(c[kind], id) }));
   };
 
   /* -------------------- autosave nháp (annotator) -------------------- */
@@ -2232,7 +2256,7 @@ export default function LegalAnnotationApp() {
                   </p>
                 )}
                 {addingType === "claim" && (
-                  <UnitForm parties={caseData.parties || []} initial={{ type: "claim", order: sortedUnits.length + 1 }} onSave={saveNewUnit} onCancel={() => setAddingType(null)} />
+                  <UnitForm parties={caseData.parties || []} initial={{ type: "claim", order: nextOrder(caseData.units) }} onSave={saveNewUnit} onCancel={() => setAddingType(null)} />
                 )}
                 {sortedUnits.filter((u) => u.type !== "request").map((u) => (
                   <UnitCard
@@ -2266,7 +2290,7 @@ export default function LegalAnnotationApp() {
                   </p>
                 )}
                 {addingType === "request" && (
-                  <UnitForm parties={caseData.parties || []} initial={{ type: "request", order: sortedUnits.length + 1 }} onSave={saveNewUnit} onCancel={() => setAddingType(null)} />
+                  <UnitForm parties={caseData.parties || []} initial={{ type: "request", order: nextOrder(caseData.units) }} onSave={saveNewUnit} onCancel={() => setAddingType(null)} />
                 )}
                 {sortedUnits.filter((u) => u.type === "request").map((u) => (
                   <UnitCard
@@ -2298,7 +2322,7 @@ export default function LegalAnnotationApp() {
                   </p>
                 )}
                 {addingType === "reasoning" && (
-                  <ReasonDecisionForm kind="reasoning" initial={{ order: (caseData.reasoning || []).length + 1 }} onSave={(d) => saveNewSimple("reasoning", d)} onCancel={() => setAddingType(null)} />
+                  <ReasonDecisionForm kind="reasoning" initial={{ order: nextOrder(caseData.reasoning || []) }} onSave={(d) => saveNewSimple("reasoning", d)} onCancel={() => setAddingType(null)} />
                 )}
                 {[...(caseData.reasoning || [])].sort((a, b) => a.order - b.order).map((r) => (
                   <SimpleCard key={r.id} item={r} kind="reasoning"
@@ -2322,7 +2346,7 @@ export default function LegalAnnotationApp() {
                   </p>
                 )}
                 {addingType === "decision" && (
-                  <ReasonDecisionForm kind="decision" initial={{ order: (caseData.decisions || []).length + 1 }} onSave={(d) => saveNewSimple("decisions", d)} onCancel={() => setAddingType(null)} />
+                  <ReasonDecisionForm kind="decision" initial={{ order: nextOrder(caseData.decisions || []) }} onSave={(d) => saveNewSimple("decisions", d)} onCancel={() => setAddingType(null)} />
                 )}
                 {[...(caseData.decisions || [])].sort((a, b) => a.order - b.order).map((d) => (
                   <SimpleCard key={d.id} item={d} kind="decision"
