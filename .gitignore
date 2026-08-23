@@ -19,3 +19,8 @@ legal-annotation/dist/
 
 # Logs
 *.log
+pdfs/
+pdfs
+kilo/
+.kilo/
+.kilo
