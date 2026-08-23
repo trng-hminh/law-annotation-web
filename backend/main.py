@@ -1125,6 +1125,7 @@ async def upload_case_pdf(case_id: str, request: Request, file: UploadFile = Fil
     storage.save_pdf(case_id, data)
     return {"success": True, "case_id": case_id, "size": len(data)}
 
+import base64
 
 @app.get("/api/cases/{case_id}/pdf")
 def get_case_pdf(case_id: str, request: Request):
@@ -1135,7 +1136,7 @@ def get_case_pdf(case_id: str, request: Request):
     if data is None:
         raise HTTPException(status_code=404, detail="Chưa có PDF cho case này.")
     return Response(
-        content=data,
+        content=base64.b64decode(data),
         media_type="application/pdf",
         headers={"Content-Disposition": f'inline; filename="case_{case_id}.pdf"'},
     )
