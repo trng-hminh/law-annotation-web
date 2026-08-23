@@ -21,6 +21,5 @@ legal-annotation/dist/
 *.log
 pdfs/
 pdfs
-kilo/
 .kilo/
 .kilo
