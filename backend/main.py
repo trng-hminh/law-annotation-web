@@ -328,7 +328,7 @@ class MongoStorage:
 
     def list_submissions(self):
         """Toàn bộ submission đầy đủ (phục vụ export)."""
-        return list(self.db.submissions.find({}))
+        return [{k: v for k, v in s.items() if k != "_id"} for s in self.db.submissions.find({})]
 
     def delete_submissions(self, case_id):
         """Xoá toàn bộ submission của một case."""
@@ -1190,6 +1190,19 @@ def get_my_submission(case_id: str, request: Request):
         raise HTTPException(status_code=404, detail="Chưa có bài nộp.")
     subs.sort(key=lambda s: s.get("submitted_at") or s.get("received_at") or "", reverse=True)
     return subs[0]
+
+
+@app.get("/api/cases/{case_id}/submissions")
+def get_case_submissions(case_id: str, request: Request):
+    """Admin xem toàn bộ bài nộp (chỉ đọc) của mọi annotator cho một case."""
+    _require_admin(request)
+    case_id = _safe_id(case_id)
+    subs = [
+        s for s in storage.list_submissions()
+        if str(s.get("case_id")) == case_id
+    ]
+    subs.sort(key=lambda s: s.get("submitted_at") or s.get("received_at") or "", reverse=True)
+    return {"case_id": case_id, "submissions": subs}
 
 
 # ------------------------------ submission ------------------------------

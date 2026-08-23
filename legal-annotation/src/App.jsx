@@ -839,6 +839,128 @@ function OnboardingModal({ onClose }) {
   );
 }
 
+/* ---------------------------- submission viewer (admin, read-only) ---------------------------- */
+
+function SubSection({ title, children }) {
+  return (
+    <div style={{ marginBottom: 10 }}>
+      <div style={{ fontSize: 10.5, fontWeight: 700, color: T.inkSoft, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 5 }}>{title}</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>{children}</div>
+    </div>
+  );
+}
+
+function ReadOnlySimple({ item }) {
+  const confirmed = item.status === "confirmed";
+  return (
+    <div style={{ background: T.paperCard, border: `1px solid ${T.line}`, borderRadius: 8, padding: "8px 10px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+        <span style={{ fontFamily: "ui-monospace, Menlo, monospace", fontSize: 11, fontWeight: 700, color: "#5B6B93", background: "#E7EAF3", padding: "1px 6px", borderRadius: 4 }}>{item.id}</span>
+        <span style={{ fontSize: 10.5, fontWeight: 700, color: confirmed ? "#3D6944" : "#8A6D3B", background: confirmed ? "#E9F2E7" : T.goldTint, padding: "1px 7px", borderRadius: 10 }}>
+          {confirmed ? "Đã xác nhận" : "Chưa xác nhận"}
+        </span>
+      </div>
+      <div style={{ fontSize: 12.5, lineHeight: 1.55, color: T.ink }}>{item.text}</div>
+    </div>
+  );
+}
+
+function ReadOnlyUnit({ unit, parties }) {
+  const isRequest = unit.type === "request";
+  const confirmed = unit.status === "confirmed";
+  return (
+    <div style={{ background: T.paperCard, border: `1px solid ${T.line}`, borderRadius: 8, padding: "8px 10px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 4 }}>
+        <span style={{ fontFamily: "ui-monospace, Menlo, monospace", fontSize: 11, fontWeight: 700, color: T.ink, background: T.paperDim, padding: "1px 6px", borderRadius: 4 }}>{unit.id}</span>
+        <span style={{ fontSize: 10.5, fontWeight: 700, color: isRequest ? T.gold : T.inkSoft, textTransform: "uppercase", letterSpacing: 0.3 }}>{isRequest ? "Request" : "Claim"}</span>
+        {unit.assertedBy?.map((id) => <PartyTag key={id} id={id} parties={parties} />)}
+        {isRequest && unit.outcome && (
+          <span style={{ fontSize: 10.5, fontWeight: 700, color: "#3D6944", background: "#E9F2E7", padding: "1px 7px", borderRadius: 10 }}>{OUTCOME_LABEL[unit.outcome] || unit.outcome}</span>
+        )}
+        <span style={{ fontSize: 10.5, fontWeight: 700, color: confirmed ? "#3D6944" : "#8A6D3B", background: confirmed ? "#E9F2E7" : T.goldTint, padding: "1px 7px", borderRadius: 10 }}>
+          {confirmed ? "Đã xác nhận" : "Chưa xác nhận"}
+        </span>
+      </div>
+      <div style={{ fontSize: 12.5, lineHeight: 1.55, color: T.ink }}>{unit.text}</div>
+    </div>
+  );
+}
+
+function SubmissionsModal({ view, data, loading, error, onClose }) {
+  const fmtTime = (iso) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso;
+    return d.toLocaleString("vi-VN", { dateStyle: "medium", timeStyle: "short" });
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed", inset: 0, background: "rgba(28,38,36,0.45)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        zIndex: 110, padding: 20, boxSizing: "border-box",
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: 860, maxWidth: "100%", maxHeight: "90vh", background: T.paperCard,
+          borderRadius: 14, boxShadow: "0 20px 60px rgba(28,38,36,0.30)",
+          display: "flex", flexDirection: "column", overflow: "hidden",
+        }}
+      >
+        <div style={{ padding: "16px 20px", borderBottom: `1px solid ${T.line}`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 700 }}>Bài nộp — Case {view?.title || view?.caseId}</div>
+            <div style={{ fontSize: 12, color: T.inkSoft, marginTop: 2 }}>{data.length} bài nộp</div>
+          </div>
+          <IconBtn size={26} title="Đóng" onClick={onClose}><X size={16} /></IconBtn>
+        </div>
+
+        <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px 24px" }}>
+          {loading && <div style={{ textAlign: "center", color: T.inkSoft, padding: 30 }}>Đang tải bài nộp…</div>}
+          {!loading && error && <div style={{ color: T.danger, fontSize: 13, padding: 20, textAlign: "center" }}>{error}</div>}
+          {!loading && !error && data.length === 0 && (
+            <div style={{ color: T.inkSoft, fontSize: 13, padding: 20, textAlign: "center" }}>Chưa có bài nộp nào cho case này.</div>
+          )}
+
+          {!loading && !error && data.map((sub, idx) => (
+            <div key={sub.file || idx} style={{ marginBottom: 18, paddingBottom: 16, borderBottom: idx < data.length - 1 ? `1px solid ${T.line}` : "none" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+                <UserRound size={15} color={T.inkSoft} />
+                <span style={{ fontSize: 13.5, fontWeight: 700 }}>{sub.annotator_name || sub.annotator_id}</span>
+                <span style={{ fontSize: 11.5, color: T.inkSoft }}>{sub.annotator_id}</span>
+                <span style={{ fontSize: 11.5, color: T.inkSoft, marginLeft: "auto" }}>Nộp {fmtTime(sub.submitted_at || sub.received_at)}</span>
+              </div>
+
+              {(sub.units || []).length > 0 && (
+                <SubSection title="Claims & Requests">
+                  {sub.units.map((u) => <ReadOnlyUnit key={u.id} unit={u} parties={sub.parties || []} />)}
+                </SubSection>
+              )}
+              {(sub.reasoning || []).length > 0 && (
+                <SubSection title="Reasoning">
+                  {sub.reasoning.map((r) => <ReadOnlySimple key={r.id} item={r} />)}
+                </SubSection>
+              )}
+              {(sub.decisions || []).length > 0 && (
+                <SubSection title="Decisions">
+                  {sub.decisions.map((d) => <ReadOnlySimple key={d.id} item={d} />)}
+                </SubSection>
+              )}
+              {!(sub.units || []).length && !(sub.reasoning || []).length && !(sub.decisions || []).length && (
+                <div style={{ fontSize: 12, color: T.inkSoft }}>Không có nội dung gán nhãn.</div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ============================================================================
    LOGIN — hai vai trò: Annotator (tên + mã) và Admin (user + mật khẩu)
    ============================================================================ */
@@ -1070,6 +1192,7 @@ function AdminDashboard({
   onCreateAdmin, onResetAdminPassword, onDeleteAdmin,
   onDeleteSubmissions,
   onClearAssignments,
+  onViewSubmissions,
   onRefresh, refreshing, flash, onExport,
 }) {
   const [section, setSection] = useState("cases"); // "cases" | "annotators" | "admins" | "progress"
@@ -1241,6 +1364,11 @@ function AdminDashboard({
 
                   <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end", flexShrink: 0 }}>
                     <button onClick={() => onOpenCase(c.case_id)} style={{ ...btnPrimaryStyle, padding: "5px 12px", fontSize: 12 }}>Mở case</button>
+                    {c.submissions.length > 0 && (
+                      <button onClick={() => onViewSubmissions(c.case_id, c.title)} style={{ ...btnGhostStyle, padding: "4px 10px", fontSize: 11.5 }}>
+                        Xem bài nộp ({c.submissions.length})
+                      </button>
+                    )}
                     {c.status === "completed" && (
                       <button onClick={() => onReopen(c.case_id)} style={{ ...btnGhostStyle, padding: "4px 10px", fontSize: 11.5 }}>Mở lại</button>
                     )}
@@ -1527,6 +1655,12 @@ export default function LegalAnnotationApp() {
   const [adminAdmins, setAdminAdmins] = useState([]);
   const [adminProgress, setAdminProgress] = useState([]);
   const [importMessage, setImportMessage] = useState("");
+
+  // xem bài nộp của case (admin, read-only)
+  const [submissionView, setSubmissionView] = useState(null); // { caseId, title } | null
+  const [submissionsData, setSubmissionsData] = useState([]);
+  const [submissionsLoading, setSubmissionsLoading] = useState(false);
+  const [submissionsError, setSubmissionsError] = useState("");
 
   const api = async (path, { method = "GET", body } = {}) => {
     const headers = { "Content-Type": "application/json" };
@@ -1871,6 +2005,27 @@ export default function LegalAnnotationApp() {
     } catch (e) {
       setFlash(e.message || "Phân công thất bại.");
     }
+  };
+
+  const openSubmissions = async (caseId, title) => {
+    setSubmissionView({ caseId, title });
+    setSubmissionsLoading(true);
+    setSubmissionsError("");
+    setSubmissionsData([]);
+    try {
+      const res = await api(`/api/cases/${caseId}/submissions`);
+      setSubmissionsData(res.submissions || []);
+    } catch (e) {
+      setSubmissionsError(e.message || "Không tải được bài nộp.");
+    } finally {
+      setSubmissionsLoading(false);
+    }
+  };
+
+  const closeSubmissions = () => {
+    setSubmissionView(null);
+    setSubmissionsData([]);
+    setSubmissionsError("");
   };
 
   const createAnnotator = async (name, passcode) => {
@@ -2296,6 +2451,7 @@ export default function LegalAnnotationApp() {
           onAssign={assignCase}
           onReopen={reopenCase}
           onDeleteSubmissions={deleteCaseSubmissions}
+          onViewSubmissions={openSubmissions}
           onAutoAssign={autoAssign}
           onClearAssignments={clearAllAssignments}
           onImportFile={importFromFile}
@@ -2324,6 +2480,15 @@ export default function LegalAnnotationApp() {
         />
       )}
       {showOnboarding && <OnboardingModal onClose={closeOnboarding} />}
+      {submissionView && (
+        <SubmissionsModal
+          view={submissionView}
+          data={submissionsData}
+          loading={submissionsLoading}
+          error={submissionsError}
+          onClose={closeSubmissions}
+        />
+      )}
     </div>
   );
 }
