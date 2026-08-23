@@ -38,7 +38,7 @@ import secrets
 import time
 from datetime import datetime
 from pathlib import Path
-
+import base64
 from bson import Binary
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
@@ -1125,8 +1125,6 @@ async def upload_case_pdf(case_id: str, request: Request, file: UploadFile = Fil
     storage.save_pdf(case_id, data)
     return {"success": True, "case_id": case_id, "size": len(data)}
 
-import base64
-
 @app.get("/api/cases/{case_id}/pdf")
 def get_case_pdf(case_id: str, request: Request):
     """Stream the PDF for a case. Any authenticated user can access."""
@@ -1135,6 +1133,8 @@ def get_case_pdf(case_id: str, request: Request):
     data = storage.get_pdf(case_id)
     if data is None:
         raise HTTPException(status_code=404, detail="Chưa có PDF cho case này.")
+    print(f"File size: {len(data)} bytes")
+    print(f"First 5 bytes: {data[:5]}")
     return Response(
         content=base64.b64decode(data),
         media_type="application/pdf",
