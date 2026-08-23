@@ -1,7 +1,7 @@
 import React, { useState, useRef, useMemo, useCallback, useEffect } from "react";
 import rawPrototypeCases from "./prototype_10_cases.json";
 import {
-  ChevronLeft, ChevronRight, Plus, Pencil, Trash2, Link2,
+  ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Plus, Pencil, Trash2, Link2,
   X, GripVertical, ScrollText, Gavel, ListChecks,
   Scale, CircleCheck, Circle, UserRound, LogOut,
   FolderOpen, Shield, Loader2, LayoutDashboard, RefreshCw,
@@ -311,6 +311,7 @@ function SimpleCard({ item, kind, editing, onConfirm, onEditStart, onEditSave, o
 
 function LinksTab({ caseData, updateCase }) {
   const requests = caseData.units.filter((u) => u.type === "request");
+  const [expanded, setExpanded] = useState(() => new Set());
 
   const patchRequest = (id, patch) =>
     updateCase((c) => ({
@@ -325,88 +326,130 @@ function LinksTab({ caseData, updateCase }) {
     patchRequest(req.id, { [key]: next, linksConfirmed: false });
   };
 
+  const toggleExpanded = (id) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
   if (requests.length === 0) {
     return <p style={{ color: T.inkSoft, fontSize: 13 }}>Chưa có request nào để liên kết.</p>;
   }
 
   return (
     <div>
-      {requests.map((req) => (
-        <div key={req.id} style={{
-          background: T.paperCard, border: `1px solid ${T.line}`, borderRadius: 10,
-          padding: "12px 14px", marginBottom: 14,
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-            <span style={{
-              fontFamily: "ui-monospace, monospace", fontSize: 11.5, fontWeight: 700,
-              color: PARTY_STYLE.P.deep, background: PARTY_STYLE.P.tint, padding: "2px 7px", borderRadius: 5,
-            }}>{req.id}</span>
-            <span style={{ fontSize: 13, color: T.ink, lineHeight: 1.4 }}>
-              {req.text.length > 90 ? req.text.slice(0, 90) + "…" : req.text}
-            </span>
-          </div>
+      {requests.map((req) => {
+        const isOpen = expanded.has(req.id);
+        return (
+          <div key={req.id} style={{
+            background: T.paperCard, border: `1px solid ${T.line}`, borderRadius: 10,
+            padding: "12px 14px", marginBottom: 14,
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+              <span style={{
+                fontFamily: "ui-monospace, monospace", fontSize: 11.5, fontWeight: 700,
+                color: PARTY_STYLE.P.deep, background: PARTY_STYLE.P.tint, padding: "2px 7px", borderRadius: 5,
+              }}>{req.id}</span>
+              <span style={{ fontSize: 13, color: T.ink, lineHeight: 1.4 }}>
+                {req.text.length > 90 ? req.text.slice(0, 90) + "…" : req.text}
+              </span>
+            </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-            <div>
-              <label style={labelStyle}>Liên kết Decision</label>
-              <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                {caseData.decisions.length === 0 && <span style={{ fontSize: 12, color: T.inkSoft }}>Chưa có decision</span>}
-                {caseData.decisions.map((d) => (
-                  <label key={d.id} style={checkRowStyle}>
-                    <input type="checkbox" checked={req.linkedDecisions?.includes(d.id) || false}
-                      onChange={() => toggle(req, "decision", d.id)} />
-                    <span style={{ fontFamily: "ui-monospace, monospace", fontWeight: 700, color: T.gold }}>{d.id}</span>
-                    <span style={{ color: T.inkSoft }}>{d.text.slice(0, 40)}…</span>
-                  </label>
-                ))}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              <div>
+                <label style={labelStyle}>Liên kết Decision</label>
+                <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                  {caseData.decisions.length === 0 && <span style={{ fontSize: 12, color: T.inkSoft }}>Chưa có decision</span>}
+                  {caseData.decisions.map((d) => (
+                    <label key={d.id} style={checkRowStyle}>
+                      <input type="checkbox" checked={req.linkedDecisions?.includes(d.id) || false}
+                        onChange={() => toggle(req, "decision", d.id)} />
+                      <span style={{ fontFamily: "ui-monospace, monospace", fontWeight: 700, color: T.gold }}>{d.id}</span>
+                      <span style={{ color: T.inkSoft }}>{d.text.slice(0, 40)}…</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label style={labelStyle}>Liên kết Reasoning</label>
+                <div style={{ display: "flex", flexDirection: "column", gap: 5, maxHeight: 130, overflowY: "auto" }}>
+                  {caseData.reasoning.length === 0 && <span style={{ fontSize: 12, color: T.inkSoft }}>Chưa có reasoning</span>}
+                  {caseData.reasoning.map((r) => (
+                    <label key={r.id} style={checkRowStyle}>
+                      <input type="checkbox" checked={req.linkedReasoning?.includes(r.id) || false}
+                        onChange={() => toggle(req, "reasoning", r.id)} />
+                      <span style={{ fontFamily: "ui-monospace, monospace", fontWeight: 700, color: "#5B6B93" }}>{r.id}</span>
+                      <span style={{ color: T.inkSoft }}>{r.text.slice(0, 40)}…</span>
+                    </label>
+                  ))}
+                </div>
               </div>
             </div>
-            <div>
-              <label style={labelStyle}>Liên kết Reasoning</label>
-              <div style={{ display: "flex", flexDirection: "column", gap: 5, maxHeight: 130, overflowY: "auto" }}>
-                {caseData.reasoning.length === 0 && <span style={{ fontSize: 12, color: T.inkSoft }}>Chưa có reasoning</span>}
-                {caseData.reasoning.map((r) => (
-                  <label key={r.id} style={checkRowStyle}>
-                    <input type="checkbox" checked={req.linkedReasoning?.includes(r.id) || false}
-                      onChange={() => toggle(req, "reasoning", r.id)} />
-                    <span style={{ fontFamily: "ui-monospace, monospace", fontWeight: 700, color: "#5B6B93" }}>{r.id}</span>
-                    <span style={{ color: T.inkSoft }}>{r.text.slice(0, 40)}…</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          </div>
 
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, paddingTop: 10, borderTop: `1px solid ${T.line}` }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <label style={{ ...labelStyle, marginBottom: 0 }}>Outcome</label>
-              <select
-                value={req.outcome || ""}
-                onChange={(e) => patchRequest(req.id, { outcome: e.target.value || null, linksConfirmed: false })}
-                style={{ ...inputStyle, width: 220, padding: "6px 9px" }}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, paddingTop: 10, borderTop: `1px solid ${T.line}` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <label style={{ ...labelStyle, marginBottom: 0 }}>Outcome</label>
+                <select
+                  value={req.outcome || ""}
+                  onChange={(e) => patchRequest(req.id, { outcome: e.target.value || null, linksConfirmed: false })}
+                  style={{ ...inputStyle, width: 220, padding: "6px 9px" }}
+                >
+                  <option value="">— chưa chọn —</option>
+                  <option value="accepted">Chấp nhận</option>
+                  <option value="rejected">Không chấp nhận</option>
+                  <option value="partial">Chấp nhận một phần</option>
+                </select>
+              </div>
+              <button
+                onClick={() => patchRequest(req.id, { linksConfirmed: !req.linksConfirmed })}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  padding: "6px 12px", borderRadius: 20, cursor: "pointer", fontSize: 12, fontWeight: 600,
+                  border: `1px solid ${req.linksConfirmed ? "#5C8A63" : T.lineStrong}`,
+                  background: req.linksConfirmed ? "#E9F2E7" : T.paperCard,
+                  color: req.linksConfirmed ? "#3D6944" : T.inkSoft,
+                }}
               >
-                <option value="">— chưa chọn —</option>
-                <option value="accepted">Chấp nhận</option>
-                <option value="rejected">Không chấp nhận</option>
-                <option value="partial">Chấp nhận một phần</option>
-              </select>
+                <Link2 size={13} />
+                {req.linksConfirmed ? "Links & outcome đã xác nhận" : "Xác nhận links & outcome"}
+              </button>
             </div>
+
+            {/* toggleable expansion bar */}
             <button
-              onClick={() => patchRequest(req.id, { linksConfirmed: !req.linksConfirmed })}
+              onClick={() => toggleExpanded(req.id)}
               style={{
-                display: "inline-flex", alignItems: "center", gap: 6,
-                padding: "6px 12px", borderRadius: 20, cursor: "pointer", fontSize: 12, fontWeight: 600,
-                border: `1px solid ${req.linksConfirmed ? "#5C8A63" : T.lineStrong}`,
-                background: req.linksConfirmed ? "#E9F2E7" : T.paperCard,
-                color: req.linksConfirmed ? "#3D6944" : T.inkSoft,
+                width: "100%", marginTop: 12, padding: "8px 10px",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                border: `1px dashed ${T.lineStrong}`, borderRadius: 8,
+                background: isOpen ? T.paperDim : "transparent",
+                color: T.inkSoft, fontSize: 12, fontWeight: 600, cursor: "pointer",
               }}
             >
-              <Link2 size={13} />
-              {req.linksConfirmed ? "Links & outcome đã xác nhận" : "Xác nhận links & outcome"}
+              {isOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              {isOpen ? "Ẩn nội dung đầy đủ" : "Xem đầy đủ Request · Decision · Reasoning"}
             </button>
+
+            {isOpen && (
+              <div style={{ marginTop: 12, padding: "12px 12px 4px", background: T.paperDim, borderRadius: 10 }}>
+                <SubSection title={`Request ${req.id} — đầy đủ`}>
+                  <ReadOnlyUnit unit={req} parties={caseData.parties || []} />
+                </SubSection>
+                <SubSection title={`Decisions (${caseData.decisions.length}) — đầy đủ`}>
+                  {caseData.decisions.length === 0 && <span style={{ fontSize: 12, color: T.inkSoft }}>Chưa có decision</span>}
+                  {caseData.decisions.map((d) => <ReadOnlySimple key={d.id} item={d} kind="decision" />)}
+                </SubSection>
+                <SubSection title={`Reasoning (${caseData.reasoning.length}) — đầy đủ`}>
+                  {caseData.reasoning.length === 0 && <span style={{ fontSize: 12, color: T.inkSoft }}>Chưa có reasoning</span>}
+                  {caseData.reasoning.map((r) => <ReadOnlySimple key={r.id} item={r} kind="reasoning" />)}
+                </SubSection>
+              </div>
+            )}
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -693,15 +736,19 @@ const HELP_OVERVIEW = {
   steps: [
     {
       title: "1. Phân đoạn",
-      text: "Tách bản án thành Claims (tình tiết), Requests (yêu cầu), Reasoning (nhận định) và Decisions (quyết định) trong từng tab tương ứng.",
+      text: "Tách bản án thành Claims (tình tiết), Requests (yêu cầu), Reasoning (nhận định) và Decisions (quyết định) trong từng tab tương ứng: bấm 'Thêm…', nhập nội dung trích nguyên văn từ bản án (khung PDF bên phải) rồi bấm 'Lưu'.",
     },
     {
-      title: "2. Ghép nối",
-      text: "Trong tab Links, với mỗi Request hãy tích chọn các Reasoning và Decision làm căn cứ cho yêu cầu đó.",
+      title: "2. Xác nhận từng mục",
+      text: "Sau khi tạo và rà soát kỹ từng card, bấm nút 'Xác nhận' trên card đó để đánh dấu đã duyệt. Thanh tiến độ phía trên (X/Y đã xác nhận) sẽ tăng dần — đừng bỏ qua bước này vì nó thể hiện bạn đã kiểm tra xong mục đó.",
     },
     {
-      title: "3. Gán Outcome",
-      text: "Cũng trong tab Links, chọn kết quả (Chấp nhận / Không chấp nhận / Chấp nhận một phần) rồi bấm 'Xác nhận links & outcome'.",
+      title: "3. Ghép nối & gán Outcome",
+      text: "Trong tab Links, với mỗi Request hãy tích chọn các Reasoning và Decision làm căn cứ, chọn kết quả (Chấp nhận / Không chấp nhận / Chấp nhận một phần), rồi bấm 'Xác nhận links & outcome'.",
+    },
+    {
+      title: "4. Hoàn tất case",
+      text: "Khi đã xử lý xong cả 4 tab và xác nhận đầy đủ, bấm nút 'Hoàn tất case' ở góc trên bên phải để nộp bài. Bạn vẫn có thể mở lại để chỉnh sửa và gửi lại.",
     },
   ],
 };
@@ -711,53 +758,53 @@ const HELP_TABS = {
     title: "Phân đoạn Claim",
     intro: "Claim là tình tiết, sự kiện, lời trình bày của đương sự (thuộc phần nội dung vụ án).",
     steps: [
-      "Bấm 'Thêm claim'.",
+      "Bấm nút 'Thêm claim' ở đầu tab.",
       "Chọn bên khởi xướng (Nguyên đơn / Bị đơn / Đương sự liên quan).",
-      "Nhập nội dung trích nguyên văn từ bản án ở khung bên phải.",
-      "Chỉnh 'Thứ tự' cho khớp trình tự bản án rồi bấm 'Lưu'.",
-      "Rà soát xong, bấm 'Xác nhận' để đánh dấu đã duyệt.",
+      "Nhập nội dung trích nguyên văn từ bản án ở khung PDF bên phải.",
+      "Bấm 'Lưu' để thêm claim vào danh sách.",
+      "Rà soát kỹ từng claim, rồi bấm 'Xác nhận' trên card để đánh dấu đã duyệt (thanh tiến độ phía trên sẽ tăng).",
     ],
   },
   requests: {
     title: "Phân đoạn Request",
     intro: "Request là yêu cầu khởi kiện / yêu cầu cụ thể của đương sự.",
     steps: [
-      "Bấm 'Thêm request'.",
-      "Chọn một hoặc nhiều bên yêu cầu.",
-      "Nhập nội dung yêu cầu từ bản án.",
-      "Nếu có yêu cầu sửa đổi/bổ sung phát sinh, bấm '+ yêu cầu sửa đổi/bổ sung' để thêm.",
-      "Bấm 'Xác nhận' khi đã hoàn chỉnh.",
+      "Bấm nút 'Thêm request' ở đầu tab.",
+      "Chọn một hoặc nhiều bên yêu cầu (Nguyên đơn / Bị đơn / Đương sự liên quan).",
+      "Nhập nội dung yêu cầu khởi kiện từ bản án.",
+      "Bấm 'Lưu' để thêm request vào danh sách.",
+      "Rà soát kỹ từng request, rồi bấm 'Xác nhận' trên card để đánh dấu đã duyệt.",
     ],
   },
   reasoning: {
     title: "Phân đoạn Reasoning",
     intro: "Reasoning là nhận định, lập luận của Toà án (phần 'xét thấy').",
     steps: [
-      "Bấm 'Thêm reasoning'.",
-      "Nhập nội dung nhận định của Toà.",
-      "Chỉnh 'Thứ tự' rồi bấm 'Lưu'.",
-      "Bấm 'Xác nhận' sau khi rà soát.",
+      "Bấm nút 'Thêm reasoning' ở đầu tab.",
+      "Nhập nội dung nhận định, lập luận của Toà án từ bản án.",
+      "Bấm 'Lưu' để thêm reasoning vào danh sách.",
+      "Rà soát kỹ từng reasoning, rồi bấm 'Xác nhận' trên card để đánh dấu đã duyệt.",
     ],
   },
   decisions: {
     title: "Phân đoạn Decision",
     intro: "Decision là quyết định cuối cùng của Toà án.",
     steps: [
-      "Bấm 'Thêm decision'.",
-      "Nhập nội dung quyết định.",
-      "Chỉnh 'Thứ tự' rồi bấm 'Lưu'.",
-      "Bấm 'Xác nhận' sau khi rà soát.",
+      "Bấm nút 'Thêm decision' ở đầu tab.",
+      "Nhập nội dung quyết định cuối cùng của Toà án từ bản án.",
+      "Bấm 'Lưu' để thêm decision vào danh sách.",
+      "Rà soát kỹ từng decision, rồi bấm 'Xác nhận' trên card để đánh dấu đã duyệt.",
     ],
   },
   links: {
     title: "Ghép nối & gán Outcome",
     intro: "Với mỗi Request, xác định Reasoning/Decision làm căn cứ và gán kết quả.",
     steps: [
-      "Chọn Request cần xử lý.",
-      "Ở 'Liên kết Decision': tích chọn quyết định tương ứng.",
-      "Ở 'Liên kết Reasoning': tích chọn nhận định làm căn cứ.",
+      "Chọn Request cần xử lý trong danh sách.",
+      "Ở 'Liên kết Decision': tích chọn (các) quyết định tương ứng.",
+      "Ở 'Liên kết Reasoning': tích chọn (các) nhận định làm căn cứ.",
       "Ở 'Outcome': chọn 'Chấp nhận' / 'Không chấp nhận' / 'Chấp nhận một phần'.",
-      "Bấm 'Xác nhận links & outcome' để chốt.",
+      "Bấm 'Xác nhận links & outcome' để chốt — nút sẽ chuyển sang màu xanh.",
     ],
   },
 };
@@ -817,7 +864,7 @@ function OnboardingModal({ onClose }) {
           <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>Hướng dẫn gán nhãn vụ án</h2>
         </div>
         <p style={{ margin: "0 0 16px", fontSize: 12.5, color: T.inkSoft }}>
-          Dành cho luật sư: quy trình gồm 3 bước chính.
+          Dành cho luật sư: quy trình gồm 4 bước chính.
         </p>
 
         {HELP_OVERVIEW.steps.map((s) => (
@@ -850,12 +897,14 @@ function SubSection({ title, children }) {
   );
 }
 
-function ReadOnlySimple({ item }) {
+function ReadOnlySimple({ item, kind = "reasoning" }) {
   const confirmed = item.status === "confirmed";
+  const accent = kind === "decision" ? T.gold : "#5B6B93";
+  const accentTint = kind === "decision" ? T.goldTint : "#E7EAF3";
   return (
     <div style={{ background: T.paperCard, border: `1px solid ${T.line}`, borderRadius: 8, padding: "8px 10px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-        <span style={{ fontFamily: "ui-monospace, Menlo, monospace", fontSize: 11, fontWeight: 700, color: "#5B6B93", background: "#E7EAF3", padding: "1px 6px", borderRadius: 4 }}>{item.id}</span>
+        <span style={{ fontFamily: "ui-monospace, Menlo, monospace", fontSize: 11, fontWeight: 700, color: accent, background: accentTint, padding: "1px 6px", borderRadius: 4 }}>{item.id}</span>
         <span style={{ fontSize: 10.5, fontWeight: 700, color: confirmed ? "#3D6944" : "#8A6D3B", background: confirmed ? "#E9F2E7" : T.goldTint, padding: "1px 7px", borderRadius: 10 }}>
           {confirmed ? "Đã xác nhận" : "Chưa xác nhận"}
         </span>
@@ -942,12 +991,12 @@ function SubmissionsModal({ view, data, loading, error, onClose }) {
               )}
               {(sub.reasoning || []).length > 0 && (
                 <SubSection title="Reasoning">
-                  {sub.reasoning.map((r) => <ReadOnlySimple key={r.id} item={r} />)}
+                  {sub.reasoning.map((r) => <ReadOnlySimple key={r.id} item={r} kind="reasoning" />)}
                 </SubSection>
               )}
               {(sub.decisions || []).length > 0 && (
                 <SubSection title="Decisions">
-                  {sub.decisions.map((d) => <ReadOnlySimple key={d.id} item={d} />)}
+                  {sub.decisions.map((d) => <ReadOnlySimple key={d.id} item={d} kind="decision" />)}
                 </SubSection>
               )}
               {!(sub.units || []).length && !(sub.reasoning || []).length && !(sub.decisions || []).length && (
