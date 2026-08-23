@@ -38,7 +38,7 @@ import secrets
 import time
 from datetime import datetime
 from pathlib import Path
-import base64
+
 from bson import Binary
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
@@ -358,7 +358,6 @@ class MongoStorage:
         self.db.secrets.replace_one({"_id": "token"}, {"_id": "token", "value": value}, upsert=True)
 
     def save_pdf(self, case_id, data: bytes):
-        from bson import Binary
         self.db.case_pdfs.replace_one(
             {"_id": case_id},
             {"_id": case_id, "data": Binary(data)},
@@ -1127,18 +1126,23 @@ async def upload_case_pdf(case_id: str, request: Request, file: UploadFile = Fil
 
 @app.get("/api/cases/{case_id}/pdf")
 def get_case_pdf(case_id: str, request: Request):
-    """Stream the PDF for a case. Any authenticated user can access."""
+    """Stream the PDF for a case. Any authenticated user can access.
+
+    Trả 404 khi chưa có file PDF trong storage (MongoDB collection `case_pdfs`
+    hoặc thư mục `case_pdfs` ở chế độ file). Không bao giờ dựng nội dung giả.
+    """
     _require_auth(request)
     case_id = _safe_id(case_id)
     data = storage.get_pdf(case_id)
     if data is None:
         raise HTTPException(status_code=404, detail="Chưa có PDF cho case này.")
-    print(f"File size: {len(data)} bytes")
-    print(f"First 5 bytes: {data[:5]}")
     return Response(
-        content=base64.b64decode(data),
+        content=data,
         media_type="application/pdf",
-        headers={"Content-Disposition": f'inline; filename="case_{case_id}.pdf"'},
+        headers={
+            "Content-Disposition": f'inline; filename="case_{case_id}.pdf"',
+            "Cache-Control": "no-store",
+        },
     )
 
 

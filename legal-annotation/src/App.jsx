@@ -2,7 +2,7 @@ import React, { useState, useRef, useMemo, useCallback, useEffect } from "react"
 import rawPrototypeCases from "./prototype_10_cases.json";
 import {
   ChevronLeft, ChevronRight, Plus, Pencil, Trash2, Link2,
-  ZoomIn, ZoomOut, X, GripVertical, ScrollText, Gavel, ListChecks,
+  X, GripVertical, ScrollText, Gavel, ListChecks,
   Scale, CircleCheck, Circle, UserRound, LogOut,
   FolderOpen, Shield, Loader2, LayoutDashboard, RefreshCw,
   Users, Download, ClipboardList, Activity, CircleHelp, BookOpen,
@@ -67,6 +67,17 @@ function deleteAtOrder(list, id) {
 }
 
 const nextOrder = (list) => (list.length ? Math.max(...list.map((e) => e.order || 0)) : 0) + 1;
+
+// updateAtOrder: sửa 1 entry theo id, và nếu order thay đổi thì di chuyển nó
+// tới vị trí mới, đẩy/lấp khoảng trống cho các entry còn lại (giống move trong linked list).
+function updateAtOrder(list, id, patch) {
+  const target = list.find((e) => e.id === id);
+  if (!target) return list;
+  const merged = { ...target, ...patch };
+  const newOrder = merged.order ?? target.order;
+  const withoutTarget = deleteAtOrder(list, id);
+  return insertAtOrder(withoutTarget, merged, newOrder);
+}
 
 /* ---------------------------- small pieces ---------------------------- */
 
@@ -133,89 +144,13 @@ function ConfirmToggle({ status, onClick }) {
   );
 }
 
-function ModificationList({ unit, onAdd, onUpdate, onRemove, onClose }) {
-  const [draft, setDraft] = useState("");
-  const [section, setSection] = useState("content");
-
-  const add = () => {
-    const text = draft.trim();
-    if (!text) return;
-    const orders = (unit.modification_spans || []).map((m) => Number(m.order) || 0);
-    const maxOrder = Math.max(Number(unit.order) || 0, ...orders, 0);
-    onAdd({ order: maxOrder + 1, section, text });
-    setDraft("");
-  };
-
-  return (
-    <div style={{ marginTop: 10, padding: 12, background: T.paperDim, borderRadius: 8, border: `1px solid ${T.line}` }}>
-      <p style={{ margin: "0 0 8px", fontSize: 11.5, color: T.inkSoft, fontWeight: 600 }}>
-        modification_spans là các yêu cầu sửa đổi/bổ sung phát sinh trong quá trình tố tụng,
-        mỗi mục có <code>order</code>, <code>section</code> và <code>text</code>.
-      </p>
-
-      {(unit.modification_spans || []).length === 0 ? (
-        <div style={{ fontSize: 12, color: T.inkSoft, padding: "6px 0 10px" }}>Chưa có yêu cầu sửa đổi/bổ sung.</div>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-          {[...(unit.modification_spans || [])].sort((a, b) => (a.order || 0) - (b.order || 0)).map((m, i) => (
-            <div key={`${m.order}-${i}`} style={{
-              background: T.paperCard, padding: "8px 10px", borderRadius: 7,
-              border: `1px solid ${T.line}`, display: "flex", gap: 8, alignItems: "flex-start"
-            }}>
-              <div style={{
-                minWidth: 28, height: 28, borderRadius: 6, background: T.goldTint, color: T.gold,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 11, fontWeight: 700
-              }}>{m.order}</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 3 }}>
-                  <span style={{ fontSize: 10.5, fontWeight: 700, color: T.inkSoft, textTransform: "uppercase" }}>
-                    {m.section || "content"}
-                  </span>
-                </div>
-                <textarea
-                  value={m.text || ""}
-                  onChange={(e) => onUpdate(m, { ...m, text: e.target.value })}
-                  style={{ width: "100%", minHeight: 55, resize: "vertical", border: `1px solid ${T.line}`, borderRadius: 5, padding: 7, font: "inherit", fontSize: 12.5, lineHeight: 1.5, boxSizing: "border-box" }}
-                />
-              </div>
-              <IconBtn tone="danger" size={24} onClick={() => onRemove(m)} title="Xoá yêu cầu sửa đổi">
-                <X size={13} />
-              </IconBtn>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div style={{ marginTop: 10, display: "flex", gap: 7, alignItems: "flex-start" }}>
-        <select value={section} onChange={(e) => setSection(e.target.value)} style={{ ...inputStyle, width: 105 }}>
-          <option value="content">content</option>
-          <option value="assessment">assessment</option>
-          <option value="decision">decision</option>
-        </select>
-        <textarea
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          placeholder="Nội dung yêu cầu sửa đổi/bổ sung..."
-          style={{ ...inputStyle, flex: 1, minHeight: 58, resize: "vertical", lineHeight: 1.5 }}
-        />
-        <button onClick={add} style={{ ...btnPrimaryStyle, whiteSpace: "nowrap" }}>Thêm</button>
-      </div>
-
-      <div style={{ textAlign: "right", marginTop: 8 }}>
-        <button onClick={onClose} style={btnGhostStyle}>Xong</button>
-      </div>
-    </div>
-  );
-}
-
 /* ---------------------------- unit form (add/edit) ---------------------------- */
 
 function UnitForm({ initial, parties, onSave, onCancel }) {
   const [type, setType] = useState(initial?.type || "claim");
   const [assertedBy, setAssertedBy] = useState(initial?.assertedBy || []);
   const [text, setText] = useState(initial?.text || "");
-  const [order, setOrder] = useState(initial?.order ?? 1);
+  const order = initial?.order ?? 1;
 
   const toggleParty = (id) =>
     setAssertedBy((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
@@ -225,17 +160,13 @@ function UnitForm({ initial, parties, onSave, onCancel }) {
       padding: 14, borderRadius: 10, border: `1px solid ${T.gold}`,
       background: T.goldTint + "55", marginBottom: 12,
     }}>
-      <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
-        <div style={{ flex: 1 }}>
+      <div style={{ marginBottom: 10 }}>
+        <div>
           <label style={labelStyle}>Loại unit</label>
           <select value={type} onChange={(e) => setType(e.target.value)} style={inputStyle} disabled={!!initial}>
             <option value="claim">Claim</option>
             <option value="request">Request</option>
           </select>
-        </div>
-        <div style={{ width: 90 }}>
-          <label style={labelStyle}>Thứ tự</label>
-          <input type="number" value={order} onChange={(e) => setOrder(Number(e.target.value))} style={inputStyle} />
         </div>
       </div>
 
@@ -281,15 +212,9 @@ function UnitForm({ initial, parties, onSave, onCancel }) {
 
 function ReasonDecisionForm({ initial, onSave, onCancel, kind }) {
   const [text, setText] = useState(initial?.text || "");
-  const [order, setOrder] = useState(initial?.order ?? 1);
+  const order = initial?.order ?? 1;
   return (
     <div style={{ padding: 14, borderRadius: 10, border: `1px solid ${T.gold}`, background: T.goldTint + "55", marginBottom: 12 }}>
-      <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
-        <div style={{ width: 90 }}>
-          <label style={labelStyle}>Thứ tự</label>
-          <input type="number" value={order} onChange={(e) => setOrder(Number(e.target.value))} style={inputStyle} />
-        </div>
-      </div>
       <label style={labelStyle}>Nội dung {kind === "reasoning" ? "lý do (nhận định)" : "quyết định"}</label>
       <textarea value={text} onChange={(e) => setText(e.target.value)} style={{ ...inputStyle, minHeight: 90, resize: "vertical", lineHeight: 1.6 }} />
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 10 }}>
@@ -302,7 +227,7 @@ function ReasonDecisionForm({ initial, onSave, onCancel, kind }) {
 
 /* ---------------------------- unit card ---------------------------- */
 
-function UnitCard({ unit, parties, editing, modificationEditing, onConfirm, onEditStart, onEditSave, onEditCancel, onDelete, onModificationToggle, onAddModification, onUpdateModification, onRemoveModification }) {
+function UnitCard({ unit, parties, editing, onConfirm, onEditStart, onEditSave, onEditCancel, onDelete }) {
   const primaryParty = unit.assertedBy?.[0];
   const style = PARTY_STYLE[sideOf(primaryParty)];
   const isRequest = unit.type === "request";
@@ -311,21 +236,10 @@ function UnitCard({ unit, parties, editing, modificationEditing, onConfirm, onEd
     return <UnitForm initial={unit} parties={parties} onSave={onEditSave} onCancel={onEditCancel} />;
   }
 
-  const modifications = unit.modification_spans || [];
-
   return (
-    <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 2 }}>
-        <div style={{
-          width: 22, height: 22, borderRadius: "50%", background: style.base, color: "#fff",
-          fontSize: 10.5, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center",
-          flexShrink: 0,
-        }}>{unit.order}</div>
-        <div style={{ width: 2, flex: 1, background: T.line, marginTop: 2 }} />
-      </div>
-
+    <div style={{ marginBottom: 12 }}>
       <div style={{
-        flex: 1, background: T.paperCard, borderRadius: 10,
+        background: T.paperCard, borderRadius: 10,
         border: `1px solid ${T.line}`, borderLeft: `${isRequest ? 5 : 3}px solid ${style.base}`,
         padding: "11px 14px 12px",
       }}>
@@ -358,26 +272,7 @@ function UnitCard({ unit, parties, editing, modificationEditing, onConfirm, onEd
           color: T.ink, fontWeight: isRequest ? 500 : 400,
         }}>{unit.text}</p>
 
-        {isRequest && (
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <button onClick={onModificationToggle} style={{ ...btnGhostStyle, fontSize: 11.5, padding: "4px 9px" }}>
-              {modifications.length ? `${modifications.length} yêu cầu sửa đổi/bổ sung` : "+ yêu cầu sửa đổi/bổ sung"}
-            </button>
-            <ConfirmToggle status={unit.status} onClick={onConfirm} />
-          </div>
-        )}
-
-        {!isRequest && <div style={{ textAlign: "right" }}><ConfirmToggle status={unit.status} onClick={onConfirm} /></div>}
-
-        {modificationEditing && (
-          <ModificationList
-            unit={unit}
-            onAdd={onAddModification}
-            onUpdate={onUpdateModification}
-            onRemove={onRemoveModification}
-            onClose={onModificationToggle}
-          />
-        )}
+        <div style={{ textAlign: "right" }}><ConfirmToggle status={unit.status} onClick={onConfirm} /></div>
       </div>
     </div>
   );
@@ -518,71 +413,91 @@ function LinksTab({ caseData, updateCase }) {
 
 /* ---------------------------- document (PDF) panel ---------------------------- */
 
-/* Data source for this panel:
-   1. If `caseData.pages` holds real OCR page content (an object keyed "1".."N" or an
-      array of page strings), those pages are concatenated into one continuous document.
-   2. Otherwise — which is the case for the current corpus — there is no page-level
-      text, so we synthesize a plain-text "document" from the annotation data itself:
-      title, parties, and the ordered claims / requests / reasoning / decisions.
-   The text is rendered on a single continuous page that wraps naturally and scrolls
-   vertically, so it never escapes the panel.
-*/
-function buildDocumentText(caseData) {
-  const lines = [];
-  const title = (caseData.title || `Case ${caseData.id}`).trim();
-  if (title) {
-    lines.push(title.toUpperCase());
-    lines.push("");
-  }
+function DocumentPanel({ caseData, auth }) {
+  const [pdfUrl, setPdfUrl] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
+  const prevUrl = useRef(null);
 
-  const parties = caseData.parties || [];
-  if (parties.length) {
-    parties.forEach((p) => lines.push(`${p.name} — ${p.role || "Đương sự"}`));
-    lines.push("");
-  }
+  // Fetch PDF blob whenever caseData changes
+  useEffect(() => {
+    if (!caseData?.id) return;
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
 
-  const units = [...(caseData.units || [])].sort((a, b) => (a.order || 0) - (b.order || 0));
-  const claims = units.filter((u) => u.type !== "request");
-  const requests = units.filter((u) => u.type === "request");
-  const reasoning = [...(caseData.reasoning || [])].sort((a, b) => (a.order || 0) - (b.order || 0));
-  const decisions = [...(caseData.decisions || [])].sort((a, b) => (a.order || 0) - (b.order || 0));
+    fetch(`${API_BASE}/api/cases/${caseData.id}/pdf`, {
+      headers: auth?.token ? { Authorization: `Bearer ${auth.token}` } : {},
+      cache: "no-store",
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error(res.status === 404 ? "no_pdf" : `HTTP ${res.status}`);
+        return res.blob();
+      })
+      .then((blob) => {
+        if (cancelled) return;
+        const url = URL.createObjectURL(blob);
+        if (prevUrl.current) URL.revokeObjectURL(prevUrl.current);
+        prevUrl.current = url;
+        setPdfUrl(url);
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(err.message === "no_pdf" ? "no_pdf" : err.message);
+        setPdfUrl(null);
+        setLoading(false);
+      });
 
-  const pushSection = (header, items) => {
-    const texts = items.map((it) => (it.text || "").trim()).filter(Boolean);
-    if (!texts.length) return;
-    lines.push(header);
-    lines.push("");
-    texts.forEach((t, i) => lines.push(`${i + 1}. ${t}`));
-    lines.push("");
+    return () => { cancelled = true; };
+  }, [caseData?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Cleanup blob URL on unmount
+  useEffect(() => () => { if (prevUrl.current) URL.revokeObjectURL(prevUrl.current); }, []);
+
+  const handleUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch(`${API_BASE}/api/cases/${caseData.id}/pdf`, {
+        method: "POST",
+        headers: auth?.token ? { Authorization: `Bearer ${auth.token}` } : {},
+        body: form,
+      });
+      if (!res.ok) {
+        const detail = await res.json().catch(() => ({}));
+        throw new Error(detail.detail || `HTTP ${res.status}`);
+      }
+      // Re-fetch the PDF after upload
+      const pdfRes = await fetch(`${API_BASE}/api/cases/${caseData.id}/pdf`, {
+        headers: auth?.token ? { Authorization: `Bearer ${auth.token}` } : {},
+        cache: "no-store",
+      });
+      const blob = await pdfRes.blob();
+      const url = URL.createObjectURL(blob);
+      if (prevUrl.current) URL.revokeObjectURL(prevUrl.current);
+      prevUrl.current = url;
+      setPdfUrl(url);
+      setError(null);
+    } catch (err) {
+      setUploadError(err.message);
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
   };
 
-  pushSection("NỘI DUNG VỤ ÁN", claims);
-  pushSection("YÊU CẦU CỦA ĐƯƠNG SỰ", requests);
-  pushSection("NHẬN ĐỊNH CỦA TOÀ ÁN", reasoning);
-  pushSection("QUYẾT ĐỊNH", decisions);
-
-  return lines.join("\n").trim() || "(Chưa có nội dung số hoá cho case này)";
-}
-
-function documentText(caseData) {
-  const raw = caseData.pages;
-  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
-    const keys = Object.keys(raw)
-      .filter((k) => /^\d+$/.test(k))
-      .sort((a, b) => Number(a) - Number(b));
-    if (keys.length) return keys.map((k) => raw[k]).join("\n\n");
-  }
-  if (Array.isArray(raw) && raw.length) return raw.map((x) => String(x)).join("\n\n");
-  return buildDocumentText(caseData);
-}
-
-function DocumentPanel({ caseData }) {
-  const [zoom, setZoom] = useState(100);
-  const text = useMemo(() => documentText(caseData), [caseData]);
-  const fontSize = 13.5 * (zoom / 100);
+  const isAdmin = auth?.type === "admin";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minWidth: 0, background: T.paperDim }}>
+      {/* toolbar */}
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
         padding: "8px 14px", borderBottom: `1px solid ${T.line}`, background: T.paperCard, flexShrink: 0,
@@ -593,30 +508,59 @@ function DocumentPanel({ caseData }) {
             fontSize: 12.5, fontWeight: 600, color: T.ink,
             overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
           }}>
-            {caseData.sourceFile || `Case ${caseData.id}`}
+            Tài liệu gốc (PDF)
           </span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-          <IconBtn size={24} onClick={() => setZoom((z) => Math.max(60, z - 10))} title="Thu nhỏ"><ZoomOut size={14} /></IconBtn>
-          <span style={{ fontSize: 11.5, color: T.inkSoft, width: 36, textAlign: "center" }}>{zoom}%</span>
-          <IconBtn size={24} onClick={() => setZoom((z) => Math.min(180, z + 10))} title="Phóng to"><ZoomIn size={14} /></IconBtn>
-        </div>
+        {isAdmin && (
+          <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", flexShrink: 0 }}>
+            <input type="file" accept="application/pdf,.pdf" style={{ display: "none" }} onChange={handleUpload} disabled={uploading} />
+            <span style={{ ...btnGhostStyle, fontSize: 11.5, padding: "4px 10px", pointerEvents: "none" }}>
+              {uploading ? "Đang tải…" : "Tải PDF lên"}
+            </span>
+          </label>
+        )}
       </div>
 
-      <div style={{
-        flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden",
-        padding: "22px 24px", boxSizing: "border-box",
-      }}>
-        <div style={{
-          maxWidth: 760, margin: "0 auto", background: "#fff",
-          boxShadow: "0 1px 3px rgba(28,38,36,0.12), 0 1px 1px rgba(28,38,36,0.08)",
-          borderRadius: 2, padding: "40px 44px", boxSizing: "border-box",
-          fontFamily: "Georgia, 'Times New Roman', serif",
-          fontSize, lineHeight: 1.85, color: "#22201A",
-          whiteSpace: "pre-wrap", overflowWrap: "break-word", wordBreak: "break-word",
-        }}>
-          {text}
+      {uploadError && (
+        <div style={{ padding: "6px 14px", background: "#FEE2E2", color: "#B91C1C", fontSize: 12 }}>
+          Lỗi tải lên: {uploadError}
         </div>
+      )}
+
+      {/* content area */}
+      <div style={{ flex: 1, minHeight: 0, position: "relative" }}>
+        {loading && (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: T.inkSoft, fontSize: 13 }}>
+            Đang tải PDF…
+          </div>
+        )}
+
+        {!loading && error === "no_pdf" && (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: 10, color: T.inkSoft }}>
+            <ScrollText size={32} color={T.lineStrong} />
+            <span style={{ fontSize: 13 }}>Chưa có PDF cho case này.</span>
+            {isAdmin && (
+              <label style={{ cursor: "pointer" }}>
+                <input type="file" accept="application/pdf,.pdf" style={{ display: "none" }} onChange={handleUpload} disabled={uploading} />
+                <span style={{ ...btnGhostStyle, fontSize: 12, pointerEvents: "none" }}>Tải PDF lên</span>
+              </label>
+            )}
+          </div>
+        )}
+
+        {!loading && error && error !== "no_pdf" && (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#B91C1C", fontSize: 13 }}>
+            Lỗi tải PDF: {error}
+          </div>
+        )}
+
+        {!loading && pdfUrl && (
+          <iframe
+            src={pdfUrl}
+            title="PDF Viewer"
+            style={{ width: "100%", height: "100%", border: "none", display: "block" }}
+          />
+        )}
       </div>
     </div>
   );
@@ -655,18 +599,14 @@ const normalizeCase = (source) => {
       ...source,
       id: String(source.id),
       title: source.title || `Case ${source.id}`,
-      sourceFile: source.sourceFile || `case_${source.id}`,
-      totalPages: source.totalPages != null ? Number(source.totalPages) : 0,
       parties: source.parties || [],
       units: source.units.map((u) => ({
         ...u,
         assertedBy: u.assertedBy || u.requestedBy || [],
         text: u.text || normalizeText(u),
-        modification_spans: u.modification_spans || [],
       })),
       reasoning: source.reasoning || [],
       decisions: source.decisions || [],
-      pages: source.pages || {},
     };
   }
 
@@ -687,7 +627,6 @@ const normalizeCase = (source) => {
     text: normalizeText(c),
     status: "unconfirmed",
     section: c.section || "content",
-    modification_spans: [],
   }));
 
   const requests = (source.requests || []).map((r) => ({
@@ -698,11 +637,6 @@ const normalizeCase = (source) => {
     text: normalizeText(r),
     status: "unconfirmed",
     section: r.section || "content",
-    modification_spans: (r.modification_spans || []).map((m) => ({
-      order: Number(m.order) || 0,
-      section: m.section || "content",
-      text: m.text || "",
-    })),
     outcome: normalizeOutcome((source.request_outcomes || []).find((x) => x.request_id === r.request_id)?.outcome),
     linkedDecisions: (source.request_decision_links || [])
       .filter((x) => x.request_id === r.request_id)
@@ -732,13 +666,10 @@ const normalizeCase = (source) => {
   return {
     id: String(source.case_id),
     title: `Case ${source.case_id}`,
-    sourceFile: `case_${source.case_id}`,
-    totalPages: 0,
     parties,
     units: [...claims, ...requests],
     reasoning,
     decisions,
-    pages: {},
   };
 };
 
@@ -1568,7 +1499,6 @@ export default function LegalAnnotationApp() {
 
   const [addingType, setAddingType] = useState(null);
   const [editingId, setEditingId] = useState(null);
-  const [modificationEditId, setModificationEditId] = useState(null);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -1717,7 +1647,6 @@ export default function LegalAnnotationApp() {
       setCaseData(doc);
       setTab("units");
       setEditingId(null);
-      setModificationEditId(null);
       setAddingType(null);
       setEditingTitle(false);
       setTitleDraft("");
@@ -1790,7 +1719,7 @@ export default function LegalAnnotationApp() {
     const prefix = data.type === "claim" ? "C" : "R";
     const existingIds = caseData.units.filter((u) => u.id.startsWith(prefix)).map((u) => parseInt(u.id.slice(1)) || 0);
     const nextNum = (existingIds.length ? Math.max(...existingIds) : 0) + 1;
-    const newUnit = { id: `${prefix}${nextNum}`, status: "unconfirmed", modification_spans: [], ...data };
+    const newUnit = { id: `${prefix}${nextNum}`, status: "unconfirmed", ...data };
     if (data.type === "request") {
       newUnit.outcome = null;
       newUnit.linkedDecisions = [];
@@ -1802,46 +1731,12 @@ export default function LegalAnnotationApp() {
   };
 
   const saveEditUnit = (id, data) => {
-    updateCase((c) => ({ ...c, units: c.units.map((u) => (u.id === id ? { ...u, ...data } : u)) }));
+    updateCase((c) => ({ ...c, units: updateAtOrder(c.units, id, data) }));
     setEditingId(null);
   };
 
   const deleteUnit = (id) => {
     updateCase((c) => ({ ...c, units: deleteAtOrder(c.units, id) }));
-  };
-
-  const toggleModifications = (unitId) => {
-    setModificationEditId((id) => (id === unitId ? null : unitId));
-  };
-
-  const addModification = (unitId, modification) => {
-    updateCase((c) => ({
-      ...c,
-      units: c.units.map((u) => (u.id === unitId ? { ...u, modification_spans: [...(u.modification_spans || []), modification] } : u)),
-    }));
-  };
-
-  const updateModification = (unitId, target, modification) => {
-    updateCase((c) => ({
-      ...c,
-      units: c.units.map((u) => {
-        if (u.id !== unitId) return u;
-        const list = [...(u.modification_spans || [])];
-        const idx = list.indexOf(target);
-        if (idx >= 0) list[idx] = modification;
-        return { ...u, modification_spans: list };
-      }),
-    }));
-  };
-
-  const removeModification = (unitId, target) => {
-    updateCase((c) => ({
-      ...c,
-      units: c.units.map((u) => {
-        if (u.id !== unitId) return u;
-        return { ...u, modification_spans: (u.modification_spans || []).filter((x) => x !== target) };
-      }),
-    }));
   };
 
   const commitTitle = () => {
@@ -1861,7 +1756,7 @@ export default function LegalAnnotationApp() {
   };
 
   const saveEditSimple = (kind, id, data) => {
-    updateCase((c) => ({ ...c, [kind]: c[kind].map((u) => (u.id === id ? { ...u, ...data } : u)) }));
+    updateCase((c) => ({ ...c, [kind]: updateAtOrder(c[kind], id, data) }));
     setEditingId(null);
   };
 
@@ -2264,16 +2159,11 @@ export default function LegalAnnotationApp() {
                     unit={u}
                     parties={caseData.parties || []}
                     editing={editingId === u.id}
-                    modificationEditing={modificationEditId === u.id}
                     onConfirm={() => toggleConfirm(u.id, "units")}
                     onEditStart={() => setEditingId(u.id)}
                     onEditSave={(data) => saveEditUnit(u.id, data)}
                     onEditCancel={() => setEditingId(null)}
                     onDelete={() => deleteUnit(u.id)}
-                    onModificationToggle={() => toggleModifications(u.id)}
-                    onAddModification={(m) => addModification(u.id, m)}
-                    onUpdateModification={(m, updated) => updateModification(u.id, m, updated)}
-                    onRemoveModification={(m) => removeModification(u.id, m)}
                   />
                 ))}
               </div>
@@ -2298,16 +2188,11 @@ export default function LegalAnnotationApp() {
                     unit={u}
                     parties={caseData.parties || []}
                     editing={editingId === u.id}
-                    modificationEditing={modificationEditId === u.id}
                     onConfirm={() => toggleConfirm(u.id, "units")}
                     onEditStart={() => setEditingId(u.id)}
                     onEditSave={(data) => saveEditUnit(u.id, data)}
                     onEditCancel={() => setEditingId(null)}
                     onDelete={() => deleteUnit(u.id)}
-                    onModificationToggle={() => toggleModifications(u.id)}
-                    onAddModification={(m) => addModification(u.id, m)}
-                    onUpdateModification={(m, updated) => updateModification(u.id, m, updated)}
-                    onRemoveModification={(m) => removeModification(u.id, m)}
                   />
                 ))}
               </div>
@@ -2376,7 +2261,7 @@ export default function LegalAnnotationApp() {
           </div>
 
           <div style={{ flex: `0 0 ${100 - leftWidth}%`, minWidth: 0, minHeight: 0, height: "100%", overflow: "hidden" }}>
-            <DocumentPanel caseData={caseData} />
+            <DocumentPanel caseData={caseData} auth={auth} />
           </div>
         </div>
         {showOnboarding && <OnboardingModal onClose={closeOnboarding} />}
