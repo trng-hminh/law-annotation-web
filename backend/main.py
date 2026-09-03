@@ -63,7 +63,17 @@ ALLOWED_ORIGINS = [
 ]
 ENV_SECRET = os.environ.get("SECRET_KEY", "").strip()
 ENV_ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "").strip()
-ENV_ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin").strip()
+ENV_ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin").strip().lower() or "admin"
+
+# MongoDB stores a document (including its metadata) in at most 16 MiB.  Keep
+# a little headroom so a PDF that is valid for the API is valid for both storage
+# backends.  UploadFile spools larger multipart bodies to disk, and the route
+# below reads it in bounded chunks.
+MAX_PDF_BYTES = 15 * 1024 * 1024
+
+
+class ConfigurationError(RuntimeError):
+    """A deployment setting is unsafe or incomplete."""
 
 
 # ------------------------------ storage abstraction ------------------------------
@@ -224,10 +234,21 @@ class FileStorage:
         _write_json_file(self.config_file, cfg)
 
     def get_secret(self):
-        return self.secret_file.read_text(encoding="utf-8").strip() if self.secret_file.exists() else None
+        if not self.secret_file.exists():
+            return None
+        value = self.secret_file.read_text(encoding="utf-8").strip()
+        # Older versions wrote this as a JSON string (including quote marks).
+        # Accept that representation once so local installations keep working
+        # after upgrading, then write the canonical plaintext form going ahead.
+        try:
+            decoded = json.loads(value)
+            return decoded if isinstance(decoded, str) else value
+        except json.JSONDecodeError:
+            return value
 
     def set_secret(self, value):
-        _write_json_file(self.secret_file, value)
+        self.secret_file.parent.mkdir(parents=True, exist_ok=True)
+        self.secret_file.write_text(str(value), encoding="utf-8")
 
     def save_pdf(self, case_id, data: bytes):
         path = self.pdfs_dir / f"{case_id}.pdf"
@@ -440,6 +461,10 @@ def _ensure_admins():
         })
         storage.save_admins(admins)
         return
+    # A production database must never bootstrap an account with a predictable
+    # password. Existing installations with an admin record continue unchanged.
+    if not ENV_ADMIN_PASSWORD and _STORAGE_NAME == "mongodb":
+        raise ConfigurationError("ADMIN_PASSWORD must be set before creating the first production admin.")
     password = ENV_ADMIN_PASSWORD or "admin123"
     salt, hashed = _hash_password(password)
     admins.append({
@@ -468,10 +493,33 @@ def _secret():
     return secret
 
 
-def _make_token(identity_type, identity_id, hours=24):
+def _identity_credential_hash(identity_type, identity_id):
+    """Return the active account's password/passcode hash, if it still exists.
+
+    Including this value in the HMAC input makes a token invalid as soon as its
+    owner is deleted or their password/passcode changes, without exposing that
+    hash to the client.
+    """
+    if identity_type == "admin":
+        account = next(
+            (a for a in storage.list_admins() if a.get("username") == identity_id),
+            None,
+        )
+        return account.get("password_hash") if account else None
+    if identity_type == "annotator":
+        account = next(
+            (a for a in storage.list_annotators() if a.get("id") == identity_id),
+            None,
+        )
+        return account.get("passcode_hash") if account else None
+    return None
+
+
+def _make_token(identity_type, identity_id, credential_hash, hours=24):
     expires = int(time.time()) + hours * 3600
     payload = f"{identity_type}:{identity_id}:{expires}"
-    sig = hmac.new(_secret().encode(), payload.encode(), hashlib.sha256).hexdigest()
+    sig_input = f"{payload}:{credential_hash}"
+    sig = hmac.new(_secret().encode(), sig_input.encode(), hashlib.sha256).hexdigest()
     return f"{payload}:{sig}"
 
 
@@ -488,7 +536,14 @@ def _require_auth(request: Request):
             raise HTTPException(status_code=401, detail="Token đã hết hạn, hãy đăng nhập lại.")
     except ValueError:
         raise HTTPException(status_code=401, detail="Token không hợp lệ.")
-    expected = hmac.new(_secret().encode(), f"{itype}:{iid}:{exp}".encode(), hashlib.sha256).hexdigest()
+    credential_hash = _identity_credential_hash(itype, iid)
+    if not credential_hash:
+        raise HTTPException(status_code=401, detail="Token không hợp lệ.")
+    expected = hmac.new(
+        _secret().encode(),
+        f"{itype}:{iid}:{exp}:{credential_hash}".encode(),
+        hashlib.sha256,
+    ).hexdigest()
     if not hmac.compare_digest(expected, sig):
         raise HTTPException(status_code=401, detail="Token không hợp lệ.")
     return {"type": itype, "id": iid}
@@ -534,6 +589,15 @@ def _norm_assignments(raw):
     return out
 
 
+def _require_annotator_case_assignment(annotator_id, case_id):
+    """Ensure an annotator may access a real case before using its data."""
+    if not case_id or storage.get_case_doc(case_id) is None:
+        raise HTTPException(status_code=404, detail="Không tìm thấy case.")
+    assignments = _norm_assignments(storage.read_assignments())
+    if annotator_id not in assignments.get(case_id, []):
+        raise HTTPException(status_code=403, detail="Case này không được phân công cho bạn.")
+
+
 def _set_case_status(case_id, status, completed_by=None):
     registry = storage.read_cases()
     for c in registry:
@@ -551,6 +615,11 @@ def _set_case_status(case_id, status, completed_by=None):
 
 try:
     _ensure_admins()
+except ConfigurationError:
+    # A missing production bootstrap password is configuration, not a
+    # transient MongoDB failure. Refuse to start a service nobody can safely
+    # administer.
+    raise
 except Exception as exc:
     # MongoDB chưa sẵn sàng -> bỏ qua lúc khởi động, sẽ tự khởi tạo lại khi có request
     print(f"WARNING: Chưa thể khởi tạo admin lúc này (MongoDB chưa sẵn sàng): {exc}")
@@ -618,7 +687,7 @@ def admin_login(payload: dict):
         "type": "admin",
         "id": found["username"],
         "name": found.get("name") or found["username"],
-        "token": _make_token("admin", found["username"], hours=12),
+        "token": _make_token("admin", found["username"], found["password_hash"], hours=12),
     }
 
 
@@ -637,7 +706,7 @@ def annotator_login(payload: dict):
         "type": "annotator",
         "id": found["id"],
         "name": found["name"],
-        "token": _make_token("annotator", found["id"]),
+        "token": _make_token("annotator", found["id"], found["passcode_hash"]),
     }
 
 
@@ -842,13 +911,25 @@ def delete_annotator(annotator_id: str, request: Request):
 def import_cases(payload: dict, request: Request):
     _require_admin(request)
     docs = payload.get("cases", []) or []
+    if not isinstance(docs, list):
+        raise HTTPException(status_code=400, detail="Trường cases phải là một mảng JSON.")
     registry = storage.read_cases()
     by_id = {c["case_id"]: c for c in registry}
     imported = 0
+    skipped = 0
     for doc in docs:
+        if not isinstance(doc, dict):
+            skipped += 1
+            continue
+        doc = dict(doc)
         cid = _safe_id(doc.get("id") or doc.get("case_id") or "")
         if not cid:
+            skipped += 1
             continue
+        # Store the canonical ID in the document as well as in its storage key;
+        # otherwise a malformed JSON import can make the frontend call a
+        # different case endpoint than the one the admin imported.
+        doc["id"] = cid
         storage.save_case_doc(cid, doc)
         existing = by_id.get(cid, {})
         by_id[cid] = {
@@ -862,7 +943,7 @@ def import_cases(payload: dict, request: Request):
         imported += 1
     result = sorted(by_id.values(), key=lambda x: x["case_id"])
     storage.save_cases(result)
-    return {"imported": imported, "total_cases": len(result)}
+    return {"imported": imported, "skipped": skipped, "total_cases": len(result)}
 
 
 # ------------------------------ assignment ------------------------------
@@ -872,6 +953,8 @@ def assign_case(case_id: str, payload: dict, request: Request):
     """Thêm/bớt annotator cho một case. Mỗi annotator chỉ xuất hiện 1 lần/case."""
     _require_admin(request)
     case_id = _safe_id(case_id)
+    if not case_id or storage.get_case_doc(case_id) is None:
+        raise HTTPException(status_code=404, detail="Không tìm thấy case.")
     annotator_id = payload.get("annotator_id")
     remove = bool(payload.get("remove"))
     assignments = _norm_assignments(storage.read_assignments())
@@ -1105,10 +1188,31 @@ def get_case_doc(case_id: str, request: Request):
     if doc is None:
         raise HTTPException(status_code=404, detail="Không tìm thấy case.")
     if auth["type"] == "annotator":
-        assignments = _norm_assignments(storage.read_assignments())
-        if auth["id"] not in assignments.get(case_id, []):
-            raise HTTPException(status_code=403, detail="Case này không được phân công cho bạn.")
+        _require_annotator_case_assignment(auth["id"], case_id)
     return doc
+
+
+async def _read_pdf_with_limit(file: UploadFile):
+    """Read an upload in bounded chunks and reject it before Mongo's limit."""
+    chunks = []
+    size = 0
+    try:
+        while True:
+            # The extra byte lets us distinguish exactly MAX_PDF_BYTES from a
+            # larger file without materialising the rest in application memory.
+            chunk = await file.read(min(1024 * 1024, MAX_PDF_BYTES - size + 1))
+            if not chunk:
+                break
+            size += len(chunk)
+            if size > MAX_PDF_BYTES:
+                raise HTTPException(
+                    status_code=413,
+                    detail="File quá lớn (tối đa 15 MB).",
+                )
+            chunks.append(chunk)
+    finally:
+        await file.close()
+    return b"".join(chunks)
 
 
 @app.post("/api/cases/{case_id}/pdf")
@@ -1116,23 +1220,32 @@ async def upload_case_pdf(case_id: str, request: Request, file: UploadFile = Fil
     """Admin uploads a PDF for a case."""
     _require_admin(request)
     case_id = _safe_id(case_id)
-    if not file.filename.lower().endswith(".pdf"):
+    if not case_id or storage.get_case_doc(case_id) is None:
+        raise HTTPException(status_code=404, detail="Không tìm thấy case.")
+    if not file.filename or not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Chỉ chấp nhận file PDF.")
-    data = await file.read()
-    if len(data) > 50 * 1024 * 1024:  # 50 MB limit
-        raise HTTPException(status_code=413, detail="File quá lớn (tối đa 50 MB).")
+    data = await _read_pdf_with_limit(file)
+    # The header is permitted after an initial binary comment, but must occur
+    # near the start of a standards-conformant PDF. A .pdf filename alone is
+    # not enough to keep arbitrary data out of the case-document store.
+    if b"%PDF-" not in data[:1024]:
+        raise HTTPException(status_code=400, detail="Nội dung file không phải PDF hợp lệ.")
     storage.save_pdf(case_id, data)
     return {"success": True, "case_id": case_id, "size": len(data)}
 
 @app.get("/api/cases/{case_id}/pdf")
 def get_case_pdf(case_id: str, request: Request):
-    """Stream the PDF for a case. Any authenticated user can access.
+    """Stream the PDF for a case an authenticated user may access.
 
     Trả 404 khi chưa có file PDF trong storage (MongoDB collection `case_pdfs`
     hoặc thư mục `case_pdfs` ở chế độ file). Không bao giờ dựng nội dung giả.
     """
-    _require_auth(request)
+    auth = _require_auth(request)
     case_id = _safe_id(case_id)
+    if not case_id or storage.get_case_doc(case_id) is None:
+        raise HTTPException(status_code=404, detail="Không tìm thấy case.")
+    if auth["type"] == "annotator":
+        _require_annotator_case_assignment(auth["id"], case_id)
     data = storage.get_pdf(case_id)
     if data is None:
         raise HTTPException(status_code=404, detail="Chưa có PDF cho case này.")
@@ -1152,6 +1265,7 @@ def get_case_pdf(case_id: str, request: Request):
 def get_draft(case_id: str, request: Request):
     auth = _require_annotator(request)
     case_id = _safe_id(case_id)
+    _require_annotator_case_assignment(auth["id"], case_id)
     draft = storage.get_draft(auth["id"], case_id)
     if draft is None:
         raise HTTPException(status_code=404, detail="Chưa có nháp.")
@@ -1162,6 +1276,9 @@ def get_draft(case_id: str, request: Request):
 def save_draft(case_id: str, payload: dict, request: Request):
     auth = _require_annotator(request)
     case_id = _safe_id(case_id)
+    _require_annotator_case_assignment(auth["id"], case_id)
+    payload = dict(payload)
+    payload["id"] = case_id
     saved_at = storage.save_draft(auth["id"], case_id, payload)
     return {"success": True, "case_id": case_id, "saved_at": saved_at}
 
@@ -1170,6 +1287,7 @@ def save_draft(case_id: str, payload: dict, request: Request):
 def delete_draft(case_id: str, request: Request):
     auth = _require_annotator(request)
     case_id = _safe_id(case_id)
+    _require_annotator_case_assignment(auth["id"], case_id)
     storage.delete_draft(auth["id"], case_id)
     return {"success": True}
 
@@ -1215,6 +1333,10 @@ def submit_case(payload: dict, request: Request):
         raise HTTPException(status_code=400, detail="Thiếu case_id.")
     if storage.get_case_doc(case_id) is None:
         raise HTTPException(status_code=404, detail="Không tìm thấy case.")
+    # Persist the canonical route ID, not an untrusted spelling from the JSON
+    # body. This keeps FileStorage's submission index aligned with MongoStorage.
+    payload = dict(payload)
+    payload["case_id"] = case_id
 
     # annotators may only submit cases assigned to them; admin may submit any
     assigned_ids = []
@@ -1264,6 +1386,13 @@ def submit_case(payload: dict, request: Request):
 
 # ------------------------------ export (admin, cho nghiên cứu) ------------------------------
 
+def _safe_csv_cell(value):
+    """Keep user-supplied strings from being evaluated as spreadsheet formulas."""
+    text = "" if value is None else str(value)
+    if text.lstrip().startswith(("=", "+", "-", "@")):
+        return "'" + text
+    return text
+
 @app.get("/api/export/submissions")
 def export_submissions(request: Request):
     """Toàn bộ submission (payload đầy đủ) dạng JSON — dành cho nghiên cứu."""
@@ -1301,16 +1430,16 @@ def export_submissions_csv(request: Request):
         requests = [u for u in units if u.get("type") == "request"]
         outcomes = ";".join(str(r.get("outcome") or "") for r in requests)
         writer.writerow([
-            s.get("case_id", ""),
-            s.get("title", ""),
-            s.get("annotator_id", ""),
-            s.get("annotator_name", ""),
-            s.get("submitted_at", ""),
-            s.get("received_at", ""),
-            s.get("file", ""),
+            _safe_csv_cell(s.get("case_id")),
+            _safe_csv_cell(s.get("title")),
+            _safe_csv_cell(s.get("annotator_id")),
+            _safe_csv_cell(s.get("annotator_name")),
+            _safe_csv_cell(s.get("submitted_at")),
+            _safe_csv_cell(s.get("received_at")),
+            _safe_csv_cell(s.get("file")),
             len(units),
             sum(1 for u in units if u.get("status") == "confirmed"),
-            outcomes,
+            _safe_csv_cell(outcomes),
             len(reasoning),
             len(decisions),
         ])

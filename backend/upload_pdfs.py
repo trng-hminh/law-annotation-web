@@ -10,18 +10,19 @@ Each PDF must be named after its case_id:
 
 Usage
 -----
-  python upload_pdfs.py --dir /path/to/pdfs --url http://localhost:8000 --user admin --pass admin123
+  ADMIN_PASSWORD='your-password' python upload_pdfs.py --dir /path/to/pdfs --url http://localhost:8000 --user admin
 
 Options
 -------
   --dir    Folder containing the PDF files  (required)
   --url    Backend base URL                 (default: http://localhost:8000)
   --user   Admin username                   (default: admin)
-  --pass   Admin password                   (default: admin123)
+  --pass   Admin password (or ADMIN_PASSWORD environment variable)
   --dry    Dry-run: only print what would be uploaded, don't actually upload
 """
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -76,7 +77,7 @@ def main():
     parser.add_argument("--dir",  required=True, help="Folder containing PDF files named <case_id>.pdf")
     parser.add_argument("--url",  default="http://localhost:8000", help="Backend base URL")
     parser.add_argument("--user", default="admin", help="Admin username")
-    parser.add_argument("--pass", dest="password", default="admin123", help="Admin password")
+    parser.add_argument("--pass", dest="password", help="Admin password (or set ADMIN_PASSWORD)")
     parser.add_argument("--dry",  action="store_true", help="Dry-run only")
     args = parser.parse_args()
 
@@ -99,7 +100,11 @@ def main():
             print(f"  would upload: {p.name}  → case_id={case_id}")
         return
 
-    token = login(args.url, args.user, args.password)
+    password = args.password or os.environ.get("ADMIN_PASSWORD", "")
+    if not password:
+        parser.error("Provide --pass or set ADMIN_PASSWORD; no default production password is used.")
+
+    token = login(args.url, args.user, password)
 
     ok = 0
     fail = 0

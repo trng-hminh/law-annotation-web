@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
+// Matches the backend limit and leaves enough MongoDB document headroom.
+const MAX_PDF_BYTES = 15 * 1024 * 1024;
 
 /* ----------------------------------------------------------------------
    DESIGN TOKENS
@@ -503,6 +505,11 @@ function DocumentPanel({ caseData, auth }) {
   const handleUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > MAX_PDF_BYTES) {
+      setUploadError("File quá lớn (tối đa 15 MB).");
+      e.target.value = "";
+      return;
+    }
     setUploading(true);
     setUploadError(null);
     try {
@@ -522,12 +529,17 @@ function DocumentPanel({ caseData, auth }) {
         headers: auth?.token ? { Authorization: `Bearer ${auth.token}` } : {},
         cache: "no-store",
       });
+      if (!pdfRes.ok) {
+        const detail = await pdfRes.json().catch(() => ({}));
+        throw new Error(detail.detail || `HTTP ${pdfRes.status}`);
+      }
       const blob = await pdfRes.blob();
       const url = URL.createObjectURL(blob);
       if (prevUrl.current) URL.revokeObjectURL(prevUrl.current);
       prevUrl.current = url;
       setPdfUrl(url);
       setError(null);
+      setLoading(false);
     } catch (err) {
       setUploadError(err.message);
     } finally {

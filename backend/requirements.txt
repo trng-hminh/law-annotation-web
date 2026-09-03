@@ -3,3 +3,5 @@ uvicorn[standard]>=0.29
 pymongo>=4.6
 certifi>=2024.0.0
 python-multipart>=0.0.9
+requests>=2.31,<3
+httpx>=0.28,<1
