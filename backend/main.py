@@ -1094,6 +1094,51 @@ def annotator_cases(request: Request):
     }
 
 
+def _annotation_settings():
+    cfg = storage.read_config()
+    return {
+        "show_suggestions": cfg.get("show_suggestions", True),
+        "case_overrides": cfg.get("suggestion_case_overrides", {}),
+    }
+
+
+@app.get("/api/annotation-settings")
+def annotation_settings(request: Request):
+    _require_admin(request)
+    return _annotation_settings()
+
+
+@app.put("/api/annotation-settings")
+def update_annotation_settings(payload: dict, request: Request):
+    _require_admin(request)
+    enabled = payload.get("show_suggestions")
+    if not isinstance(enabled, bool):
+        raise HTTPException(status_code=400, detail="show_suggestions phải là boolean.")
+    cfg = storage.read_config()
+    cfg["show_suggestions"] = enabled
+    # The global control applies to ALL cases, including previous overrides.
+    cfg["suggestion_case_overrides"] = {}
+    storage.save_config(cfg)
+    return _annotation_settings()
+
+
+@app.put("/api/cases/{case_id}/annotation-settings")
+def update_case_annotation_settings(case_id: str, payload: dict, request: Request):
+    _require_admin(request)
+    case_id = _safe_id(case_id)
+    if not case_id or storage.get_case_doc(case_id) is None:
+        raise HTTPException(status_code=404, detail="Không tìm thấy case.")
+    enabled = payload.get("show_suggestions")
+    if not isinstance(enabled, bool):
+        raise HTTPException(status_code=400, detail="show_suggestions phải là boolean.")
+    cfg = storage.read_config()
+    overrides = dict(cfg.get("suggestion_case_overrides", {}))
+    overrides[case_id] = enabled
+    cfg["suggestion_case_overrides"] = overrides
+    storage.save_config(cfg)
+    return {"case_id": case_id, "show_suggestions": enabled}
+
+
 @app.get("/api/cases")
 def admin_overview(request: Request):
     _require_admin(request)
@@ -1101,6 +1146,7 @@ def admin_overview(request: Request):
     assignments = _norm_assignments(storage.read_assignments())
     submissions_index = storage.submissions_index()
     drafts = storage.list_drafts()
+    settings = _annotation_settings()
 
     drafts_by_case = {}
     for d in drafts:
@@ -1121,6 +1167,7 @@ def admin_overview(request: Request):
             "assigned_to": assignments.get(cid) or [],
             "submissions": submissions_index.get(cid, []),
             "drafts": drafts_by_case.get(cid, []),
+            "show_suggestions": settings["case_overrides"].get(cid, settings["show_suggestions"]),
         })
     return result
 
@@ -1189,6 +1236,15 @@ def get_case_doc(case_id: str, request: Request):
         raise HTTPException(status_code=404, detail="Không tìm thấy case.")
     if auth["type"] == "annotator":
         _require_annotator_case_assignment(auth["id"], case_id)
+        settings = _annotation_settings()
+        if not settings["case_overrides"].get(case_id, settings["show_suggestions"]):
+            # Serve a blank starting point without modifying the imported source,
+            # PDF, parties, or this annotator's saved drafts/submissions.
+            doc = dict(doc)
+            for field in ("units", "reasoning", "decisions", "claims", "requests",
+                          "reasonings", "request_outcomes", "request_decision_links",
+                          "request_reasoning_links"):
+                doc[field] = []
     return doc
 
 

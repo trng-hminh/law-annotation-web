@@ -408,6 +408,44 @@ class ApiIntegrationTests(unittest.TestCase):
             self.client.get("/api/cases", headers=self._auth(fresh_admin_token)), 200
         )
 
+    def test_suggestion_toggles_preserve_sources_and_saved_work(self):
+        source = {"id": "suggested", "title": "Suggested case", "parties": [{"id": "P1"}],
+                  "units": [{"id": "C1", "text": "suggested claim"}],
+                  "reasoning": [{"id": "RE1"}], "decisions": [{"id": "DE1"}],
+                  "request_decision_links": [{"request_id": "R1", "decision_id": "DE1"}]}
+        self._import_cases(source, dict(source, id="other"))
+        annotator = self._create_annotator()
+        token = self._login_annotator()
+        self._assign("suggested", annotator["id"])
+        self._assign("other", annotator["id"])
+        admin = self._auth(self.admin_token)
+        ann = self._auth(token)
+        path = "/api/annotation-settings"
+        self._assert_status(self.client.put(path, headers=ann, json={"show_suggestions": False}), 403)
+        self._assert_status(self.client.put(path, headers=admin, json={"show_suggestions": "false"}), 400)
+        self.assertTrue(self.client.get(path, headers=admin).json()["show_suggestions"])
+        self.assertEqual(self.client.get("/api/cases/suggested/doc", headers=ann).json(), source)
+        self._assert_status(self.client.put(path, headers=admin, json={"show_suggestions": False}), 200)
+        blank = self.client.get("/api/cases/suggested/doc", headers=ann).json()
+        for field in ("units", "reasoning", "decisions", "request_decision_links"):
+            self.assertEqual(blank[field], [])
+        self.assertEqual(blank["parties"], source["parties"])
+        self.assertEqual(self.client.get("/api/cases/suggested/doc", headers=admin).json(), source)
+        self._assert_status(self.client.put("/api/cases/suggested/draft", headers=ann,
+                                           json={"id": "suggested", "units": [{"id": "C2"}]}), 200)
+        per_case = "/api/cases/suggested/annotation-settings"
+        self._assert_status(self.client.put(per_case, headers=admin, json={"show_suggestions": True}), 200)
+        self.assertEqual(self.client.get("/api/cases/suggested/doc", headers=ann).json(), source)
+        self.assertEqual(self.client.get("/api/cases/other/doc", headers=ann).json()["units"], [])
+        # Reimports retain the setting; global changes clear every override.
+        self._import_cases(source)
+        self.assertTrue(self.client.get("/api/cases", headers=admin).json()[1]["show_suggestions"])
+        self._assert_status(self.client.put(path, headers=admin, json={"show_suggestions": False}), 200)
+        self.assertEqual(self.client.get("/api/cases/suggested/doc", headers=ann).json()["units"], [])
+        self.assertEqual(self.client.get("/api/cases/suggested/draft", headers=ann).json()["units"], [{"id": "C2"}])
+        self._assert_status(self.client.put(path, headers=admin, json={"show_suggestions": True}), 200)
+        self.assertEqual(self.client.get("/api/cases/other/doc", headers=ann).json()["units"], source["units"])
+
     def test_file_storage_secret_is_stable_for_the_first_authenticated_follow_up(self):
         # This intentionally disables the test-only environment secret.  It
         # verifies the file-storage path that creates and reads a fresh secret.

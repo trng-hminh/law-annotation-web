@@ -1255,6 +1255,7 @@ function AdminDashboard({
   onClearAssignments,
   onViewSubmissions,
   onRefresh, refreshing, flash, onExport,
+  showSuggestions, suggestionsSaving, onToggleSuggestions,
 }) {
   const [section, setSection] = useState("cases"); // "cases" | "annotators" | "admins" | "progress"
   const [search, setSearch] = useState("");
@@ -1355,6 +1356,18 @@ function AdminDashboard({
 
       {section === "cases" && (
         <>
+          <div style={{ marginBottom: 14, padding: "12px 14px", background: T.paperDim, borderRadius: 10 }}>
+            <button
+              type="button" role="switch" aria-checked={showSuggestions}
+              disabled={suggestionsSaving}
+              onClick={() => onToggleSuggestions(!showSuggestions)}
+              style={showSuggestions ? btnPrimaryStyle : btnGhostStyle}
+            >Gợi ý cho tất cả case: {showSuggestions ? "Bật" : "Tắt"}</button>
+            <p style={{ margin: "8px 0 0", fontSize: 12, color: T.inkSoft }}>
+              Tắt để annotator bắt đầu với Claims, Requests, Reasoning và Decisions trống. Nháp và bài nộp đã lưu được giữ nguyên.
+              Thay đổi tại đây áp dụng cho tất cả case; bạn có thể bật/tắt riêng từng case bên dưới. Có hiệu lực khi mở lại case.
+            </p>
+          </div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
             <input
               value={search}
@@ -1424,6 +1437,13 @@ function AdminDashboard({
                   </div>
 
                   <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end", flexShrink: 0 }}>
+                    <button
+                      type="button" role="switch" aria-checked={c.show_suggestions ?? true}
+                      aria-label={`Gợi ý case ${c.case_id}`}
+                      disabled={suggestionsSaving}
+                      onClick={() => onToggleSuggestions(!(c.show_suggestions ?? true), c.case_id)}
+                      style={{ ...btnGhostStyle, padding: "5px 12px", fontSize: 12 }}
+                    >Gợi ý: {(c.show_suggestions ?? true) ? "Bật" : "Tắt"}</button>
                     <button onClick={() => onOpenCase(c.case_id)} style={{ ...btnPrimaryStyle, padding: "5px 12px", fontSize: 12 }}>Mở case</button>
                     {c.submissions.length > 0 && (
                       <button onClick={() => onViewSubmissions(c.case_id, c.title)} style={{ ...btnGhostStyle, padding: "4px 10px", fontSize: 11.5 }}>
@@ -1712,6 +1732,8 @@ export default function LegalAnnotationApp() {
 
   // admin dashboard
   const [adminOverview, setAdminOverview] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(true);
+  const [suggestionsSaving, setSuggestionsSaving] = useState(false);
   const [adminAnnotators, setAdminAnnotators] = useState([]);
   const [adminAdmins, setAdminAdmins] = useState([]);
   const [adminProgress, setAdminProgress] = useState([]);
@@ -1750,13 +1772,15 @@ export default function LegalAnnotationApp() {
 
   const loadAdminData = async () => {
     try {
-      const [ov, ann, adm, prog] = await Promise.all([
+      const [ov, ann, adm, prog, settings] = await Promise.all([
         api("/api/cases"),
         api("/api/annotators"),
         api("/api/admins"),
         api("/api/admin/progress"),
+        api("/api/annotation-settings"),
       ]);
       setAdminOverview(ov);
+      setShowSuggestions(settings.show_suggestions);
       setAdminAnnotators(ann);
       setAdminAdmins(adm);
       setAdminProgress(prog.annotators || []);
@@ -2025,6 +2049,21 @@ export default function LegalAnnotationApp() {
       loadAdminData();
     } catch (e) {
       setFlash(e.message || "Phân công thất bại.");
+    }
+  };
+
+  const toggleSuggestions = async (enabled, caseId) => {
+    setSuggestionsSaving(true);
+    try {
+      await api(caseId ? `/api/cases/${caseId}/annotation-settings` : "/api/annotation-settings", {
+        method: "PUT", body: { show_suggestions: enabled },
+      });
+      await loadAdminData();
+      setFlash(`Đã ${enabled ? "bật" : "tắt"} gợi ý ${caseId ? `cho case ${caseId}` : "cho tất cả case"}. Có hiệu lực khi mở lại case; nháp và bài nộp đã lưu được giữ nguyên.`);
+    } catch (e) {
+      setFlash(e.message || "Không lưu được tùy chọn gợi ý.");
+    } finally {
+      setSuggestionsSaving(false);
     }
   };
 
@@ -2504,6 +2543,9 @@ export default function LegalAnnotationApp() {
       {auth?.type === "admin" ? (
         <AdminDashboard
           overview={adminOverview}
+          showSuggestions={showSuggestions}
+          suggestionsSaving={suggestionsSaving}
+          onToggleSuggestions={toggleSuggestions}
           annotators={adminAnnotators}
           admins={adminAdmins}
           progress={adminProgress}
