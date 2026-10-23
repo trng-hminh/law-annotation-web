@@ -535,6 +535,49 @@ class ApiIntegrationTests(unittest.TestCase):
         self.assertEqual(main.storage.get_draft("A1", "migrated")["units"][0]["text"], "Human work")
         self.assertFalse(main._annotation_settings()["case_overrides"]["migrated"])
 
+    def test_auto_assignment_limits_writes_to_filtered_expert_cases(self):
+        self.assertTrue(self.client.get("/").json()["scoped_auto_assign"])
+        self._import_cases(
+            {"id": "expert-1", "type": "expert", "units": []},
+            {"id": "expert-2", "type": "expert", "units": []},
+            {"id": "expert-done", "type": "expert", "units": []},
+            {"id": "self-1", "type": "self", "units": []},
+        )
+        first = self._create_annotator("First")
+        second = self._create_annotator("Second")
+        main._set_case_status("expert-done", "completed", completed_by="previous")
+        main.storage.save_assignments({"self-1": [first["id"]], "expert-2": [second["id"]]})
+        admin = self._auth(self.admin_token)
+        scope = {"type": "expert", "case_ids": ["expert-1", "expert-done", "self-1"]}
+        response = self._assert_status(self.client.post("/api/cases/auto-assign", headers=admin, json=scope), 200).json()
+        self.assertEqual(response["assigned"], 1)
+        self.assertEqual(response["total_open"], 1)
+        assignments = main.storage.read_assignments()
+        self.assertEqual(assignments["self-1"], [first["id"]])
+        self.assertEqual(assignments["expert-2"], [second["id"]])
+        self.assertNotIn("expert-done", assignments)
+        self._assert_status(self.client.post("/api/cases/auto-assign", headers=admin, json=scope), 200)
+        self.assertEqual(set(main.storage.read_assignments()["expert-1"]), {first["id"], second["id"]})
+        self.assertEqual(self.client.post("/api/cases/auto-assign", headers=admin, json=scope).json()["assigned"], 0)
+        before = main.storage.read_assignments()
+        self.assertEqual(self.client.post("/api/cases/auto-assign", headers=admin, json={"case_ids": []}).json()["assigned"], 0)
+        self.assertEqual(main.storage.read_assignments(), before)
+        for invalid in ({"type": "unknown"}, {"case_ids": "expert-1"}, {"case_ids": [123]}, {"case_ids": ["missing"]}):
+            self._assert_status(self.client.post("/api/cases/auto-assign", headers=admin, json=invalid), 400)
+            self.assertEqual(main.storage.read_assignments(), before)
+        token = self._login_annotator("First")
+        self._assert_status(self.client.post("/api/cases/auto-assign", headers=self._auth(token), json=scope), 403)
+
+    def test_auto_assignment_group_only_and_legacy_unscoped_requests(self):
+        self._import_cases({"id": "expert", "type": "expert", "units": []},
+                           {"id": "self", "type": "self", "units": []})
+        annotator = self._create_annotator()
+        admin = self._auth(self.admin_token)
+        self._assert_status(self.client.post("/api/cases/auto-assign", headers=admin, json={"type": "expert"}), 200)
+        self.assertEqual(main.storage.read_assignments(), {"expert": [annotator["id"]]})
+        self._assert_status(self.client.post("/api/cases/auto-assign", headers=admin), 200)
+        self.assertEqual(main.storage.read_assignments(), {"expert": [annotator["id"]], "self": [annotator["id"]]})
+
     def test_file_storage_secret_is_stable_for_the_first_authenticated_follow_up(self):
         # This intentionally disables the test-only environment secret.  It
         # verifies the file-storage path that creates and reads a fresh secret.

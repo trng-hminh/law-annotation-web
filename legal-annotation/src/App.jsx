@@ -1260,6 +1260,7 @@ function AdminDashboard({
 }) {
   const [section, setSection] = useState("cases"); // "cases" | "annotators" | "admins" | "progress"
   const [exportType, setExportType] = useState("");
+  const [autoAssigning, setAutoAssigning] = useState(false);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all"); // all | open | completed | unassigned
   const [page, setPage] = useState(1);
@@ -1280,13 +1281,16 @@ function AdminDashboard({
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return overview.filter((c) => {
+      if (exportType && c.type !== exportType) return false;
       if (q && !c.case_id.toLowerCase().includes(q) && !c.title.toLowerCase().includes(q)) return false;
       if (filter === "open" && c.status !== "open") return false;
       if (filter === "completed" && c.status !== "completed") return false;
       if (filter === "unassigned" && (c.assigned_to || []).length) return false;
       return true;
     });
-  }, [overview, search, filter]);
+  }, [overview, search, filter, exportType]);
+
+  const assignableCount = filtered.filter((c) => c.status !== "completed").length;
 
   const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, pages);
@@ -1315,13 +1319,24 @@ function AdminDashboard({
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {section === "cases" && (
             <>
-              <button onClick={onAutoAssign} style={btnPrimaryStyle}>Phân công tự động</button>
+              <button
+                disabled={autoAssigning || assignableCount === 0}
+                onClick={async () => {
+                  setAutoAssigning(true);
+                  try {
+                    await onAutoAssign({ case_ids: filtered.map((c) => c.case_id), type: exportType || null });
+                  } finally {
+                    setAutoAssigning(false);
+                  }
+                }}
+                style={btnPrimaryStyle}
+              >{autoAssigning ? "Đang phân công…" : `Phân công ${exportType === "expert" ? "Expert" : exportType === "self" ? "Self" : "tự động"} (${assignableCount})`}</button>
               <button onClick={onClearAssignments} style={{ ...btnGhostStyle, color: T.danger, borderColor: T.danger + "66" }}>Xoá toàn bộ phân công</button>
               <button onClick={onImportPrototype} style={btnGhostStyle}>Nạp 10 case mẫu</button>
               <button onClick={() => importRef.current?.click()} style={btnGhostStyle}>Import JSON</button>
             </>
           )}
-          <select aria-label="Nhóm dữ liệu tải xuống" value={exportType} onChange={(e) => setExportType(e.target.value)} style={{ ...inputStyle, width: 180 }}>
+          <select aria-label="Nhóm vụ án" value={exportType} onChange={(e) => { setExportType(e.target.value); setPage(1); }} style={{ ...inputStyle, width: 180 }}>
             <option value="">Tất cả nhóm</option>
             <option value="self">Self (có gợi ý)</option>
             <option value="expert">Expert (tự gán nhãn)</option>
@@ -1390,7 +1405,10 @@ function AdminDashboard({
             </select>
           </div>
 
-          {filtered.length === 0 && <p style={{ color: T.inkSoft, fontSize: 13 }}>Không có case nào. Hãy import corpus trước.</p>}
+          <p style={{ fontSize: 12, color: T.inkSoft }}>
+            Hiển thị {filtered.length} case. Phân công áp dụng cho {assignableCount} case đang mở khớp bộ lọc trên tất cả các trang.
+          </p>
+          {filtered.length === 0 && <p style={{ color: T.inkSoft, fontSize: 13 }}>Không có case khớp bộ lọc.</p>}
 
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {visible.map((c) => (
@@ -2105,11 +2123,16 @@ export default function LegalAnnotationApp() {
     }
   };
 
-  const autoAssign = async () => {
+  const autoAssign = async (scope) => {
     try {
-      const res = await api("/api/cases/auto-assign", { method: "POST" });
-      setFlash(`Đã phân công thêm ${res.assigned} annotator. Bấm lại để thêm lượt tiếp theo.`);
-      loadAdminData();
+      const capabilities = await api("/");
+      if (!capabilities.scoped_auto_assign) {
+        throw new Error("Hãy triển khai backend mới trên Render trước khi phân công theo bộ lọc.");
+      }
+      const res = await api("/api/cases/auto-assign", { method: "POST", body: scope });
+      const group = scope.type === "expert" ? "Expert" : scope.type === "self" ? "Self" : "khớp bộ lọc";
+      setFlash(`Đã thêm ${res.assigned} lượt phân công cho nhóm ${group} (${res.total_open} case đang mở). Bấm lại để thêm annotator khác.`);
+      await loadAdminData();
     } catch (e) {
       setFlash(e.message || "Phân công thất bại.");
     }

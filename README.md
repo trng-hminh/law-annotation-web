@@ -167,6 +167,13 @@ The corpus, PDFs, and backups are excluded from Git.
 
 ## Download completed annotations
 
+The admin **Tất cả nhóm / Self / Expert** selector also filters the case list.
+**Phân công** applies only to open cases matching the selected group, search,
+and status filters, across all matching pages. Each click adds one additional
+annotator per eligible case. Cases outside the filters retain their existing
+assignments. Deploy both frontend and backend for this behavior; the frontend
+blocks assignment if the backend does not yet support filtered assignment.
+
 In the admin dashboard, select **Tất cả nhóm**, **Self**, or **Expert** beside
 the export buttons, then choose **Tải dữ liệu (JSON)** or **Tải summary (CSV)**.
 JSON contains the full human submissions, case type, and full provision text.

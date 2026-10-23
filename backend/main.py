@@ -647,6 +647,7 @@ def root():
     return {
         "message": "Legal annotation backend is running",
         "corpus_schema_version": 2,
+        "scoped_auto_assign": True,
         "storage": _STORAGE_NAME,
         "endpoints": [
             "POST /api/auth/admin",
@@ -1026,24 +1027,40 @@ def reopen_case(case_id: str, request: Request):
 
 
 @app.post("/api/cases/auto-assign")
-def auto_assign(request: Request):
+def auto_assign(request: Request, payload: dict | None = None):
     """PHÂN CÔNG LŨY TIẾN — mỗi lần bấm chỉ thêm ĐÚNG 1 annotator cho mỗi case open:
     lần 1: mỗi case 1 annotator; lần 2: thêm annotator khác (2/case); lần 3: thêm nữa...
     Annotator trong cùng case luôn KHÁC NHAU, cân bằng theo khối lượng công việc."""
     _require_admin(request)
+    payload = payload or {}
+    mode = payload.get("type")
+    if mode is not None and mode not in ("self", "expert"):
+        raise HTTPException(status_code=400, detail="type phải là self hoặc expert.")
+    selected_ids = payload.get("case_ids")
+    if selected_ids is not None and (
+        not isinstance(selected_ids, list) or any(not isinstance(cid, str) for cid in selected_ids)
+    ):
+        raise HTTPException(status_code=400, detail="case_ids phải là mảng mã case.")
     annotators = storage.list_annotators()
     if not annotators:
         raise HTTPException(status_code=400, detail="Chưa có annotator nào. Hãy tạo annotator trước.")
     annotator_ids = [a["id"] for a in annotators]
     registry = storage.read_cases()
     assignments = _norm_assignments(storage.read_assignments())
+    if selected_ids is not None:
+        selected_ids = set(selected_ids)
+        if selected_ids - {c["case_id"] for c in registry}:
+            raise HTTPException(status_code=400, detail="Danh sách chứa case không tồn tại. Hãy làm mới danh sách.")
 
+    all_open_cases = [c["case_id"] for c in registry if c.get("status") != "completed"]
     open_cases = sorted(
         c["case_id"] for c in registry if c.get("status") != "completed"
+        and (selected_ids is None or c["case_id"] in selected_ids)
+        and (mode is None or c.get("type") == mode)
     )
 
     def workload_of(aid):
-        return sum(1 for cid in open_cases if aid in assignments.get(cid, []))
+        return sum(1 for cid in all_open_cases if aid in assignments.get(cid, []))
 
     workload = {aid: workload_of(aid) for aid in annotator_ids}
 
