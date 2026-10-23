@@ -43,7 +43,8 @@ from bson import Binary
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
-from case_schema import normalize_case, case_type
+from case_schema import (normalize_case, case_type, validate_provisions, saved_annotation_view,
+                         ANNOTATION_FIELDS, RAW_ANNOTATION_FIELDS, ANNOTATION_EDITOR_VERSION)
 
 
 def _safe_id(value):
@@ -646,8 +647,9 @@ def health():
 def root():
     return {
         "message": "Legal annotation backend is running",
-        "corpus_schema_version": 2,
+        "corpus_schema_version": 3,
         "scoped_auto_assign": True,
+        "editable_legal_provisions": True,
         "storage": _STORAGE_NAME,
         "endpoints": [
             "POST /api/auth/admin",
@@ -1138,6 +1140,13 @@ def _annotation_settings():
     }
 
 
+def _suggestions_enabled(case_id, doc, settings):
+    # Expert is a blind annotation group, not a suggestion-toggle preference.
+    if case_type(doc.get("type")) == "expert":
+        return False
+    return settings["case_overrides"].get(case_id, settings["show_suggestions"])
+
+
 @app.get("/api/annotation-settings")
 def annotation_settings(request: Request):
     _require_admin(request)
@@ -1167,6 +1176,8 @@ def update_case_annotation_settings(case_id: str, payload: dict, request: Reques
     enabled = payload.get("show_suggestions")
     if not isinstance(enabled, bool):
         raise HTTPException(status_code=400, detail="show_suggestions phải là boolean.")
+    if enabled and case_type((storage.get_case_doc(case_id) or {}).get("type")) == "expert":
+        raise HTTPException(status_code=400, detail="Case Expert luôn tự gán nhãn, không bật gợi ý LLM.")
     cfg = storage.read_config()
     overrides = dict(cfg.get("suggestion_case_overrides", {}))
     overrides[case_id] = enabled
@@ -1203,7 +1214,7 @@ def admin_overview(request: Request):
             "assigned_to": assignments.get(cid) or [],
             "submissions": submissions_index.get(cid, []),
             "drafts": drafts_by_case.get(cid, []),
-            "show_suggestions": settings["case_overrides"].get(cid, settings["show_suggestions"]),
+            "show_suggestions": _suggestions_enabled(cid, c, settings),
             "type": c.get("type"),
         })
     return result
@@ -1264,6 +1275,16 @@ def admin_progress(request: Request):
     return {"annotators": result}
 
 
+@app.get("/api/cases/{case_id}/source")
+def get_case_source(case_id: str, request: Request):
+    """Admin-only imported source for backups, never the annotation editor."""
+    _require_admin(request)
+    doc = storage.get_case_doc(_safe_id(case_id))
+    if doc is None:
+        raise HTTPException(status_code=404, detail="Không tìm thấy case.")
+    return normalize_case(doc)
+
+
 @app.get("/api/cases/{case_id}/doc")
 def get_case_doc(case_id: str, request: Request):
     auth = _require_auth(request)
@@ -1274,15 +1295,11 @@ def get_case_doc(case_id: str, request: Request):
     doc = normalize_case(doc)
     if auth["type"] == "annotator":
         _require_annotator_case_assignment(auth["id"], case_id)
-        settings = _annotation_settings()
-        if not settings["case_overrides"].get(case_id, settings["show_suggestions"]):
-            # Serve a blank starting point without modifying the imported source,
-            # PDF, parties, or this annotator's saved drafts/submissions.
-            doc = dict(doc)
-            for field in ("units", "reasoning", "decisions", "claims", "requests",
-                          "reasonings", "request_outcomes", "request_decision_links",
-                          "request_reasoning_links"):
-                doc[field] = []
+    settings = _annotation_settings()
+    if not _suggestions_enabled(case_id, doc, settings):
+        doc = dict(doc)
+        for field in ANNOTATION_FIELDS + RAW_ANNOTATION_FIELDS:
+            doc[field] = []
     return doc
 
 
@@ -1363,7 +1380,7 @@ def get_draft(case_id: str, request: Request):
     draft = storage.get_draft(auth["id"], case_id)
     if draft is None:
         raise HTTPException(status_code=404, detail="Chưa có nháp.")
-    return draft
+    return saved_annotation_view(storage.get_case_doc(case_id) or {}, draft)
 
 
 @app.put("/api/cases/{case_id}/draft")
@@ -1374,9 +1391,18 @@ def save_draft(case_id: str, payload: dict, request: Request):
     payload = dict(payload)
     payload["id"] = case_id
     source = storage.get_case_doc(case_id) or {}
-    for field in ("type", "legal_provisions"):
-        if field in source:
-            payload[field] = source[field]
+    if case_type(source.get("type")) and payload.get("annotation_editor_version") != ANNOTATION_EDITOR_VERSION:
+        raise HTTPException(status_code=409, detail="Hãy tải lại trang để dùng trình gán nhãn Điều luật mới.")
+    payload["type"] = source.get("type")
+    payload.setdefault("legal_provisions", [])
+    try:
+        validate_provisions(payload["legal_provisions"])
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    payload["annotation_editor_version"] = ANNOTATION_EDITOR_VERSION
+    payload.pop("legacy_suggestions_filtered", None)
+    for field in RAW_ANNOTATION_FIELDS:
+        payload.pop(field, None)
     saved_at = storage.save_draft(auth["id"], case_id, payload)
     return {"success": True, "case_id": case_id, "saved_at": saved_at}
 
@@ -1405,7 +1431,7 @@ def get_my_submission(case_id: str, request: Request):
     if not subs:
         raise HTTPException(status_code=404, detail="Chưa có bài nộp.")
     subs.sort(key=lambda s: s.get("submitted_at") or s.get("received_at") or "", reverse=True)
-    return subs[0]
+    return saved_annotation_view(storage.get_case_doc(case_id) or {}, subs[0])
 
 
 @app.get("/api/cases/{case_id}/submissions")
@@ -1418,7 +1444,8 @@ def get_case_submissions(case_id: str, request: Request):
         if str(s.get("case_id")) == case_id
     ]
     subs.sort(key=lambda s: s.get("submitted_at") or s.get("received_at") or "", reverse=True)
-    return {"case_id": case_id, "submissions": subs}
+    source = storage.get_case_doc(case_id) or {}
+    return {"case_id": case_id, "submissions": [saved_annotation_view(source, s) for s in subs]}
 
 
 # ------------------------------ submission ------------------------------
@@ -1436,9 +1463,18 @@ def submit_case(payload: dict, request: Request):
     # body. This keeps FileStorage's submission index aligned with MongoStorage.
     payload = dict(payload)
     payload["case_id"] = case_id
-    for field in ("type", "legal_provisions"):
-        if field in source:
-            payload[field] = source[field]
+    if case_type(source.get("type")) and payload.get("annotation_editor_version") != ANNOTATION_EDITOR_VERSION:
+        raise HTTPException(status_code=409, detail="Hãy tải lại trang để dùng trình gán nhãn Điều luật mới.")
+    payload["type"] = source.get("type")
+    payload.setdefault("legal_provisions", [])
+    try:
+        validate_provisions(payload["legal_provisions"])
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    payload["annotation_editor_version"] = ANNOTATION_EDITOR_VERSION
+    payload.pop("legacy_suggestions_filtered", None)
+    for field in RAW_ANNOTATION_FIELDS:
+        payload.pop(field, None)
 
     # annotators may only submit cases assigned to them; admin may submit any
     assigned_ids = []
@@ -1505,10 +1541,10 @@ def _exported_submissions(mode=None):
         cid = str(submission.get("case_id", ""))
         if cid not in sources:
             sources[cid] = storage.get_case_doc(cid) or {}
-        enriched = dict(submission)
-        for field in ("type", "legal_provisions"):
-            if field in sources[cid]:
-                enriched[field] = sources[cid][field]
+        enriched = saved_annotation_view(sources[cid], submission)
+        # Law provisions are annotations; never replace them with model output.
+        if "type" in sources[cid]:
+            enriched["type"] = sources[cid]["type"]
         if mode is None or enriched.get("type") == mode:
             result.append(enriched)
     result.sort(key=lambda s: (str(s.get("case_id", "")), str(s.get("submitted_at") or "")))

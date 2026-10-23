@@ -115,13 +115,21 @@ contains this change.
 
 The importer recognizes `type: "self"` (also `self_annotate`) and `type: "expert"`.
 Importing sets gợi ý on for self cases and off for expert cases. Reimporting
-reapplies these dataset defaults; the existing admin switches can override them
-afterwards. Global changes still apply to all cases. Changes affect newly opened
-cases; existing human drafts/submissions are preserved.
+reapplies these dataset defaults. Expert cases always start blank for both
+admins and annotators; neither global nor per-case switches can enable model
+suggestions for Expert. The switches still control Self and untyped cases.
+Changes affect newly opened cases.
 
 `legal_provisions` is retained per case, including `provision_id`, `title`, and
-`content`. Both groups can read these reference details under **Điều luật**.
-The app stores the supplied text; it does not generate or verify law content.
+`content`. **Điều luật is an annotation section** with add, edit, delete, and
+confirm controls. Self cases can start with imported suggestions; Expert cases
+start with an empty list. Drafts, submissions, and exports store the human's
+current list, including intentional deletions. Model text never replaces those
+edits. The app does not generate or verify law content.
+
+The imported source remains available only through the admin `/source` endpoint
+for backups and import verification. Normal `/doc` editor responses hide all
+suggestion fields (including laws) for Expert cases.
 
 Deploy the updated frontend and backend before importing. The admin **Import
 JSON** control accepts the raw grouped JSON and imports in batches of ten. For
@@ -186,5 +194,10 @@ Admin API equivalents (Bearer token required):
 - `/api/export/submissions?type=expert`
 - `/api/export/submissions.csv?type=expert`
 
-Older submissions missing provision metadata are enriched from their source
-case when exported, without rewriting their stored human annotations.
+Missing law annotations are exported as empty, never backfilled from the model.
+For Expert work saved with the older editor, exact source-copy items are hidden
+on restore/export, while new or edited items are retained. Original stored
+records are not changed by this read-time cleanup; a notice appears in the
+editor when legacy suggestions were hidden. Independently entered annotations
+saved with the new editor are preserved even when their wording matches the
+model. Deploy both frontend and backend, then refresh existing browser tabs.

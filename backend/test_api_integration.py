@@ -430,7 +430,7 @@ class ApiIntegrationTests(unittest.TestCase):
         for field in ("units", "reasoning", "decisions", "request_decision_links"):
             self.assertEqual(blank[field], [])
         self.assertEqual(blank["parties"], source["parties"])
-        self.assertEqual(self.client.get("/api/cases/suggested/doc", headers=admin).json(), source)
+        self.assertEqual(self.client.get("/api/cases/suggested/source", headers=admin).json(), source)
         self._assert_status(self.client.put("/api/cases/suggested/draft", headers=ann,
                                            json={"id": "suggested", "units": [{"id": "C2"}]}), 200)
         per_case = "/api/cases/suggested/annotation-settings"
@@ -472,19 +472,20 @@ class ApiIntegrationTests(unittest.TestCase):
         for field in ("units", "reasoning", "decisions", "claims", "requests", "reasonings",
                       "request_outcomes", "request_decision_links", "request_reasoning_links"):
             self.assertEqual(blank[field], [])
-        self.assertEqual(blank["legal_provisions"], law)
+        self.assertEqual(blank["legal_provisions"], [])
         self.assertEqual(blank["parties"][0]["id"], "P1")
+        human_law = [{"provision_id": "LP2", "title": "Human provision", "content": "Human correction.", "status": "confirmed"}]
         self._assert_status(self.client.put("/api/cases/typed-expert/draft", headers=ann,
-                                           json={"units": [{"id": "C2", "text": "Human claim"}]}), 200)
+                                           json={"units": [{"id": "C2", "text": "Human claim"}], "legal_provisions": human_law, "annotation_editor_version": 2}), 200)
         draft = self.client.get("/api/cases/typed-expert/draft", headers=ann).json()
-        self.assertEqual(draft["legal_provisions"], law)
+        self.assertEqual(draft["legal_provisions"], human_law)
         self._assert_status(self.client.post("/api/submit", headers=ann,
-                                            json={"case_id": "typed-expert", "type": "self", "legal_provisions": [],
+                                            json={"case_id": "typed-expert", "type": "self", "legal_provisions": human_law, "annotation_editor_version": 2,
                                                   "units": draft["units"], "reasoning": [], "decisions": []}), 200)
         exported = self.client.get("/api/export/submissions?type=expert", headers=admin).json()
         self.assertEqual(exported["count"], 1)
         self.assertEqual(exported["submissions"][0]["type"], "expert")
-        self.assertEqual(exported["submissions"][0]["legal_provisions"], law)
+        self.assertEqual(exported["submissions"][0]["legal_provisions"], human_law)
         self.assertEqual(exported["submissions"][0]["units"], draft["units"])
         self.assertEqual(self.client.get("/api/export/submissions?type=self", headers=admin).json()["count"], 0)
         csv_response = self.client.get("/api/export/submissions.csv?type=expert", headers=admin)
@@ -493,14 +494,79 @@ class ApiIntegrationTests(unittest.TestCase):
         self.assertEqual(row["num_legal_provisions"], "1")
         self._assert_status(self.client.get("/api/export/submissions?type=unknown", headers=admin), 400)
 
-        # Enrich old stored submissions at export time without rewriting human work.
+        # Missing law annotations must not be backfilled with model suggestions.
         for p in main.storage.submissions_dir.glob("*.json"):
             stored = main._read_json_file(p, {})
             stored.pop("legal_provisions", None)
             stored.pop("type", None)
             main._write_json_file(p, stored)
-        self.assertEqual(self.client.get("/api/export/submissions?type=expert", headers=admin).json()["submissions"][0]["legal_provisions"], law)
+        self.assertEqual(self.client.get("/api/export/submissions?type=expert", headers=admin).json()["submissions"][0]["legal_provisions"], [])
         self.assertNotIn("legal_provisions", main.storage.list_submissions()[0])
+
+    def test_expert_is_blank_for_admin_and_annotator_even_after_global_toggle(self):
+        source = {"id": "blind", "type": "expert", "units": [{"id": "C1", "type": "claim", "text": "Model claim"}],
+                  "reasoning": [{"id": "RE1", "text": "Model reasoning"}], "decisions": [{"id": "DE1", "text": "Model decision"}],
+                  "legal_provisions": [{"provision_id": "LP1", "title": "Model law", "content": "Model content"}]}
+        self._import_cases(source)
+        annotator = self._create_annotator()
+        self._assign("blind", annotator["id"])
+        admin, ann = self._auth(self.admin_token), self._auth(self._login_annotator())
+        for enabled in (True, False, True):
+            self._assert_status(self.client.put("/api/annotation-settings", headers=admin, json={"show_suggestions": enabled}), 200)
+            for headers in (admin, ann):
+                doc = self._assert_status(self.client.get("/api/cases/blind/doc", headers=headers), 200).json()
+                for field in ("units", "reasoning", "decisions", "legal_provisions"):
+                    self.assertEqual(doc[field], [])
+            self.assertFalse(self.client.get("/api/cases", headers=admin).json()[0]["show_suggestions"])
+        self._assert_status(self.client.put("/api/cases/blind/annotation-settings", headers=admin, json={"show_suggestions": True}), 400)
+        self.assertEqual(self.client.get("/api/cases/blind/source", headers=admin).json()["legal_provisions"], source["legal_provisions"])
+        self._assert_status(self.client.get("/api/cases/blind/source", headers=ann), 403)
+
+    def test_provision_edits_removals_and_empty_arrays_survive_draft_submission_and_export(self):
+        source_law = [{"provision_id": "LP1", "title": "Model law", "content": "Model content"}]
+        self._import_cases({"id": "law", "type": "self", "units": [], "legal_provisions": source_law})
+        annotator = self._create_annotator()
+        self._assign("law", annotator["id"])
+        ann, admin = self._auth(self._login_annotator()), self._auth(self.admin_token)
+        human_law = [{"provision_id": "LP2", "title": "Expert title", "content": "Expert content", "status": "confirmed"}]
+        for laws in (human_law, []):
+            payload = {"id": "law", "units": [], "reasoning": [], "decisions": [], "legal_provisions": laws, "annotation_editor_version": 2}
+            self._assert_status(self.client.put("/api/cases/law/draft", headers=ann, json=payload), 200)
+            self.assertEqual(self.client.get("/api/cases/law/draft", headers=ann).json()["legal_provisions"], laws)
+            self._assert_status(self.client.post("/api/submit", headers=ann, json=dict(payload, case_id="law")), 200)
+            self.assertEqual(self.client.get("/api/cases/law/submission", headers=ann).json()["legal_provisions"], laws)
+            self.assertEqual(self.client.get("/api/cases/law/submissions", headers=admin).json()["submissions"][0]["legal_provisions"], laws)
+            self.assertEqual(self.client.get("/api/export/submissions", headers=admin).json()["submissions"][0]["legal_provisions"], laws)
+        self.assertEqual(main.storage.get_case_doc("law")["legal_provisions"], source_law)
+        self._assert_status(self.client.put("/api/cases/law/draft", headers=ann, json={"legal_provisions": [], "annotation_editor_version": 1}), 409)
+        self._assert_status(self.client.post("/api/submit", headers=ann, json={"case_id": "law", "legal_provisions": "bad", "annotation_editor_version": 2}), 400)
+        self.assertEqual(main.storage.list_submissions()[0]["legal_provisions"], [])
+
+    def test_legacy_expert_source_copies_are_hidden_but_saved_human_edits_are_kept(self):
+        source = {"id": "legacy", "type": "expert", "units": [{"id": "C1", "type": "claim", "text": "Model claim"}],
+                  "legal_provisions": [{"provision_id": "LP1", "title": "Model law", "content": "Model content"}]}
+        self._import_cases(source)
+        annotator = self._create_annotator()
+        self._assign("legacy", annotator["id"])
+        ann, admin = self._auth(self._login_annotator()), self._auth(self.admin_token)
+        old = dict(source, case_id="legacy", units=source["units"] + [{"id": "C2", "type": "claim", "text": "Human edit"}])
+        main.storage.save_draft(annotator["id"], "legacy", old)
+        summary = {"annotator_id": annotator["id"], "annotator_name": "Annotator", "submitted_at": "2026-10-24", "file": "case_legacy_test.json"}
+        main.storage.record_submission("legacy", summary, old)
+        for path, headers in (("/api/cases/legacy/draft", ann), ("/api/cases/legacy/submission", ann)):
+            restored = self.client.get(path, headers=headers).json()
+            self.assertEqual([x["text"] for x in restored["units"]], ["Human edit"])
+            self.assertEqual(restored["legal_provisions"], [])
+            self.assertTrue(restored["legacy_suggestions_filtered"])
+        exported = self.client.get("/api/export/submissions?type=expert", headers=admin).json()["submissions"][0]
+        self.assertEqual(exported["legal_provisions"], [])
+        self.assertEqual(len(main.storage.list_submissions()[0]["units"]), 2)
+        self.assertEqual(main.storage.get_draft(annotator["id"], "legacy")["legal_provisions"], source["legal_provisions"])
+        # New blind annotations can independently match model text exactly.
+        fresh = dict(source, annotation_editor_version=2, case_id="legacy", legacy_suggestions_filtered=True)
+        self._assert_status(self.client.put("/api/cases/legacy/draft", headers=ann, json=fresh), 200)
+        self.assertEqual(self.client.get("/api/cases/legacy/draft", headers=ann).json()["legal_provisions"], source["legal_provisions"])
+        self.assertNotIn("legacy_suggestions_filtered", self.client.get("/api/cases/legacy/draft", headers=ann).json())
 
     def test_invalid_typed_import_is_rejected_before_writing(self):
         response = self.client.post("/api/cases", headers=self._auth(self.admin_token), json={"cases": [

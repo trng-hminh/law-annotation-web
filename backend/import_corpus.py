@@ -61,12 +61,12 @@ def main():
         response.raise_for_status()
         return response.json()
 
-    if api("GET", "/").get("corpus_schema_version", 0) < 2:
+    if api("GET", "/").get("corpus_schema_version", 0) < 3:
         raise RuntimeError("Deploy the updated backend before importing; no cases have been changed.")
     registry = api("GET", "/api/cases")
     settings = api("GET", "/api/annotation-settings")
     existing = {case["case_id"] for case in registry}
-    backup_docs = [api("GET", f"/api/cases/{c['id']}/doc") for c in cases if c["id"] in existing]
+    backup_docs = [api("GET", f"/api/cases/{c['id']}/source") for c in cases if c["id"] in existing]
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     backup_dir = Path(args.backup_dir)
     backup_dir.mkdir(parents=True, exist_ok=True)
@@ -84,7 +84,7 @@ def main():
 
     overview = {c["case_id"]: c for c in api("GET", "/api/cases")}
     for case in cases:
-        actual = api("GET", f"/api/cases/{case['id']}/doc")
+        actual = api("GET", f"/api/cases/{case['id']}/source")
         if actual.get("legal_provisions", []) != case.get("legal_provisions", []):
             raise RuntimeError(f"Provision verification failed for {case['id']}")
         if case.get("type") and (actual.get("type") != case["type"] or

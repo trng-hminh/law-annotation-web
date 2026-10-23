@@ -1,6 +1,69 @@
 """Normalize imported LLM cases while retaining source metadata and law text."""
 from copy import deepcopy
 
+ANNOTATION_FIELDS = ("units", "reasoning", "decisions", "legal_provisions")
+RAW_ANNOTATION_FIELDS = ("claims", "requests", "reasonings", "request_outcomes",
+                         "request_decision_links", "request_reasoning_links")
+ANNOTATION_EDITOR_VERSION = 2
+
+
+def validate_provisions(provisions):
+    if not isinstance(provisions, list):
+        raise ValueError("legal_provisions phải là một mảng.")
+    for provision in provisions:
+        if not isinstance(provision, dict) or any(
+            key in provision and not isinstance(provision[key], str)
+            for key in ("provision_id", "title", "content")
+        ):
+            raise ValueError("Nội dung legal_provisions không hợp lệ.")
+
+
+def saved_annotation_view(source, saved):
+    """Hide legacy source copies in expert work without modifying stored data.
+
+    Older servers forcibly copied source provisions into every draft/submission.
+    Exact source matches from that editor are not evidence of human authorship.
+    Keep changed/new items and retain the original record on disk/in MongoDB.
+    New editor records are never compared to the source: experts may legitimately
+    annotate exactly the same passage as the model independently.
+    """
+    result = deepcopy(saved)
+    result.setdefault("legal_provisions", [])
+    if case_type(source.get("type")) != "expert" or saved.get("annotation_editor_version") == ANNOTATION_EDITOR_VERSION:
+        return result
+    original = normalize_case(source)
+
+    def signature(field, item):
+        if field == "legal_provisions":
+            return (item.get("title", "").strip(), item.get("content", "").strip())
+        text = item.get("text") or (item.get("span") or {}).get("text", "")
+        if field == "units":
+            actors = item.get("assertedBy") or item.get("asserted_by") or item.get("requested_by") or []
+            if not isinstance(actors, list):
+                actors = [actors]
+            return (item.get("type"), text.strip(), tuple(sorted(map(str, actors))), item.get("outcome"))
+        return text.strip()
+
+    removed = False
+    for field in ANNOTATION_FIELDS:
+        suggestions = {signature(field, x) for x in original.get(field, [])}
+        items = result.get(field) or []
+        result[field] = [x for x in items if signature(field, x) not in suggestions]
+        removed = removed or len(result[field]) != len(items)
+    for field in RAW_ANNOTATION_FIELDS:
+        if result.get(field):
+            removed = True
+        result[field] = []
+    # Do not restore links pointing to source-only items that were just hidden.
+    for unit in result["units"]:
+        for link, target in (("linkedDecisions", "decisions"), ("linkedReasoning", "reasoning")):
+            if link in unit:
+                kept = {x.get("id") for x in result[target]}
+                unit[link] = [iid for iid in unit[link] if iid in kept]
+    if removed:
+        result["legacy_suggestions_filtered"] = True
+    return result
+
 
 def case_type(value):
     return {"self": "self", "self_annotate": "self", "expert": "expert"}.get(value)
@@ -16,14 +79,8 @@ def normalize_case(source):
         if mode is None:
             raise ValueError(f"Case {cid}: type phải là self, self_annotate hoặc expert.")
         doc["type"] = mode
-    if "legal_provisions" in doc and not isinstance(doc["legal_provisions"], list):
-        raise ValueError(f"Case {cid}: legal_provisions phải là một mảng.")
-    for provision in doc.get("legal_provisions", []):
-        if not isinstance(provision, dict) or any(
-            key in provision and not isinstance(provision[key], str)
-            for key in ("provision_id", "title", "content")
-        ):
-            raise ValueError(f"Case {cid}: nội dung legal_provisions không hợp lệ.")
+    if "legal_provisions" in doc:
+        validate_provisions(doc["legal_provisions"])
     # Already-normalized app cases (including existing installations).
     if isinstance(doc.get("units"), list):
         return doc
