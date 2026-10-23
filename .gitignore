@@ -21,5 +21,8 @@ legal-annotation/dist/
 *.log
 pdfs/
 pdfs
+pdf_cases/
+cases_to_annotate_326.json
+backups/
 .kilo/
 .kilo

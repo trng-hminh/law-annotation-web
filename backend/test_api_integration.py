@@ -446,6 +446,95 @@ class ApiIntegrationTests(unittest.TestCase):
         self._assert_status(self.client.put(path, headers=admin, json={"show_suggestions": True}), 200)
         self.assertEqual(self.client.get("/api/cases/other/doc", headers=ann).json()["units"], source["units"])
 
+    def test_typed_raw_import_automatically_controls_suggestions_and_keeps_law_text(self):
+        law = [{"provision_id": "LP1", "title": "Supplied provision", "content": "Full supplied law text."}]
+        raw = {"case_id": "typed-self", "type": "self",
+               "parties": [{"party_id": "P1", "name": "Party", "procedural_role": "PLAINTIFF"}],
+               "claims": [{"claim_id": "C1", "span": {"text": "LLM claim"}, "asserted_by": ["P1"], "order": 1}],
+               "requests": [{"request_id": "R1", "span": {"text": "LLM request"}, "order": 2}],
+               "reasonings": [{"reasoning_id": "RE1", "span": {"text": "LLM reasoning"}}],
+               "decisions": [{"decision_id": "DE1", "span": {"text": "LLM decision"}}],
+               "request_outcomes": [{"request_id": "R1", "outcome": "ACCEPTED"}],
+               "request_decision_links": [{"request_id": "R1", "decision_id": "DE1"}],
+               "request_reasoning_links": [{"request_id": "R1", "reasoning_id": "RE1"}],
+               "legal_provisions": law}
+        self._import_cases(raw, dict(raw, case_id="typed-expert", type="expert"))
+        annotator = self._create_annotator()
+        token = self._login_annotator()
+        ann, admin = self._auth(token), self._auth(self.admin_token)
+        for cid in ("typed-self", "typed-expert"):
+            self._assign(cid, annotator["id"])
+        suggested = self.client.get("/api/cases/typed-self/doc", headers=ann).json()
+        self.assertEqual(suggested["units"][0]["text"], "LLM claim")
+        self.assertEqual(suggested["units"][1]["linkedDecisions"], ["DE1"])
+        self.assertEqual(suggested["units"][1]["outcome"], "accepted")
+        blank = self.client.get("/api/cases/typed-expert/doc", headers=ann).json()
+        for field in ("units", "reasoning", "decisions", "claims", "requests", "reasonings",
+                      "request_outcomes", "request_decision_links", "request_reasoning_links"):
+            self.assertEqual(blank[field], [])
+        self.assertEqual(blank["legal_provisions"], law)
+        self.assertEqual(blank["parties"][0]["id"], "P1")
+        self._assert_status(self.client.put("/api/cases/typed-expert/draft", headers=ann,
+                                           json={"units": [{"id": "C2", "text": "Human claim"}]}), 200)
+        draft = self.client.get("/api/cases/typed-expert/draft", headers=ann).json()
+        self.assertEqual(draft["legal_provisions"], law)
+        self._assert_status(self.client.post("/api/submit", headers=ann,
+                                            json={"case_id": "typed-expert", "type": "self", "legal_provisions": [],
+                                                  "units": draft["units"], "reasoning": [], "decisions": []}), 200)
+        exported = self.client.get("/api/export/submissions?type=expert", headers=admin).json()
+        self.assertEqual(exported["count"], 1)
+        self.assertEqual(exported["submissions"][0]["type"], "expert")
+        self.assertEqual(exported["submissions"][0]["legal_provisions"], law)
+        self.assertEqual(exported["submissions"][0]["units"], draft["units"])
+        self.assertEqual(self.client.get("/api/export/submissions?type=self", headers=admin).json()["count"], 0)
+        csv_response = self.client.get("/api/export/submissions.csv?type=expert", headers=admin)
+        row = next(csv.DictReader(io.StringIO(csv_response.content.decode("utf-8-sig"))))
+        self.assertEqual(row["type"], "expert")
+        self.assertEqual(row["num_legal_provisions"], "1")
+        self._assert_status(self.client.get("/api/export/submissions?type=unknown", headers=admin), 400)
+
+        # Enrich old stored submissions at export time without rewriting human work.
+        for p in main.storage.submissions_dir.glob("*.json"):
+            stored = main._read_json_file(p, {})
+            stored.pop("legal_provisions", None)
+            stored.pop("type", None)
+            main._write_json_file(p, stored)
+        self.assertEqual(self.client.get("/api/export/submissions?type=expert", headers=admin).json()["submissions"][0]["legal_provisions"], law)
+        self.assertNotIn("legal_provisions", main.storage.list_submissions()[0])
+
+    def test_invalid_typed_import_is_rejected_before_writing(self):
+        response = self.client.post("/api/cases", headers=self._auth(self.admin_token), json={"cases": [
+            {"case_id": "valid", "type": "self", "claims": []},
+            {"case_id": "invalid", "type": "unknown"},
+        ]})
+        self._assert_status(response, 400)
+        self.assertIsNone(main.storage.get_case_doc("valid"))
+
+    def test_corpus_cli_backs_up_existing_sources_and_preserves_human_work(self):
+        import import_corpus
+        old = {"id": "migrated", "type": "self", "units": [{"id": "C1", "text": "Old suggestion"}],
+               "legal_provisions": []}
+        self._import_cases(old)
+        main.storage.save_draft("A1", "migrated", {"units": [{"id": "C2", "text": "Human work"}]})
+        new = dict(old, type="expert", legal_provisions=[{"provision_id": "LP1", "content": "Supplied provision"}])
+        source_file = Path(self._tempdir.name) / "corpus.json"
+        main._write_json_file(source_file, [new])
+        backup_dir = Path(self._tempdir.name) / "backups"
+        args = ["import_corpus.py", "--file", str(source_file), "--url", "http://testserver", "--apply", "--backup-dir", str(backup_dir)]
+        with patch.object(sys, "argv", args), patch.dict(os.environ, {"ADMIN_PASSWORD": "test-only"}), \
+             patch.object(import_corpus, "login", return_value=self.admin_token), \
+             patch.object(import_corpus.requests, "Session", return_value=self.client), \
+             patch("builtins.print"):
+            import_corpus.main()
+        backups = list(backup_dir.glob("*.json"))
+        self.assertEqual(len(backups), 1)
+        backup = main._read_json_file(backups[0], {})
+        self.assertEqual(backup["cases"][0]["type"], "self")
+        self.assertEqual(backup["cases"][0]["legal_provisions"], [])
+        self.assertEqual(main.storage.get_case_doc("migrated")["legal_provisions"], new["legal_provisions"])
+        self.assertEqual(main.storage.get_draft("A1", "migrated")["units"][0]["text"], "Human work")
+        self.assertFalse(main._annotation_settings()["case_overrides"]["migrated"])
+
     def test_file_storage_secret_is_stable_for_the_first_authenticated_follow_up(self):
         # This intentionally disables the test-only environment secret.  It
         # verifies the file-storage path that creates and reads a fresh secret.

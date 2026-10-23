@@ -43,6 +43,7 @@ from bson import Binary
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
+from case_schema import normalize_case, case_type
 
 
 def _safe_id(value):
@@ -645,6 +646,7 @@ def health():
 def root():
     return {
         "message": "Legal annotation backend is running",
+        "corpus_schema_version": 2,
         "storage": _STORAGE_NAME,
         "endpoints": [
             "POST /api/auth/admin",
@@ -913,7 +915,14 @@ def import_cases(payload: dict, request: Request):
     docs = payload.get("cases", []) or []
     if not isinstance(docs, list):
         raise HTTPException(status_code=400, detail="Trường cases phải là một mảng JSON.")
+    # Validate all entries before writing any documents.
+    try:
+        docs = [normalize_case(doc) if isinstance(doc, dict) else doc for doc in docs]
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
     registry = storage.read_cases()
+    cfg = storage.read_config()
+    overrides = dict(cfg.get("suggestion_case_overrides", {}))
     by_id = {c["case_id"]: c for c in registry}
     imported = 0
     skipped = 0
@@ -930,19 +939,29 @@ def import_cases(payload: dict, request: Request):
         # otherwise a malformed JSON import can make the frontend call a
         # different case endpoint than the one the admin imported.
         doc["id"] = cid
+        previous_doc = storage.get_case_doc(cid) or {}
+        # Legacy imports may lack the new fields; do not erase existing metadata.
+        for field in ("type", "legal_provisions"):
+            if field not in doc and field in previous_doc:
+                doc[field] = previous_doc[field]
         storage.save_case_doc(cid, doc)
         existing = by_id.get(cid, {})
         by_id[cid] = {
             "case_id": cid,
             "title": doc.get("title") or existing.get("title") or f"Case {cid}",
             "status": existing.get("status", "open"),
+            "type": doc.get("type", existing.get("type")),
         }
+        if case_type(doc.get("type")):
+            overrides[cid] = doc["type"] == "self"
         if existing.get("status") == "completed":
             by_id[cid]["completed_at"] = existing.get("completed_at")
             by_id[cid]["completed_by"] = existing.get("completed_by")
         imported += 1
     result = sorted(by_id.values(), key=lambda x: x["case_id"])
     storage.save_cases(result)
+    cfg["suggestion_case_overrides"] = overrides
+    storage.save_config(cfg)
     return {"imported": imported, "skipped": skipped, "total_cases": len(result)}
 
 
@@ -1168,6 +1187,7 @@ def admin_overview(request: Request):
             "submissions": submissions_index.get(cid, []),
             "drafts": drafts_by_case.get(cid, []),
             "show_suggestions": settings["case_overrides"].get(cid, settings["show_suggestions"]),
+            "type": c.get("type"),
         })
     return result
 
@@ -1234,6 +1254,7 @@ def get_case_doc(case_id: str, request: Request):
     doc = storage.get_case_doc(case_id)
     if doc is None:
         raise HTTPException(status_code=404, detail="Không tìm thấy case.")
+    doc = normalize_case(doc)
     if auth["type"] == "annotator":
         _require_annotator_case_assignment(auth["id"], case_id)
         settings = _annotation_settings()
@@ -1335,6 +1356,10 @@ def save_draft(case_id: str, payload: dict, request: Request):
     _require_annotator_case_assignment(auth["id"], case_id)
     payload = dict(payload)
     payload["id"] = case_id
+    source = storage.get_case_doc(case_id) or {}
+    for field in ("type", "legal_provisions"):
+        if field in source:
+            payload[field] = source[field]
     saved_at = storage.save_draft(auth["id"], case_id, payload)
     return {"success": True, "case_id": case_id, "saved_at": saved_at}
 
@@ -1387,12 +1412,16 @@ def submit_case(payload: dict, request: Request):
     case_id = _safe_id(str(payload.get("case_id", "")))
     if not case_id:
         raise HTTPException(status_code=400, detail="Thiếu case_id.")
-    if storage.get_case_doc(case_id) is None:
+    source = storage.get_case_doc(case_id)
+    if source is None:
         raise HTTPException(status_code=404, detail="Không tìm thấy case.")
     # Persist the canonical route ID, not an untrusted spelling from the JSON
     # body. This keeps FileStorage's submission index aligned with MongoStorage.
     payload = dict(payload)
     payload["case_id"] = case_id
+    for field in ("type", "legal_provisions"):
+        if field in source:
+            payload[field] = source[field]
 
     # annotators may only submit cases assigned to them; admin may submit any
     assigned_ids = []
@@ -1449,11 +1478,30 @@ def _safe_csv_cell(value):
         return "'" + text
     return text
 
+
+def _exported_submissions(mode=None):
+    if mode is not None and mode not in ("self", "expert"):
+        raise HTTPException(status_code=400, detail="type phải là self hoặc expert.")
+    sources = {}
+    result = []
+    for submission in storage.list_submissions():
+        cid = str(submission.get("case_id", ""))
+        if cid not in sources:
+            sources[cid] = storage.get_case_doc(cid) or {}
+        enriched = dict(submission)
+        for field in ("type", "legal_provisions"):
+            if field in sources[cid]:
+                enriched[field] = sources[cid][field]
+        if mode is None or enriched.get("type") == mode:
+            result.append(enriched)
+    result.sort(key=lambda s: (str(s.get("case_id", "")), str(s.get("submitted_at") or "")))
+    return result
+
 @app.get("/api/export/submissions")
-def export_submissions(request: Request):
+def export_submissions(request: Request, type: str | None = None):
     """Toàn bộ submission (payload đầy đủ) dạng JSON — dành cho nghiên cứu."""
     _require_admin(request)
-    subs = storage.list_submissions()
+    subs = _exported_submissions(type)
     subs.sort(key=lambda s: (str(s.get("case_id", "")), str(s.get("submitted_at", "") or "")))
     return {
         "exported_at": datetime.now().isoformat(),
@@ -1463,10 +1511,10 @@ def export_submissions(request: Request):
 
 
 @app.get("/api/export/submissions.csv")
-def export_submissions_csv(request: Request):
+def export_submissions_csv(request: Request, type: str | None = None):
     """Bảng tóm tắt CSV (1 dòng/submission) — mở được bằng Excel."""
     _require_admin(request)
-    subs = storage.list_submissions()
+    subs = _exported_submissions(type)
     subs.sort(key=lambda s: (str(s.get("case_id", "")), str(s.get("submitted_at", "") or "")))
 
     import csv
@@ -1477,7 +1525,7 @@ def export_submissions_csv(request: Request):
     writer.writerow([
         "case_id", "title", "annotator_id", "annotator_name",
         "submitted_at", "received_at", "file",
-        "num_units", "num_confirmed", "outcomes", "num_reasoning", "num_decisions",
+        "num_units", "num_confirmed", "outcomes", "num_reasoning", "num_decisions", "type", "num_legal_provisions",
     ])
     for s in subs:
         units = s.get("units") or []
@@ -1498,6 +1546,8 @@ def export_submissions_csv(request: Request):
             _safe_csv_cell(outcomes),
             len(reasoning),
             len(decisions),
+            _safe_csv_cell(s.get("type")),
+            len(s.get("legal_provisions") or []),
         ])
 
     content = "\ufeff" + buf.getvalue()  # BOM để Excel đọc tiếng Việt đúng

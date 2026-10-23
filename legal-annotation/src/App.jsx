@@ -719,8 +719,9 @@ const normalizeCase = (source) => {
   }));
 
   return {
+    ...source,
     id: String(source.case_id),
-    title: `Case ${source.case_id}`,
+    title: source.title || `Case ${source.case_id}`,
     parties,
     units: [...claims, ...requests],
     reasoning,
@@ -1258,6 +1259,7 @@ function AdminDashboard({
   showSuggestions, suggestionsSaving, onToggleSuggestions,
 }) {
   const [section, setSection] = useState("cases"); // "cases" | "annotators" | "admins" | "progress"
+  const [exportType, setExportType] = useState("");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all"); // all | open | completed | unassigned
   const [page, setPage] = useState(1);
@@ -1319,10 +1321,15 @@ function AdminDashboard({
               <button onClick={() => importRef.current?.click()} style={btnGhostStyle}>Import JSON</button>
             </>
           )}
-          <button onClick={() => onExport("json")} style={{ ...btnGhostStyle, display: "inline-flex", alignItems: "center", gap: 5 }} title="Tải toàn bộ submission (payload đầy đủ) dạng JSON">
+          <select aria-label="Nhóm dữ liệu tải xuống" value={exportType} onChange={(e) => setExportType(e.target.value)} style={{ ...inputStyle, width: 180 }}>
+            <option value="">Tất cả nhóm</option>
+            <option value="self">Self (có gợi ý)</option>
+            <option value="expert">Expert (tự gán nhãn)</option>
+          </select>
+          <button onClick={() => onExport("json", exportType)} style={{ ...btnGhostStyle, display: "inline-flex", alignItems: "center", gap: 5 }} title="Tải bài nộp đầy đủ, bao gồm điều luật">
             <Download size={13} /> Tải dữ liệu (JSON)
           </button>
-          <button onClick={() => onExport("csv")} style={{ ...btnGhostStyle, display: "inline-flex", alignItems: "center", gap: 5 }} title="Tải bảng tóm tắt CSV (mở bằng Excel)">
+          <button onClick={() => onExport("csv", exportType)} style={{ ...btnGhostStyle, display: "inline-flex", alignItems: "center", gap: 5 }} title="Tải bảng tóm tắt CSV (mở bằng Excel)">
             <Download size={13} /> Tải summary (CSV)
           </button>
           <button onClick={onRefresh} disabled={refreshing} style={{ ...btnGhostStyle, display: "inline-flex", alignItems: "center", gap: 5 }}>
@@ -1396,6 +1403,7 @@ function AdminDashboard({
                         ? <span style={{ fontSize: 11, fontWeight: 700, color: "#3D6944", background: "#E9F2E7", padding: "2px 8px", borderRadius: 20 }}>Đã hoàn thành{c.completed_by ? ` · ${nameOf(c.completed_by)}` : ""}</span>
                         : <span style={{ fontSize: 11, fontWeight: 700, color: T.gold, background: T.goldTint, padding: "2px 8px", borderRadius: 20 }}>Mở</span>}
                       <span style={{ fontSize: 12, color: T.inkSoft }}>{c.title}</span>
+                      {c.type && <span style={{ fontSize: 11, color: T.inkSoft }}>{c.type === "expert" ? "Expert · tự gán nhãn" : "Self · có gợi ý"}</span>}
                     </div>
 
                     <div style={{ display: "flex", gap: 22, flexWrap: "wrap", marginTop: 8, fontSize: 12 }}>
@@ -1864,7 +1872,7 @@ export default function LegalAnnotationApp() {
     try {
       const doc = await api(`/api/cases/${caseId}/doc`);
       setCaseData(doc);
-      setTab("units");
+      setTab("claims");
       setEditingId(null);
       setAddingType(null);
       setEditingTitle(false);
@@ -1882,7 +1890,7 @@ export default function LegalAnnotationApp() {
           const d = await api(`/api/cases/${caseId}/draft`);
           if (d?.saved_at) {
             const { saved_at, ...clean } = d;
-            setCaseData(clean);
+            setCaseData({ ...doc, ...clean, type: doc.type, legal_provisions: doc.legal_provisions || [] });
             setDraftLoadedAt(saved_at);
             restored = true;
           }
@@ -2178,13 +2186,20 @@ export default function LegalAnnotationApp() {
   };
 
   const importCorpus = async (cases) => {
+    let imported = 0;
     try {
-      const res = await api("/api/cases", { method: "POST", body: { cases } });
-      setImportMessage(`Đã import ${res.imported} case (tổng ${res.total_cases}).`);
+      let totalCases = 0;
+      for (let offset = 0; offset < cases.length; offset += 10) {
+        setImportMessage(`Đang import ${imported}/${cases.length} case…`);
+        const res = await api("/api/cases", { method: "POST", body: { cases: cases.slice(offset, offset + 10) } });
+        imported += res.imported;
+        totalCases = res.total_cases;
+      }
+      setImportMessage(`Đã import ${imported} case (tổng ${totalCases}). Gợi ý tự động: self bật, expert tắt.`);
       loadAdminData();
       return true;
     } catch (e) {
-      setImportMessage(`Import thất bại: ${e.message}`);
+      setImportMessage(`Import thất bại sau ${imported}/${cases.length} case: ${e.message}`);
       return false;
     }
   };
@@ -2217,11 +2232,12 @@ export default function LegalAnnotationApp() {
   };
 
   /* Tải submission phục vụ nghiên cứu: JSON (đầy đủ) hoặc CSV (tóm tắt) */
-  const exportSubmissions = async (format = "json") => {
+  const exportSubmissions = async (format = "json", caseType = "") => {
     if (!auth) return;
     try {
       const suffix = format === "csv" ? ".csv" : "";
-      const res = await fetch(`${API_BASE}/api/export/submissions${suffix}`, {
+      const query = caseType ? `?type=${encodeURIComponent(caseType)}` : "";
+      const res = await fetch(`${API_BASE}/api/export/submissions${suffix}${query}`, {
         headers: { Authorization: `Bearer ${auth.token}` },
       });
       if (!res.ok) {
@@ -2232,9 +2248,9 @@ export default function LegalAnnotationApp() {
       const text = await res.text();
       const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
       if (format === "csv") {
-        downloadBlob(text, `submissions_summary_${stamp}.csv`, "text/csv;charset=utf-8");
+        downloadBlob(text, `submissions_summary_${caseType || "all"}_${stamp}.csv`, "text/csv;charset=utf-8");
       } else {
-        downloadBlob(text, `submissions_${stamp}.json`, "application/json");
+        downloadBlob(text, `submissions_${caseType || "all"}_${stamp}.json`, "application/json");
       }
       setFlash(`Đã tải ${format === "csv" ? "summary CSV" : "submissions JSON"} (${(text.length / 1024).toFixed(1)} KB).`);
     } catch (e) {
@@ -2267,6 +2283,7 @@ export default function LegalAnnotationApp() {
   const onMouseUp = () => { draggingRef.current = false; };
 
   const TABS = caseData ? [
+    { key: "provisions", label: "Điều luật", count: (caseData.legal_provisions || []).length, icon: BookOpen },
     { key: "claims", label: "Claims", count: caseData.units.filter((u) => u.type !== "request").length, icon: ListChecks },
     { key: "requests", label: "Requests", count: caseData.units.filter((u) => u.type === "request").length, icon: ClipboardList },
     { key: "reasoning", label: "Reasoning", count: caseData.reasoning.length, icon: Scale },
@@ -2369,7 +2386,7 @@ export default function LegalAnnotationApp() {
         >
           {helpOpen && <HelpPanel tab={tab} onClose={() => setHelpOpen(false)} />}
           <div style={{ width: `${leftWidth}%`, overflowY: "auto", padding: "16px 16px 40px" }}>
-            <div style={{ display: "flex", gap: 4, marginBottom: 14, borderBottom: `1px solid ${T.line}`, paddingBottom: 2 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 14, borderBottom: `1px solid ${T.line}`, paddingBottom: 2 }}>
               {TABS.map((t) => {
                 const Icon = t.icon;
                 const active = tab === t.key;
@@ -2395,6 +2412,18 @@ export default function LegalAnnotationApp() {
               })}
             </div>
 
+            {tab === "provisions" && (
+              <div>
+                <p style={{ fontSize: 12, color: T.inkSoft }}>Điều luật tham khảo từ dữ liệu được nhập cho vụ án.</p>
+                {(caseData.legal_provisions || []).length === 0 && <p>Chưa có nội dung điều luật.</p>}
+                {(caseData.legal_provisions || []).map((p, i) => (
+                  <details key={p.provision_id || i} style={{ marginBottom: 10, padding: 12, background: T.paperCard, border: `1px solid ${T.line}`, borderRadius: 8 }}>
+                    <summary style={{ cursor: "pointer", fontWeight: 600 }}>{p.title || p.provision_id || `Điều luật ${i + 1}`}</summary>
+                    <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.65, fontSize: 13, marginTop: 10 }}>{p.content || "Chưa có nội dung."}</div>
+                  </details>
+                ))}
+              </div>
+            )}
             {tab === "claims" && (
               <div>
                 <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>

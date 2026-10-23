@@ -110,3 +110,74 @@ Before each release:
 Changing an admin password or annotator passcode now invalidates that account's
 existing sessions. Users will need to sign in again after a deployment that
 contains this change.
+
+## Import grouped cases and provision details
+
+The importer recognizes `type: "self"` (also `self_annotate`) and `type: "expert"`.
+Importing sets gợi ý on for self cases and off for expert cases. Reimporting
+reapplies these dataset defaults; the existing admin switches can override them
+afterwards. Global changes still apply to all cases. Changes affect newly opened
+cases; existing human drafts/submissions are preserved.
+
+`legal_provisions` is retained per case, including `provision_id`, `title`, and
+`content`. Both groups can read these reference details under **Điều luật**.
+The app stores the supplied text; it does not generate or verify law content.
+
+Deploy the updated frontend and backend before importing. The admin **Import
+JSON** control accepts the raw grouped JSON and imports in batches of ten. For
+a backup before updating existing source cases, use the CLI instead:
+
+```sh
+# Offline validation only; no password or database connection needed.
+backend/.venv/bin/python backend/import_corpus.py --file cases_to_annotate_326.json
+
+# Prompts for your actual admin password, backs up source cases/settings,
+# imports in batches, then verifies groups, suggestions, and provision text.
+backend/.venv/bin/python backend/import_corpus.py \
+  --file cases_to_annotate_326.json \
+  --url https://legal-annotation-backend.onrender.com --user admin --apply
+```
+
+The backup is written under ignored `backups/`; retain it privately. The import
+updates source documents and preserves assignments, progress, drafts, and
+submissions. It does not delete existing cases outside the imported corpus.
+
+## Upload the grouped PDFs
+
+After importing the cases, validate both PDF folders:
+
+```sh
+backend/.venv/bin/python backend/upload_pdfs.py \
+  --dir pdf_cases --recursive --manifest cases_to_annotate_326.json --dry
+```
+
+Then run the upload (prompts for your actual admin password):
+
+```sh
+backend/.venv/bin/python backend/upload_pdfs.py \
+  --dir pdf_cases --recursive --manifest cases_to_annotate_326.json \
+  --url https://legal-annotation-backend.onrender.com --user admin
+```
+
+The tool maps both `ban_3184.pdf` and `3184.pdf` to case `3184`, checks group
+folders against the JSON, and rejects duplicate IDs and oversized files. To
+upload one group at a time, use `--dir pdf_cases/self_annotate` or
+`--dir pdf_cases/expert`. PDFs must be uploaded via the API, not to GitHub Pages.
+The corpus, PDFs, and backups are excluded from Git.
+
+## Download completed annotations
+
+In the admin dashboard, select **Tất cả nhóm**, **Self**, or **Expert** beside
+the export buttons, then choose **Tải dữ liệu (JSON)** or **Tải summary (CSV)**.
+JSON contains the full human submissions, case type, and full provision text.
+CSV is a summary with the type and number of provisions. Exports contain
+submitted work only; unfinished drafts are not included.
+
+Admin API equivalents (Bearer token required):
+
+- `/api/export/submissions?type=self`
+- `/api/export/submissions?type=expert`
+- `/api/export/submissions.csv?type=expert`
+
+Older submissions missing provision metadata are enriched from their source
+case when exported, without rewriting their stored human annotations.
