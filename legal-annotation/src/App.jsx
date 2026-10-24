@@ -212,41 +212,6 @@ function UnitForm({ initial, parties, onSave, onCancel }) {
   );
 }
 
-function ProvisionForm({ initial, onSave, onCancel }) {
-  const [title, setTitle] = useState(initial?.title || "");
-  const [content, setContent] = useState(initial?.content || "");
-  return (
-    <form onSubmit={(e) => { e.preventDefault(); if (title.trim() && content.trim()) onSave({ title: title.trim(), content: content.trim() }); }}
-      style={{ padding: 14, borderRadius: 10, border: `1px solid ${T.gold}`, background: T.goldTint + "55", marginBottom: 12 }}>
-      <label htmlFor="provision-title" style={labelStyle}>Tên văn bản và điều, khoản</label>
-      <input id="provision-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="VD: Điều 26, Bộ luật Tố tụng dân sự 2015" style={{ ...inputStyle, marginBottom: 10 }} required />
-      <label htmlFor="provision-content" style={labelStyle}>Nội dung điều luật</label>
-      <textarea id="provision-content" value={content} onChange={(e) => setContent(e.target.value)} style={{ ...inputStyle, minHeight: 160, resize: "vertical", lineHeight: 1.6 }} required />
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 10 }}>
-        <button type="button" onClick={onCancel} style={btnGhostStyle}>Huỷ</button>
-        <button type="submit" disabled={!title.trim() || !content.trim()} style={btnPrimaryStyle}>Lưu điều luật</button>
-      </div>
-    </form>
-  );
-}
-
-function ProvisionCard({ item, onEdit, onDelete, onConfirm }) {
-  return (
-    <div style={{ marginBottom: 12, padding: 14, background: T.paperCard, border: `1px solid ${T.line}`, borderRadius: 10 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-        <span style={{ fontSize: 12, color: T.inkSoft }}>{item.provision_id}</span>
-        <div style={{ display: "flex", gap: 2 }}>
-          <IconBtn title={`Sửa điều luật ${item.provision_id}`} onClick={onEdit}><Pencil size={14} /></IconBtn>
-          <IconBtn title={`Xoá điều luật ${item.provision_id}`} tone="danger" onClick={onDelete}><Trash2 size={14} /></IconBtn>
-        </div>
-      </div>
-      <div style={{ fontWeight: 600, marginBottom: 8 }}>{item.title}</div>
-      <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.65, fontSize: 13, marginBottom: 10 }}>{item.content}</div>
-      <div style={{ textAlign: "right" }}><ConfirmToggle status={item.status} onClick={onConfirm} /></div>
-    </div>
-  );
-}
-
 function ReasonDecisionForm({ initial, onSave, onCancel, kind }) {
   const [text, setText] = useState(initial?.text || "");
   const order = initial?.order ?? 1;
@@ -802,11 +767,6 @@ const HELP_OVERVIEW = {
 };
 
 const HELP_TABS = {
-  provisions: {
-    title: "Gán nhãn Điều luật",
-    intro: "Ghi lại các điều luật được viện dẫn trong bản án. Đây là phần gán nhãn cần rà soát và xác nhận.",
-    steps: ["Bấm Thêm điều luật để nhập tên văn bản, điều/khoản và nội dung.", "Sửa hoặc xoá các mục chưa chính xác, rồi bấm Xác nhận.", "Case Expert bắt đầu trống. Case Self có thể có gợi ý để bạn rà soát."],
-  },
   claims: {
     title: "Phân đoạn Claim",
     intro: "Claim là tình tiết, sự kiện, lời trình bày của đương sự (thuộc phần nội dung vụ án).",
@@ -1053,17 +1013,16 @@ function SubmissionsModal({ view, data, loading, error, onClose }) {
                 </SubSection>
               )}
               {(sub.legal_provisions || []).length > 0 && (
-                <SubSection title="Điều luật">
+                <SubSection title="Điều luật (dữ liệu vụ án, không gán nhãn)">
                   {sub.legal_provisions.map((p, i) => (
                     <div key={p.provision_id || i} style={{ padding: 10, border: `1px solid ${T.line}`, borderRadius: 8 }}>
                       <strong>{p.provision_id} · {p.title}</strong>
                       <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.6, marginTop: 6 }}>{p.content}</div>
-                      <span style={{ fontSize: 11, color: T.inkSoft }}>{p.status === "confirmed" ? "Đã xác nhận" : "Chưa xác nhận"}</span>
                     </div>
                   ))}
                 </SubSection>
               )}
-              {!(sub.units || []).length && !(sub.reasoning || []).length && !(sub.decisions || []).length && !(sub.legal_provisions || []).length && (
+              {!(sub.units || []).length && !(sub.reasoning || []).length && !(sub.decisions || []).length && (
                 <div style={{ fontSize: 12, color: T.inkSoft }}>Không có nội dung gán nhãn.</div>
               )}
             </div>
@@ -1437,7 +1396,7 @@ function AdminDashboard({
               style={showSuggestions ? btnPrimaryStyle : btnGhostStyle}
             >Gợi ý (trừ Expert): {showSuggestions ? "Bật" : "Tắt"}</button>
             <p style={{ margin: "8px 0 0", fontSize: 12, color: T.inkSoft }}>
-              Tắt để bắt đầu với tất cả mục gán nhãn trống, bao gồm Điều luật. Case Expert luôn tắt gợi ý LLM.
+              Tắt để bắt đầu với tất cả mục gán nhãn trống. Case Expert luôn tắt gợi ý LLM.
               Bạn có thể bật/tắt riêng case Self bên dưới. Có hiệu lực khi mở lại case.
             </p>
           </div>
@@ -1940,8 +1899,8 @@ export default function LegalAnnotationApp() {
   const openCase = async (caseId) => {
     try {
       const capabilities = await api("/");
-      if (!capabilities.editable_legal_provisions) {
-        throw new Error("Hãy triển khai backend mới trên Render để lưu Điều luật và mở case Expert không có gợi ý.");
+      if (!capabilities.hidden_legal_provisions) {
+        throw new Error("Hãy triển khai backend mới trên Render để ẩn Điều luật khỏi trình gán nhãn.");
       }
       const doc = await api(`/api/cases/${caseId}/doc`);
       setCaseData(doc);
@@ -1963,7 +1922,7 @@ export default function LegalAnnotationApp() {
           const d = await api(`/api/cases/${caseId}/draft`);
           if (d?.saved_at) {
             const { saved_at, ...clean } = d;
-            setCaseData({ ...doc, ...clean, type: doc.type, legal_provisions: clean.legal_provisions || [] });
+            setCaseData({ ...doc, ...clean, type: doc.type });
             if (d.legacy_suggestions_filtered) setSubmitMessage("Đã ẩn nội dung trùng gợi ý LLM trong nháp cũ; giữ lại các mục mới hoặc đã sửa. Dữ liệu cũ vẫn được lưu trên máy chủ.");
             setDraftLoadedAt(saved_at);
             restored = true;
@@ -1979,7 +1938,6 @@ export default function LegalAnnotationApp() {
               units: sub.units ?? [],
               reasoning: sub.reasoning ?? [],
               decisions: sub.decisions ?? [],
-              legal_provisions: sub.legal_provisions ?? [],
             });
             setSubmitted(true);
             setSubmitMessage(sub.legacy_suggestions_filtered ? "Đã ẩn nội dung trùng gợi ý LLM trong bài nộp cũ; giữ lại các mục mới hoặc đã sửa. Dữ liệu cũ vẫn được lưu trên máy chủ." : "Đã tải lại bài nộp trước đó — bạn có thể chỉnh sửa và gửi lại.");
@@ -2066,17 +2024,6 @@ export default function LegalAnnotationApp() {
     updateCase((c) => ({ ...c, [kind]: deleteAtOrder(c[kind], id) }));
   };
 
-  const saveProvision = (data, id = null) => {
-    updateCase((c) => {
-      const list = c.legal_provisions || [];
-      if (id !== null) return { ...c, legal_provisions: list.map((p) => p.provision_id === id ? { ...p, ...data, status: "unconfirmed" } : p) };
-      const next = Math.max(0, ...list.map((p) => Number(String(p.provision_id || "").replace(/^LP/, "")) || 0)) + 1;
-      return { ...c, legal_provisions: [...list, { provision_id: `LP${next}`, ...data, status: "unconfirmed" }] };
-    });
-    setAddingType(null);
-    setEditingId(null);
-  };
-
   /* -------------------- autosave nháp (annotator) -------------------- */
 
   useEffect(() => {
@@ -2118,7 +2065,6 @@ export default function LegalAnnotationApp() {
           units: caseData.units,
           reasoning: caseData.reasoning,
           decisions: caseData.decisions,
-          legal_provisions: caseData.legal_provisions || [],
           annotation_editor_version: 2,
           submitted_at: new Date().toISOString(),
         },
@@ -2354,7 +2300,7 @@ export default function LegalAnnotationApp() {
   /* -------------------- derived values -------------------- */
 
   const allTrackedUnits = useMemo(
-    () => caseData ? [...caseData.units, ...caseData.reasoning, ...caseData.decisions, ...(caseData.legal_provisions || [])] : [],
+    () => caseData ? [...caseData.units, ...caseData.reasoning, ...caseData.decisions] : [],
     [caseData]
   );
   const confirmedCount = allTrackedUnits.filter((u) => u.status === "confirmed").length;
@@ -2376,7 +2322,6 @@ export default function LegalAnnotationApp() {
   const onMouseUp = () => { draggingRef.current = false; };
 
   const TABS = caseData ? [
-    { key: "provisions", label: "Điều luật", count: (caseData.legal_provisions || []).length, icon: BookOpen },
     { key: "claims", label: "Claims", count: caseData.units.filter((u) => u.type !== "request").length, icon: ListChecks },
     { key: "requests", label: "Requests", count: caseData.units.filter((u) => u.type === "request").length, icon: ClipboardList },
     { key: "reasoning", label: "Reasoning", count: caseData.reasoning.length, icon: Scale },
@@ -2505,24 +2450,6 @@ export default function LegalAnnotationApp() {
               })}
             </div>
 
-            {tab === "provisions" && (
-              <div>
-                <button onClick={() => { setAddingType("provision"); setEditingId(null); }} style={{ ...btnGhostStyle, marginBottom: 12 }}>Thêm điều luật</button>
-                {(caseData.legal_provisions || []).length === 0 && addingType !== "provision" && (
-                  <p style={{ fontSize: 12.5, color: T.inkSoft }}>Chưa có Điều luật. Bấm Thêm điều luật để gán nhãn từ bản án.</p>
-                )}
-                {addingType === "provision" && <ProvisionForm onSave={(data) => saveProvision(data)} onCancel={() => setAddingType(null)} />}
-                {(caseData.legal_provisions || []).map((p, i) => (
-                  editingId === p.provision_id
-                    ? <ProvisionForm key={p.provision_id || i} initial={p} onSave={(data) => saveProvision(data, p.provision_id)} onCancel={() => setEditingId(null)} />
-                    : <ProvisionCard key={p.provision_id || i} item={p}
-                        onEdit={() => { setEditingId(p.provision_id); setAddingType(null); }}
-                        onDelete={() => updateCase((c) => ({ ...c, legal_provisions: c.legal_provisions.filter((x) => x.provision_id !== p.provision_id) }))}
-                        onConfirm={() => updateCase((c) => ({ ...c, legal_provisions: c.legal_provisions.map((x) => x.provision_id === p.provision_id ? { ...x, status: x.status === "confirmed" ? "unconfirmed" : "confirmed" } : x) }))}
-                      />
-                ))}
-              </div>
-            )}
             {tab === "claims" && (
               <div>
                 <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>

@@ -43,7 +43,7 @@ from bson import Binary
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
-from case_schema import (normalize_case, case_type, validate_provisions, saved_annotation_view,
+from case_schema import (normalize_case, case_type, saved_annotation_view,
                          ANNOTATION_FIELDS, RAW_ANNOTATION_FIELDS, ANNOTATION_EDITOR_VERSION)
 
 
@@ -649,7 +649,8 @@ def root():
         "message": "Legal annotation backend is running",
         "corpus_schema_version": 3,
         "scoped_auto_assign": True,
-        "editable_legal_provisions": True,
+        "editable_legal_provisions": False,
+        "hidden_legal_provisions": True,
         "storage": _STORAGE_NAME,
         "endpoints": [
             "POST /api/auth/admin",
@@ -1300,6 +1301,8 @@ def get_case_doc(case_id: str, request: Request):
         doc = dict(doc)
         for field in ANNOTATION_FIELDS + RAW_ANNOTATION_FIELDS:
             doc[field] = []
+    if auth["type"] == "annotator":
+        doc.pop("legal_provisions", None)
     return doc
 
 
@@ -1380,7 +1383,9 @@ def get_draft(case_id: str, request: Request):
     draft = storage.get_draft(auth["id"], case_id)
     if draft is None:
         raise HTTPException(status_code=404, detail="Chưa có nháp.")
-    return saved_annotation_view(storage.get_case_doc(case_id) or {}, draft)
+    result = saved_annotation_view(storage.get_case_doc(case_id) or {}, draft)
+    result.pop("legal_provisions", None)
+    return result
 
 
 @app.put("/api/cases/{case_id}/draft")
@@ -1392,13 +1397,9 @@ def save_draft(case_id: str, payload: dict, request: Request):
     payload["id"] = case_id
     source = storage.get_case_doc(case_id) or {}
     if case_type(source.get("type")) and payload.get("annotation_editor_version") != ANNOTATION_EDITOR_VERSION:
-        raise HTTPException(status_code=409, detail="Hãy tải lại trang để dùng trình gán nhãn Điều luật mới.")
+        raise HTTPException(status_code=409, detail="Hãy tải lại trang để dùng trình gán nhãn mới.")
     payload["type"] = source.get("type")
-    payload.setdefault("legal_provisions", [])
-    try:
-        validate_provisions(payload["legal_provisions"])
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+    payload["legal_provisions"] = source.get("legal_provisions", [])
     payload["annotation_editor_version"] = ANNOTATION_EDITOR_VERSION
     payload.pop("legacy_suggestions_filtered", None)
     for field in RAW_ANNOTATION_FIELDS:
@@ -1431,7 +1432,9 @@ def get_my_submission(case_id: str, request: Request):
     if not subs:
         raise HTTPException(status_code=404, detail="Chưa có bài nộp.")
     subs.sort(key=lambda s: s.get("submitted_at") or s.get("received_at") or "", reverse=True)
-    return saved_annotation_view(storage.get_case_doc(case_id) or {}, subs[0])
+    result = saved_annotation_view(storage.get_case_doc(case_id) or {}, subs[0])
+    result.pop("legal_provisions", None)
+    return result
 
 
 @app.get("/api/cases/{case_id}/submissions")
@@ -1464,13 +1467,9 @@ def submit_case(payload: dict, request: Request):
     payload = dict(payload)
     payload["case_id"] = case_id
     if case_type(source.get("type")) and payload.get("annotation_editor_version") != ANNOTATION_EDITOR_VERSION:
-        raise HTTPException(status_code=409, detail="Hãy tải lại trang để dùng trình gán nhãn Điều luật mới.")
+        raise HTTPException(status_code=409, detail="Hãy tải lại trang để dùng trình gán nhãn mới.")
     payload["type"] = source.get("type")
-    payload.setdefault("legal_provisions", [])
-    try:
-        validate_provisions(payload["legal_provisions"])
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+    payload["legal_provisions"] = source.get("legal_provisions", [])
     payload["annotation_editor_version"] = ANNOTATION_EDITOR_VERSION
     payload.pop("legacy_suggestions_filtered", None)
     for field in RAW_ANNOTATION_FIELDS:
@@ -1542,7 +1541,7 @@ def _exported_submissions(mode=None):
         if cid not in sources:
             sources[cid] = storage.get_case_doc(cid) or {}
         enriched = saved_annotation_view(sources[cid], submission)
-        # Law provisions are annotations; never replace them with model output.
+        # Provisions stay in exported case metadata, never in annotator responses.
         if "type" in sources[cid]:
             enriched["type"] = sources[cid]["type"]
         if mode is None or enriched.get("type") == mode:

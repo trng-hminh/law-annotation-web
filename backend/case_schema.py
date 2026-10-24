@@ -1,7 +1,7 @@
 """Normalize imported LLM cases while retaining source metadata and law text."""
 from copy import deepcopy
 
-ANNOTATION_FIELDS = ("units", "reasoning", "decisions", "legal_provisions")
+ANNOTATION_FIELDS = ("units", "reasoning", "decisions")
 RAW_ANNOTATION_FIELDS = ("claims", "requests", "reasonings", "request_outcomes",
                          "request_decision_links", "request_reasoning_links")
 ANNOTATION_EDITOR_VERSION = 2
@@ -21,21 +21,19 @@ def validate_provisions(provisions):
 def saved_annotation_view(source, saved):
     """Hide legacy source copies in expert work without modifying stored data.
 
-    Older servers forcibly copied source provisions into every draft/submission.
-    Exact source matches from that editor are not evidence of human authorship.
+    Exact annotation matches from that editor are not evidence of human authorship.
     Keep changed/new items and retain the original record on disk/in MongoDB.
     New editor records are never compared to the source: experts may legitimately
     annotate exactly the same passage as the model independently.
     """
     result = deepcopy(saved)
-    result.setdefault("legal_provisions", [])
+    # Provisions are case metadata, independent of the human annotation fields.
+    result["legal_provisions"] = deepcopy(source.get("legal_provisions", saved.get("legal_provisions", [])))
     if case_type(source.get("type")) != "expert" or saved.get("annotation_editor_version") == ANNOTATION_EDITOR_VERSION:
         return result
     original = normalize_case(source)
 
     def signature(field, item):
-        if field == "legal_provisions":
-            return (item.get("title", "").strip(), item.get("content", "").strip())
         text = item.get("text") or (item.get("span") or {}).get("text", "")
         if field == "units":
             actors = item.get("assertedBy") or item.get("asserted_by") or item.get("requested_by") or []

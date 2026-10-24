@@ -121,15 +121,17 @@ suggestions for Expert. The switches still control Self and untyped cases.
 Changes affect newly opened cases.
 
 `legal_provisions` is retained per case, including `provision_id`, `title`, and
-`content`. **Điều luật is an annotation section** with add, edit, delete, and
-confirm controls. Self cases can start with imported suggestions; Expert cases
-start with an empty list. Drafts, submissions, and exports store the human's
-current list, including intentional deletions. Model text never replaces those
-edits. The app does not generate or verify law content.
+`content`. **Điều luật is case metadata, not an annotation task.** It is hidden
+from annotators in both groups and excluded from annotation progress. The
+backend retains the source provision details when saving drafts/submissions,
+even though the annotator never receives or submits them. Admin exports and
+the admin submission viewer retain this metadata. Client payloads cannot alter
+or erase it. The app does not generate or verify law content.
 
 The imported source remains available only through the admin `/source` endpoint
-for backups and import verification. Normal `/doc` editor responses hide all
-suggestion fields (including laws) for Expert cases.
+for backups and import verification. Annotator `/doc`, `/draft`, and
+`/submission` responses omit `legal_provisions`. Expert cases still start with
+all actual annotation fields blank, regardless of suggestion toggles.
 
 Deploy the updated frontend and backend before importing. The admin **Import
 JSON** control accepts the raw grouped JSON and imports in batches of ten. For
@@ -194,7 +196,8 @@ Admin API equivalents (Bearer token required):
 - `/api/export/submissions?type=expert`
 - `/api/export/submissions.csv?type=expert`
 
-Missing law annotations are exported as empty, never backfilled from the model.
+Exports include provision details from the source case as metadata, including
+for older submissions that lack the field.
 For Expert work saved with the older editor, exact source-copy items are hidden
 on restore/export, while new or edited items are retained. Original stored
 records are not changed by this read-time cleanup; a notice appears in the
