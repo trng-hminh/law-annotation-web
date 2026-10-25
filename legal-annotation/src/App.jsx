@@ -2533,7 +2533,7 @@ export default function LegalAnnotationApp() {
           background: T.paper, color: T.ink, overflow: "hidden",
         }}
       >
-        <div style={{ padding: "12px 18px", borderBottom: `1px solid ${T.line}`, background: T.paperCard }}>
+        <div style={{ padding: "12px 18px", borderBottom: `1px solid ${T.line}`, background: T.paperCard, width: "100%", minWidth: 0, boxSizing: "border-box", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, maxWidth: "100%", flex: "1 1 420px" }}>
               <IconBtn size={26} title="Về danh sách" onClick={backToDashboard}><LayoutDashboard size={15} /></IconBtn>
@@ -2557,9 +2557,6 @@ export default function LegalAnnotationApp() {
                       </IconBtn>
                     </>
                   )}
-                </div>
-                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", gap: 6, marginTop: 4, minWidth: 0 }}>
-                  {(caseData.parties || []).map((p) => <PartyTag key={p.id} id={p.id} parties={caseData.parties || []} size="sm" />)}
                 </div>
               </div>
             </div>
@@ -2592,6 +2589,13 @@ export default function LegalAnnotationApp() {
                 {submitting ? "Đang gửi…" : submitted ? "Cập nhật bài nộp" : "Hoàn tất case"}
               </button>
             </div>
+          </div>
+          <div aria-label="Đương sự trong vụ án" style={{
+            display: "flex", flexWrap: "wrap", alignItems: "flex-start", alignContent: "flex-start",
+            gap: 6, marginTop: 8, width: "100%", minWidth: 0, maxWidth: "100%",
+            maxHeight: 120, overflowY: "auto", overflowX: "hidden", boxSizing: "border-box",
+          }}>
+            {(caseData.parties || []).map((p) => <PartyTag key={p.id} id={p.id} parties={caseData.parties || []} size="sm" />)}
           </div>
           {submitError && <div style={{ marginTop: 8, fontSize: 11.5, color: T.danger }}>{submitError}</div>}
           {submitMessage && <div style={{ marginTop: 8, fontSize: 11.5, color: "#3D6944" }}>{submitMessage}</div>}
