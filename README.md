@@ -178,11 +178,13 @@ The corpus, PDFs, and backups are excluded from Git.
 ## Download completed annotations
 
 The admin **Tất cả nhóm / Self / Expert** selector also filters the case list.
-**Phân công** applies only to open cases matching the selected group, search,
-and status filters, across all matching pages. Each click adds one additional
-annotator per eligible case. Cases outside the filters retain their existing
-assignments. Deploy both frontend and backend for this behavior; the frontend
-blocks assignment if the backend does not yet support filtered assignment.
+Use **Chỉ chưa phân công** to toggle the unassigned-only view, combined with the
+group, search, and status filters. **Phân công** opens a recipient picker: select
+the annotators who should receive the remaining cases, then click the assignment
+button. It assigns only open, unassigned cases matching the filters across all
+pages, balancing existing open-case workloads among the selected people. Manual
+and other existing assignments are preserved, even if you click again. Deploy
+both frontend and backend; the frontend blocks this action on older backends.
 
 In the admin dashboard, select **Tất cả nhóm**, **Self**, or **Expert** beside
 the export buttons, then choose **Tải dữ liệu (JSON)** or **Tải summary (CSV)**.
@@ -204,3 +206,24 @@ records are not changed by this read-time cleanup; a notice appears in the
 editor when legacy suggestions were hidden. Independently entered annotations
 saved with the new editor are preserved even when their wording matches the
 model. Deploy both frontend and backend, then refresh existing browser tabs.
+
+## Draft recovery
+
+Annotator changes and unfinished add/edit form inputs are backed up immediately
+in this browser, separately for each account and case. The app synchronizes
+pending work to the backend after a short typing pause and retries failed saves
+when the connection returns. Returning to the case list or logging out waits
+for pending saves first. Refreshing or signing in again resumes the last open
+case, restoring its server draft and any newer pending browser backup.
+
+The case header distinguishes **saved in this browser**, **saving**, and
+**saved on the server**. Only a server-saved draft is available on another
+browser/device. Offline pending work requires the same browser until it syncs.
+Cases with drafts show **Có nháp / Tiếp tục nháp** on the annotator dashboard.
+Use **Lưu** to finish a form before submitting; unfinished input remains a draft
+and is not included in a completed submission.
+
+The login page includes the external Google Docs annotation procedure beside
+the built-in workflow guide.
+
+Frontend draft recovery tests: `cd legal-annotation && npm test`.

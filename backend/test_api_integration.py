@@ -640,6 +640,48 @@ class ApiIntegrationTests(unittest.TestCase):
         token = self._login_annotator("First")
         self._assert_status(self.client.post("/api/cases/auto-assign", headers=self._auth(token), json=scope), 403)
 
+    def test_selected_recipients_only_get_unassigned_filtered_cases(self):
+        self.assertTrue(self.client.get("/").json()["selective_auto_assign"])
+        self._import_cases(
+            *[{"id": f"expert-{i}", "type": "expert", "units": []} for i in range(6)],
+            {"id": "manual", "type": "expert", "units": []},
+            {"id": "done", "type": "expert", "units": []},
+            {"id": "self", "type": "self", "units": []},
+            {"id": "outside", "type": "expert", "units": []},
+        )
+        special = self._create_annotator("Special")
+        first = self._create_annotator("First")
+        second = self._create_annotator("Second")
+        # Manual assignments must survive even when their recipient is not selected.
+        main.storage.save_assignments({"manual": [special["id"]], "self": [first["id"]]})
+        main._set_case_status("done", "completed", completed_by=special["id"])
+        admin = self._auth(self.admin_token)
+        scope = {"type": "expert", "case_ids": [f"expert-{i}" for i in range(6)] + ["manual", "done", "self"],
+                 "annotator_ids": [first["id"], second["id"]], "unassigned_only": True}
+        result = self._assert_status(self.client.post("/api/cases/auto-assign", headers=admin, json=scope), 200).json()
+        self.assertEqual(result["assigned"], 6)
+        assignments = main.storage.read_assignments()
+        self.assertEqual(assignments["manual"], [special["id"]])
+        self.assertEqual(assignments["self"], [first["id"]])
+        self.assertNotIn("done", assignments)
+        self.assertNotIn("outside", assignments)
+        for i in range(6):
+            self.assertEqual(len(assignments[f"expert-{i}"]), 1)
+            self.assertIn(assignments[f"expert-{i}"][0], scope["annotator_ids"])
+        workloads = [sum(aid in ids for ids in assignments.values()) for aid in scope["annotator_ids"]]
+        self.assertLessEqual(abs(workloads[0] - workloads[1]), 1)
+        # A stale client still listing just-assigned cases cannot assign them again.
+        self.assertEqual(self.client.post("/api/cases/auto-assign", headers=admin, json=scope).json()["assigned"], 0)
+        self.assertEqual(main.storage.read_assignments(), assignments)
+        for invalid in ({"annotator_ids": []}, {"annotator_ids": None}, {"annotator_ids": "one"},
+                        {"annotator_ids": [123]}, {"annotator_ids": ["missing"]}, {"unassigned_only": "true"}):
+            self._assert_status(self.client.post("/api/cases/auto-assign", headers=admin, json={**scope, **invalid}), 400)
+            self.assertEqual(main.storage.read_assignments(), assignments)
+        # Explicit incremental API requests also retain people outside the recipient pool.
+        self._assert_status(self.client.post("/api/cases/auto-assign", headers=admin,
+            json={"case_ids": ["manual"], "annotator_ids": [first["id"]]}), 200)
+        self.assertEqual(main.storage.read_assignments()["manual"], [special["id"], first["id"]])
+
     def test_auto_assignment_group_only_and_legacy_unscoped_requests(self):
         self._import_cases({"id": "expert", "type": "expert", "units": []},
                            {"id": "self", "type": "self", "units": []})
@@ -649,6 +691,37 @@ class ApiIntegrationTests(unittest.TestCase):
         self.assertEqual(main.storage.read_assignments(), {"expert": [annotator["id"]]})
         self._assert_status(self.client.post("/api/cases/auto-assign", headers=admin), 200)
         self.assertEqual(main.storage.read_assignments(), {"expert": [annotator["id"]], "self": [annotator["id"]]})
+
+    def test_drafts_survive_a_new_login_and_are_visible_only_to_their_owner(self):
+        self._import_cases({"id": "resume", "type": "expert", "units": []})
+        owner = self._create_annotator("Owner")
+        other = self._create_annotator("Other")
+        for annotator in (owner, other):
+            self._assign("resume", annotator["id"])
+        auth = self._auth(self._login_annotator("Owner"))
+        payload = {"id": "resume", "units": [{"id": "C1", "text": "Saved human work"}],
+                   "reasoning": [], "decisions": [], "annotation_editor_version": 2,
+                   "_editor_state": {"tab": "requests", "addingType": "request", "form": {"text": "Unfinished request"}}}
+        saved = self._assert_status(self.client.put("/api/cases/resume/draft", headers=auth, json=payload), 200).json()
+        self.assertTrue(saved["saved_at"].endswith("+00:00"))
+        # A fresh client/session uses the persistent backend draft, not React state.
+        with TestClient(main.app) as fresh:
+            logged_in = fresh.post("/api/auth/annotator", json={"name": "Owner", "passcode": "pass-1234"}).json()
+            headers = self._auth(logged_in["token"])
+            restored = self._assert_status(fresh.get("/api/cases/resume/draft", headers=headers), 200).json()
+            self.assertEqual(restored["units"], payload["units"])
+            self.assertEqual(restored["_editor_state"], payload["_editor_state"])
+            self.assertNotIn("legal_provisions", restored)
+            case = fresh.get("/api/annotator/cases", headers=headers).json()["cases"][0]
+            self.assertTrue(case["has_draft"])
+            self.assertEqual(case["draft_saved_at"], saved["saved_at"])
+        other_auth = self._auth(self._login_annotator("Other"))
+        self._assert_status(self.client.get("/api/cases/resume/draft", headers=other_auth), 404)
+        self.assertFalse(self.client.get("/api/annotator/cases", headers=other_auth).json()["cases"][0]["has_draft"])
+        self._assert_status(self.client.post("/api/submit", headers=auth,
+                                            json={"case_id": "resume", "units": payload["units"], "annotation_editor_version": 2}), 200)
+        self._assert_status(self.client.get("/api/cases/resume/draft", headers=auth), 404)
+        self.assertFalse(self.client.get("/api/annotator/cases", headers=auth).json()["cases"][0]["has_draft"])
 
     def test_file_storage_secret_is_stable_for_the_first_authenticated_follow_up(self):
         # This intentionally disables the test-only environment secret.  It

@@ -36,7 +36,7 @@ import os
 import re
 import secrets
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from bson import Binary
@@ -151,7 +151,7 @@ class FileStorage:
 
     def save_draft(self, annotator_id, case_id, payload):
         payload = dict(payload)
-        payload["saved_at"] = datetime.now().isoformat()
+        payload["saved_at"] = datetime.now(timezone.utc).isoformat()
         _write_json_file(self.drafts_dir / annotator_id / f"case_{case_id}.json", payload)
         return payload["saved_at"]
 
@@ -163,10 +163,11 @@ class FileStorage:
     def list_drafts(self):
         out = []
         for f in self.drafts_dir.glob("*/case_*.json"):
+            draft = _read_json_file(f, {})
             out.append({
                 "annotator_id": f.parent.name,
                 "case_id": f.name.replace("case_", "").replace(".json", ""),
-                "updated_at": datetime.fromtimestamp(f.stat().st_mtime).isoformat(),
+                "updated_at": draft.get("saved_at") or datetime.fromtimestamp(f.stat().st_mtime, timezone.utc).isoformat(),
             })
         return out
 
@@ -311,7 +312,7 @@ class MongoStorage:
 
     def save_draft(self, annotator_id, case_id, payload):
         payload = dict(payload)
-        payload["saved_at"] = datetime.now().isoformat()
+        payload["saved_at"] = datetime.now(timezone.utc).isoformat()
         self.db.drafts.replace_one(
             {"_id": f"{annotator_id}:{case_id}"},
             {"_id": f"{annotator_id}:{case_id}", "annotator_id": annotator_id,
@@ -649,6 +650,7 @@ def root():
         "message": "Legal annotation backend is running",
         "corpus_schema_version": 3,
         "scoped_auto_assign": True,
+        "selective_auto_assign": True,
         "editable_legal_provisions": False,
         "hidden_legal_provisions": True,
         "storage": _STORAGE_NAME,
@@ -1044,10 +1046,23 @@ def auto_assign(request: Request, payload: dict | None = None):
         not isinstance(selected_ids, list) or any(not isinstance(cid, str) for cid in selected_ids)
     ):
         raise HTTPException(status_code=400, detail="case_ids phải là mảng mã case.")
+    unassigned_only = payload.get("unassigned_only", False)
+    if not isinstance(unassigned_only, bool):
+        raise HTTPException(status_code=400, detail="unassigned_only phải là boolean.")
+    recipients = payload.get("annotator_ids")
+    if "annotator_ids" in payload and (
+        not isinstance(recipients, list) or not recipients
+        or any(not isinstance(aid, str) for aid in recipients)
+    ):
+        raise HTTPException(status_code=400, detail="Hãy chọn ít nhất một annotator hợp lệ.")
     annotators = storage.list_annotators()
     if not annotators:
         raise HTTPException(status_code=400, detail="Chưa có annotator nào. Hãy tạo annotator trước.")
     annotator_ids = [a["id"] for a in annotators]
+    if recipients is not None:
+        if set(recipients) - set(annotator_ids):
+            raise HTTPException(status_code=400, detail="Annotator không tồn tại. Hãy làm mới danh sách.")
+        annotator_ids = list(dict.fromkeys(recipients))
     registry = storage.read_cases()
     assignments = _norm_assignments(storage.read_assignments())
     if selected_ids is not None:
@@ -1060,6 +1075,7 @@ def auto_assign(request: Request, payload: dict | None = None):
         c["case_id"] for c in registry if c.get("status") != "completed"
         and (selected_ids is None or c["case_id"] in selected_ids)
         and (mode is None or c.get("type") == mode)
+        and (not unassigned_only or not assignments.get(c["case_id"]))
     )
 
     def workload_of(aid):
@@ -1069,10 +1085,8 @@ def auto_assign(request: Request, payload: dict | None = None):
 
     added = 0
     for cid in open_cases:
-        cur = [x for x in assignments.get(cid, []) if x in annotator_ids]
-        # case đã đủ mọi annotator hiện có -> bỏ qua
-        if len(cur) >= len(annotator_ids):
-            continue
+        # Preserve manual assignments, including annotators outside this selection.
+        cur = list(assignments.get(cid, []))
         candidates = [aid for aid in annotator_ids if aid not in cur]
         if not candidates:
             continue
@@ -1107,6 +1121,8 @@ def annotator_cases(request: Request):
     assignments = _norm_assignments(storage.read_assignments())
     registry = _registry_by_id()
     submissions_index = storage.submissions_index()
+    drafts = {d["case_id"]: d.get("updated_at") for d in storage.list_drafts()
+              if d["annotator_id"] == auth["id"]}
 
     cases = []
     for cid, ids in assignments.items():
@@ -1120,6 +1136,8 @@ def annotator_cases(request: Request):
             "case_id": cid,
             "title": reg.get("title", f"Case {cid}"),
             "submitted": auth["id"] in submitted_ids,
+            "has_draft": cid in drafts,
+            "draft_saved_at": drafts.get(cid),
         })
     cases.sort(key=lambda c: c["case_id"])
     submitted_count = sum(1 for c in cases if c["submitted"])

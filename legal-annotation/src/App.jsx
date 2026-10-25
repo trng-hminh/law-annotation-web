@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo, useCallback, useEffect } from "react";
-import rawPrototypeCases from "./prototype_10_cases.json";
+import { createDraftStore } from "./draftStore.js";
 import {
   ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Plus, Pencil, Trash2, Link2,
   X, GripVertical, ScrollText, Gavel, ListChecks,
@@ -12,6 +12,26 @@ import {
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
 // Matches the backend limit and leaves enough MongoDB document headroom.
 const MAX_PDF_BYTES = 15 * 1024 * 1024;
+const ANNOTATION_GUIDE_URL = "https://docs.google.com/document/d/1JXuUc3RGiGTC5grvgzno6yeHJJdYV7OgU21_DdkNcY4/edit?tab=t.0";
+
+async function saveDraftRemote(identity, payload) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(`${API_BASE}/api/cases/${encodeURIComponent(payload.id)}/draft`, {
+      method: "PUT", signal: controller.signal,
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${identity.token}` },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const detail = await res.json().catch(() => ({}));
+      throw new Error(detail.detail || `Không lưu được nháp (HTTP ${res.status}).`);
+    }
+    return res.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 /* ----------------------------------------------------------------------
    DESIGN TOKENS
@@ -148,14 +168,18 @@ function ConfirmToggle({ status, onClick }) {
 
 /* ---------------------------- unit form (add/edit) ---------------------------- */
 
-function UnitForm({ initial, parties, onSave, onCancel }) {
+function UnitForm({ initial, parties, onSave, onCancel, onDraftChange }) {
   const [type, setType] = useState(initial?.type || "claim");
   const [assertedBy, setAssertedBy] = useState(initial?.assertedBy || []);
   const [text, setText] = useState(initial?.text || "");
   const order = initial?.order ?? 1;
 
-  const toggleParty = (id) =>
-    setAssertedBy((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
+  const stage = (patch) => onDraftChange?.({ type, assertedBy, text, order, ...patch });
+  const toggleParty = (id) => {
+    const next = assertedBy.includes(id) ? assertedBy.filter((x) => x !== id) : [...assertedBy, id];
+    setAssertedBy(next);
+    stage({ assertedBy: next });
+  };
 
   return (
     <div style={{
@@ -165,7 +189,7 @@ function UnitForm({ initial, parties, onSave, onCancel }) {
       <div style={{ marginBottom: 10 }}>
         <div>
           <label style={labelStyle}>Loại unit</label>
-          <select value={type} onChange={(e) => setType(e.target.value)} style={inputStyle} disabled={!!initial}>
+          <select value={type} onChange={(e) => { setType(e.target.value); stage({ type: e.target.value }); }} style={inputStyle} disabled={!!initial}>
             <option value="claim">Claim</option>
             <option value="request">Request</option>
           </select>
@@ -195,7 +219,7 @@ function UnitForm({ initial, parties, onSave, onCancel }) {
 
       <label style={labelStyle}>Nội dung</label>
       <textarea
-        value={text} onChange={(e) => setText(e.target.value)}
+        value={text} onChange={(e) => { setText(e.target.value); stage({ text: e.target.value }); }}
         style={{ ...inputStyle, minHeight: 90, resize: "vertical", lineHeight: 1.6 }}
       />
 
@@ -212,13 +236,13 @@ function UnitForm({ initial, parties, onSave, onCancel }) {
   );
 }
 
-function ReasonDecisionForm({ initial, onSave, onCancel, kind }) {
+function ReasonDecisionForm({ initial, onSave, onCancel, kind, onDraftChange }) {
   const [text, setText] = useState(initial?.text || "");
   const order = initial?.order ?? 1;
   return (
     <div style={{ padding: 14, borderRadius: 10, border: `1px solid ${T.gold}`, background: T.goldTint + "55", marginBottom: 12 }}>
       <label style={labelStyle}>Nội dung {kind === "reasoning" ? "lý do (nhận định)" : "quyết định"}</label>
-      <textarea value={text} onChange={(e) => setText(e.target.value)} style={{ ...inputStyle, minHeight: 90, resize: "vertical", lineHeight: 1.6 }} />
+      <textarea value={text} onChange={(e) => { setText(e.target.value); onDraftChange?.({ text: e.target.value, order }); }} style={{ ...inputStyle, minHeight: 90, resize: "vertical", lineHeight: 1.6 }} />
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 10 }}>
         <button onClick={onCancel} style={btnGhostStyle}>Huỷ</button>
         <button onClick={() => text.trim() && onSave({ text: text.trim(), order })} style={btnPrimaryStyle}>Lưu</button>
@@ -229,13 +253,13 @@ function ReasonDecisionForm({ initial, onSave, onCancel, kind }) {
 
 /* ---------------------------- unit card ---------------------------- */
 
-function UnitCard({ unit, parties, editing, onConfirm, onEditStart, onEditSave, onEditCancel, onDelete }) {
+function UnitCard({ unit, parties, editing, onConfirm, onEditStart, onEditSave, onEditCancel, onDelete, draftInitial, onDraftChange }) {
   const primaryParty = unit.assertedBy?.[0];
   const style = PARTY_STYLE[sideOf(primaryParty)];
   const isRequest = unit.type === "request";
 
   if (editing) {
-    return <UnitForm initial={unit} parties={parties} onSave={onEditSave} onCancel={onEditCancel} />;
+    return <UnitForm initial={{ ...unit, ...draftInitial }} parties={parties} onSave={onEditSave} onCancel={onEditCancel} onDraftChange={onDraftChange} />;
   }
 
   return (
@@ -280,8 +304,8 @@ function UnitCard({ unit, parties, editing, onConfirm, onEditStart, onEditSave, 
   );
 }
 
-function SimpleCard({ item, kind, editing, onConfirm, onEditStart, onEditSave, onEditCancel, onDelete }) {
-  if (editing) return <ReasonDecisionForm initial={item} kind={kind} onSave={onEditSave} onCancel={onEditCancel} />;
+function SimpleCard({ item, kind, editing, onConfirm, onEditStart, onEditSave, onEditCancel, onDelete, draftInitial, onDraftChange }) {
+  if (editing) return <ReasonDecisionForm initial={{ ...item, ...draftInitial }} kind={kind} onSave={onEditSave} onCancel={onEditCancel} onDraftChange={onDraftChange} />;
   const accent = kind === "reasoning" ? "#5B6B93" : T.gold;
   const accentTint = kind === "reasoning" ? "#E7EAF3" : T.goldTint;
   return (
@@ -738,7 +762,6 @@ const normalizeCasesPayload = (payload) => {
   return list.map(normalizeCase);
 };
 
-const INITIAL_CASES = normalizeCasesPayload(rawPrototypeCases);
 
 /* ============================================================================
    HƯỚNG DẪN SỬ DỤNG — nội dung theo tab + tổng quan (dành cho luật sư)
@@ -1037,7 +1060,7 @@ function SubmissionsModal({ view, data, loading, error, onClose }) {
    LOGIN — hai vai trò: Annotator (tên + mã) và Admin (user + mật khẩu)
    ============================================================================ */
 
-function LoginScreen({ onLogin, offline }) {
+function LoginScreen({ onLogin, offline, notice }) {
   const [mode, setMode] = useState("annotator"); // "annotator" | "admin"
   const [name, setName] = useState("");
   const [passcode, setPasscode] = useState("");
@@ -1117,6 +1140,7 @@ function LoginScreen({ onLogin, offline }) {
           </>
         )}
 
+        {notice && <p role="status" style={{ color: T.inkSoft, fontSize: 12 }}>{notice}</p>}
         {error && <p style={{ color: T.danger, fontSize: 12, margin: "0 0 10px" }}>{error}</p>}
         {offline && (
           <p style={{ color: T.danger, fontSize: 12, margin: "0 0 10px" }}>
@@ -1136,6 +1160,10 @@ function LoginScreen({ onLogin, offline }) {
           >
             <BookOpen size={13} /> {showHelp ? "Ẩn quy trình gán nhãn" : "Xem quy trình gán nhãn"}
           </button>
+          <a href={ANNOTATION_GUIDE_URL} target="_blank" rel="noopener noreferrer"
+            style={{ ...btnGhostStyle, display: "block", textAlign: "center", marginTop: 8, fontSize: 12, textDecoration: "none" }}>
+            Mở tài liệu quy trình gán nhãn (Google Docs) ↗
+          </a>
           {showHelp && (
             <div style={{ marginTop: 10, background: T.paperDim, borderRadius: 8, padding: "10px 12px" }}>
               {HELP_OVERVIEW.steps.map((s) => (
@@ -1234,9 +1262,10 @@ function AnnotatorDashboard({ cases, stats, onOpen, onRefresh, refreshing, flash
               {c.submitted && (
                 <span style={{ fontSize: 11, fontWeight: 700, color: "#3D6944", background: "#E9F2E7", padding: "2px 8px", borderRadius: 20, flexShrink: 0 }}>Đã nộp</span>
               )}
+              {c.has_draft && <span style={{ fontSize: 11, color: T.gold, flexShrink: 0 }}>Có nháp</span>}
               <span style={{ fontSize: 12.5, color: T.inkSoft, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.title}</span>
             </div>
-            <button onClick={() => onOpen(c.case_id)} style={{ ...btnPrimaryStyle, flexShrink: 0 }}>Mở case</button>
+            <button onClick={() => onOpen(c.case_id)} style={{ ...btnPrimaryStyle, flexShrink: 0 }}>{c.has_draft ? "Tiếp tục nháp" : "Mở case"}</button>
           </div>
         ))}
       </div>
@@ -1259,7 +1288,7 @@ function AnnotatorDashboard({ cases, stats, onOpen, onRefresh, refreshing, flash
 function AdminDashboard({
   overview, annotators, admins, progress, currentUsername,
   onOpenCase, onAssign, onReopen, onAutoAssign,
-  onImportFile, onImportPrototype, importMessage,
+  onImportFile, importMessage,
   onCreateAnnotator, onResetPasscode, onDeleteAnnotator,
   onCreateAdmin, onResetAdminPassword, onDeleteAdmin,
   onDeleteSubmissions,
@@ -1271,8 +1300,11 @@ function AdminDashboard({
   const [section, setSection] = useState("cases"); // "cases" | "annotators" | "admins" | "progress"
   const [exportType, setExportType] = useState("");
   const [autoAssigning, setAutoAssigning] = useState(false);
+  const [showAssignmentOptions, setShowAssignmentOptions] = useState(false);
+  const [selectedAnnotators, setSelectedAnnotators] = useState([]);
+  const [unassignedOnly, setUnassignedOnly] = useState(false);
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("all"); // all | open | completed | unassigned
+  const [filter, setFilter] = useState("all"); // all | open | completed
   const [page, setPage] = useState(1);
   const pageSize = 20;
 
@@ -1295,12 +1327,14 @@ function AdminDashboard({
       if (q && !c.case_id.toLowerCase().includes(q) && !c.title.toLowerCase().includes(q)) return false;
       if (filter === "open" && c.status !== "open") return false;
       if (filter === "completed" && c.status !== "completed") return false;
-      if (filter === "unassigned" && (c.assigned_to || []).length) return false;
+      if (unassignedOnly && (c.assigned_to || []).length) return false;
       return true;
     });
-  }, [overview, search, filter, exportType]);
+  }, [overview, search, filter, exportType, unassignedOnly]);
 
-  const assignableCount = filtered.filter((c) => c.status !== "completed").length;
+  const assignableCases = filtered.filter((c) => c.status !== "completed" && !(c.assigned_to || []).length);
+  const assignableCount = assignableCases.length;
+  const recipientIds = selectedAnnotators.filter((id) => annotators.some((a) => a.id === id));
 
   const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, pages);
@@ -1331,18 +1365,11 @@ function AdminDashboard({
             <>
               <button
                 disabled={autoAssigning || assignableCount === 0}
-                onClick={async () => {
-                  setAutoAssigning(true);
-                  try {
-                    await onAutoAssign({ case_ids: filtered.map((c) => c.case_id), type: exportType || null });
-                  } finally {
-                    setAutoAssigning(false);
-                  }
-                }}
+                aria-expanded={showAssignmentOptions}
+                onClick={() => setShowAssignmentOptions((value) => !value)}
                 style={btnPrimaryStyle}
               >{autoAssigning ? "Đang phân công…" : `Phân công ${exportType === "expert" ? "Expert" : exportType === "self" ? "Self" : "tự động"} (${assignableCount})`}</button>
               <button onClick={onClearAssignments} style={{ ...btnGhostStyle, color: T.danger, borderColor: T.danger + "66" }}>Xoá toàn bộ phân công</button>
-              <button onClick={onImportPrototype} style={btnGhostStyle}>Nạp 10 case mẫu</button>
               <button onClick={() => importRef.current?.click()} style={btnGhostStyle}>Import JSON</button>
             </>
           )}
@@ -1411,12 +1438,51 @@ function AdminDashboard({
               <option value="all">Tất cả</option>
               <option value="open">Đang mở</option>
               <option value="completed">Đã hoàn thành</option>
-              <option value="unassigned">Chưa phân công</option>
             </select>
+            <button type="button" aria-pressed={unassignedOnly}
+              onClick={() => { setUnassignedOnly((value) => !value); setPage(1); }}
+              style={unassignedOnly ? btnPrimaryStyle : btnGhostStyle}
+            >Chỉ chưa phân công: {unassignedOnly ? "Bật" : "Tắt"}</button>
           </div>
 
+          {showAssignmentOptions && (
+            <fieldset disabled={autoAssigning} style={{ margin: "0 0 14px", padding: 14, border: `1px solid ${T.line}`, borderRadius: 10 }}>
+              <legend style={{ fontSize: 13, fontWeight: 700 }}>Chọn annotator nhận case</legend>
+              <p style={{ margin: "0 0 10px", fontSize: 12, color: T.inkSoft }}>
+                Chia {assignableCount} case đang mở, chưa phân công trong bộ lọc cho những người được chọn.
+                Cân bằng theo số case đang mở mỗi người đã nhận. Giữ nguyên các case đã phân công.
+              </p>
+              <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                <button type="button" style={btnGhostStyle} onClick={() => setSelectedAnnotators(annotators.map((a) => a.id))}>Chọn tất cả</button>
+                <button type="button" style={btnGhostStyle} onClick={() => setSelectedAnnotators([])}>Bỏ chọn tất cả</button>
+              </div>
+              <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 12 }}>
+                {annotators.map((a) => (
+                  <label key={a.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+                    <input type="checkbox" checked={recipientIds.includes(a.id)} onChange={(e) => {
+                      setSelectedAnnotators((ids) => e.target.checked ? [...ids, a.id] : ids.filter((id) => id !== a.id));
+                    }} />
+                    {a.name} ({a.id})
+                  </label>
+                ))}
+                {!annotators.length && <span>Hãy tạo annotator trước khi phân công.</span>}
+              </div>
+              <button type="button" disabled={autoAssigning || !assignableCount || !recipientIds.length}
+                style={btnPrimaryStyle} onClick={async () => {
+                  setAutoAssigning(true);
+                  try {
+                    await onAutoAssign({ case_ids: assignableCases.map((c) => c.case_id), type: exportType || null,
+                      annotator_ids: recipientIds, unassigned_only: true });
+                  } finally {
+                    setAutoAssigning(false);
+                  }
+                }}
+              >{autoAssigning ? "Đang phân công…" : `Phân công ${assignableCount} case cho ${recipientIds.length} người`}</button>
+            </fieldset>
+          )}
+
           <p style={{ fontSize: 12, color: T.inkSoft }}>
-            Hiển thị {filtered.length} case. Phân công áp dụng cho {assignableCount} case đang mở khớp bộ lọc trên tất cả các trang.
+            Hiển thị {filtered.length} case. Phân công tự động áp dụng cho {assignableCount} case đang mở, chưa phân công khớp bộ lọc trên tất cả các trang.
           </p>
           {filtered.length === 0 && <p style={{ color: T.inkSoft, fontSize: 13 }}>Không có case khớp bộ lọc.</p>}
 
@@ -1752,8 +1818,30 @@ export default function LegalAnnotationApp() {
   const [submitMessage, setSubmitMessage] = useState("");
   const [draftStatus, setDraftStatus] = useState("idle"); // idle | saving | saved | error
   const [draftLoadedAt, setDraftLoadedAt] = useState(null);
-  const dirtyRef = useRef(false);
-  const dirtyVersionRef = useRef(0);
+  const authRef = useRef(auth);
+  authRef.current = auth;
+  const caseDataRef = useRef(null);
+  const submittingRef = useRef(false);
+  const openVersionRef = useRef(0);
+  const [leaving, setLeaving] = useState(false);
+  const draftStoreRef = useRef(null);
+  if (!draftStoreRef.current) {
+    draftStoreRef.current = createDraftStore({
+      storage: {
+        getItem: (key) => localStorage.getItem(key),
+        setItem: (key, value) => localStorage.setItem(key, value),
+        removeItem: (key) => localStorage.removeItem(key),
+      },
+      saveRemote: saveDraftRemote,
+      onStatus: (identity, id, status, savedAt) => {
+        if (authRef.current?.id !== identity.id || authRef.current?.type !== identity.type || caseDataRef.current?.id !== id) return;
+        setDraftStatus(status);
+        if (savedAt) setDraftLoadedAt(savedAt);
+        if (status === "saved") setBackendOk(true);
+        if (status === "error") setBackendOk(false);
+      },
+    });
+  }
 
   const [flash, setFlash] = useState("");
   const [refreshing, setRefreshing] = useState(false);
@@ -1800,6 +1888,8 @@ export default function LegalAnnotationApp() {
   };
 
   const expireSession = () => {
+    openVersionRef.current += 1;
+    caseDataRef.current = null;
     setAuth(null);
     localStorage.removeItem("legal-annotation-auth");
     setCaseData(null);
@@ -1844,10 +1934,14 @@ export default function LegalAnnotationApp() {
     if (!auth) return;
     setView("dashboard");
     setCaseData(null);
-    dirtyRef.current = false;
+    caseDataRef.current = null;
     if (auth.type === "admin") loadAdminData();
-    else loadMyCases();
-  }, [auth?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+    else {
+      loadMyCases();
+      const last = draftStoreRef.current.last(auth);
+      if (last) openCase(last);
+    }
+  }, [auth?.type, auth?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* tự động cập nhật tiến độ cho admin (real-time) */
   useEffect(() => {
@@ -1879,11 +1973,28 @@ export default function LegalAnnotationApp() {
     return a;
   };
 
-  const handleLogout = () => {
-    expireSession();
-    setFlash("");
-    setSubmitMessage("");
-    setSubmitError("");
+  const handleLogout = async () => {
+    if (leaving || submittingRef.current) return;
+    const activeId = caseDataRef.current?.id;
+    setLeaving(true);
+    let notice = "";
+    let canLeave = true;
+    try {
+      if (auth?.type === "annotator" && activeId) await draftStoreRef.current.flush(auth, activeId);
+    } catch {
+      if (draftStoreRef.current.read(auth, activeId)?.durable === false) {
+        canLeave = false;
+        setSubmitError("Chưa lưu được nháp trên trình duyệt hoặc máy chủ. Giữ trang này mở và kiểm tra kết nối trước khi đăng xuất.");
+      } else notice = "Chưa đồng bộ được với máy chủ. Nháp còn trên trình duyệt này; đăng nhập lại để tiếp tục và đồng bộ.";
+    } finally {
+      if (canLeave) {
+        expireSession();
+        setFlash(notice);
+        setSubmitMessage("");
+        setSubmitError("");
+      }
+      setLeaving(false);
+    }
   };
 
   const refresh = async () => {
@@ -1897,76 +2008,131 @@ export default function LegalAnnotationApp() {
   };
 
   const openCase = async (caseId) => {
+    const openingVersion = ++openVersionRef.current;
     try {
       const capabilities = await api("/");
       if (!capabilities.hidden_legal_provisions) {
         throw new Error("Hãy triển khai backend mới trên Render để ẩn Điều luật khỏi trình gán nhãn.");
       }
       const doc = await api(`/api/cases/${caseId}/doc`);
-      setCaseData(doc);
-      setTab("claims");
-      setEditingId(null);
-      setAddingType(null);
-      setEditingTitle(false);
-      setTitleDraft("");
-      setSubmitted(false);
-      setSubmitError("");
-      setSubmitMessage("");
-      dirtyRef.current = false;
-      setDraftStatus("idle");
-      setDraftLoadedAt(null);
-      setView("annotation");
+      let restoredDoc = doc;
+      let savedAt = null;
+      let wasSubmitted = false;
+      let message = "";
+      const pending = auth?.type === "annotator" ? draftStoreRef.current.read(auth, caseId) : null;
       if (auth?.type === "annotator") {
         let restored = false;
         try {
           const d = await api(`/api/cases/${caseId}/draft`);
           if (d?.saved_at) {
             const { saved_at, ...clean } = d;
-            setCaseData({ ...doc, ...clean, type: doc.type });
-            if (d.legacy_suggestions_filtered) setSubmitMessage("Đã ẩn nội dung trùng gợi ý LLM trong nháp cũ; giữ lại các mục mới hoặc đã sửa. Dữ liệu cũ vẫn được lưu trên máy chủ.");
-            setDraftLoadedAt(saved_at);
+            restoredDoc = { ...doc, ...clean, type: doc.type };
+            if (d.legacy_suggestions_filtered) message = "Đã ẩn nội dung trùng gợi ý LLM trong nháp cũ; giữ lại các mục mới hoặc đã sửa.";
+            savedAt = saved_at;
             restored = true;
           }
-        } catch { /* chưa có nháp */ }
-        if (!restored) {
+        } catch (e) {
+          if (e.status !== 404 && !pending) throw new Error(`Không đọc được nháp đã lưu: ${e.message}`);
+        }
+        if (!restored && !pending) {
           try {
             const sub = await api(`/api/cases/${caseId}/submission`);
-            setCaseData({
+            restoredDoc = {
               ...doc,
               title: sub.title || doc.title,
               parties: sub.parties ?? doc.parties ?? [],
               units: sub.units ?? [],
               reasoning: sub.reasoning ?? [],
               decisions: sub.decisions ?? [],
-            });
-            setSubmitted(true);
-            setSubmitMessage(sub.legacy_suggestions_filtered ? "Đã ẩn nội dung trùng gợi ý LLM trong bài nộp cũ; giữ lại các mục mới hoặc đã sửa. Dữ liệu cũ vẫn được lưu trên máy chủ." : "Đã tải lại bài nộp trước đó — bạn có thể chỉnh sửa và gửi lại.");
-          } catch { /* chưa có bài nộp */ }
+            };
+            wasSubmitted = true;
+            message = sub.legacy_suggestions_filtered ? "Đã ẩn nội dung trùng gợi ý LLM trong bài nộp cũ; giữ lại các mục mới hoặc đã sửa." : "Đã tải lại bài nộp trước đó — bạn có thể chỉnh sửa và gửi lại.";
+          } catch (e) { if (e.status !== 404) throw e; }
         }
       }
+      if (openingVersion !== openVersionRef.current) return;
+      if (pending) {
+        restoredDoc = { ...doc, ...pending.payload, type: doc.type };
+        savedAt = pending.updatedAt;
+        message = "Đã khôi phục nháp trên trình duyệt; đang chờ đồng bộ với máy chủ.";
+      }
+      const editor = restoredDoc._editor_state || {};
+      caseDataRef.current = restoredDoc;
+      setCaseData(restoredDoc);
+      setTab(editor.tab || "claims");
+      setEditingId(editor.editingId || null);
+      setAddingType(editor.addingType || null);
+      setEditingTitle(!!editor.editingTitle);
+      setTitleDraft(editor.titleDraft || "");
+      setSubmitted(wasSubmitted && !pending);
+      setSubmitError("");
+      setSubmitMessage(message);
+      setDraftStatus(pending ? "local" : savedAt ? "saved" : "idle");
+      setDraftLoadedAt(savedAt);
+      if (auth?.type === "annotator") draftStoreRef.current.remember(auth, caseId);
+      setView("annotation");
     } catch (e) {
+      if (openingVersion !== openVersionRef.current) return;
       setFlash(e.message || "Không tải được case.");
     }
   };
 
-  const backToDashboard = () => {
+  const backToDashboard = async () => {
+    if (leaving || submittingRef.current) return;
+    const activeId = caseDataRef.current?.id;
+    setLeaving(true);
+    if (auth?.type === "annotator" && activeId) {
+      try { await draftStoreRef.current.flush(auth, activeId); }
+      catch {
+        if (draftStoreRef.current.read(auth, activeId)?.durable === false) {
+          setSubmitError("Chưa lưu được nháp. Giữ case mở và kiểm tra kết nối trước khi rời trang.");
+          setLeaving(false);
+          return;
+        }
+        setFlash("Nháp còn trên trình duyệt; mở lại case để tiếp tục đồng bộ với máy chủ.");
+      }
+      draftStoreRef.current.forget(auth);
+    }
+    openVersionRef.current += 1;
+    caseDataRef.current = null;
     setView("dashboard");
     setCaseData(null);
-    dirtyRef.current = false;
     if (auth?.type === "admin") loadAdminData();
     else loadMyCases();
+    setLeaving(false);
   };
 
   /* -------------------- annotation handlers (single case) -------------------- */
 
   const updateCase = useCallback((fn) => {
-    setCaseData((c) => (c ? fn(c) : c));
-    dirtyRef.current = true;
-    dirtyVersionRef.current += 1;
+    if (!caseDataRef.current || submittingRef.current) return;
+    const next = fn(caseDataRef.current);
+    caseDataRef.current = next;
+    if (authRef.current?.type === "annotator") draftStoreRef.current.stage(authRef.current, next);
+    setCaseData(next);
     setSubmitted(false);
-    setDraftStatus("idle");
     setSubmitMessage("");
   }, []);
+
+  const editorState = caseData?._editor_state || {};
+  const stageEditor = (patch) => updateCase((c) => ({ ...c, _editor_state: { ...c._editor_state, ...patch } }));
+  const beginEditor = (kind, item = null) => {
+    if (addingType || editingId) {
+      setSubmitError("Hãy Lưu hoặc Huỷ mục đang chỉnh sửa trước khi mở mục khác.");
+      return;
+    }
+    setSubmitError("");
+    setAddingType(item ? null : kind);
+    setEditingId(item?.id || null);
+    stageEditor({ tab, addingType: item ? null : kind, editingId: item?.id || null, form: item || {} });
+  };
+  const closeEditor = () => {
+    setAddingType(null);
+    setEditingId(null);
+    stageEditor({ addingType: null, editingId: null, form: null });
+  };
+  const stageForm = (form) => stageEditor({ form });
+  const finishedEditor = (c) => ({ ...c._editor_state, tab, addingType: null, editingId: null, form: null });
 
   const toggleConfirm = (id, group) => {
     updateCase((c) => ({
@@ -1986,12 +2152,12 @@ export default function LegalAnnotationApp() {
       newUnit.linkedReasoning = [];
       newUnit.linksConfirmed = false;
     }
-    updateCase((c) => ({ ...c, units: insertAtOrder(c.units, newUnit, newUnit.order) }));
+    updateCase((c) => ({ ...c, units: insertAtOrder(c.units, newUnit, newUnit.order), _editor_state: finishedEditor(c) }));
     setAddingType(null);
   };
 
   const saveEditUnit = (id, data) => {
-    updateCase((c) => ({ ...c, units: updateAtOrder(c.units, id, data) }));
+    updateCase((c) => ({ ...c, units: updateAtOrder(c.units, id, data), _editor_state: finishedEditor(c) }));
     setEditingId(null);
   };
 
@@ -2001,7 +2167,7 @@ export default function LegalAnnotationApp() {
 
   const commitTitle = () => {
     const title = titleDraft.trim();
-    if (title) updateCase((c) => ({ ...c, title }));
+    updateCase((c) => ({ ...c, ...(title ? { title } : {}), _editor_state: { ...c._editor_state, editingTitle: false, titleDraft: "" } }));
     setEditingTitle(false);
   };
 
@@ -2011,12 +2177,12 @@ export default function LegalAnnotationApp() {
     const existingIds = list.map((u) => parseInt(u.id.replace(prefix, "")) || 0);
     const nextNum = (existingIds.length ? Math.max(...existingIds) : 0) + 1;
     const item = { id: `${prefix}${nextNum}`, status: "unconfirmed", ...data };
-    updateCase((c) => ({ ...c, [kind]: insertAtOrder(c[kind], item, item.order) }));
+    updateCase((c) => ({ ...c, [kind]: insertAtOrder(c[kind], item, item.order), _editor_state: finishedEditor(c) }));
     setAddingType(null);
   };
 
   const saveEditSimple = (kind, id, data) => {
-    updateCase((c) => ({ ...c, [kind]: updateAtOrder(c[kind], id, data) }));
+    updateCase((c) => ({ ...c, [kind]: updateAtOrder(c[kind], id, data), _editor_state: finishedEditor(c) }));
     setEditingId(null);
   };
 
@@ -2028,34 +2194,44 @@ export default function LegalAnnotationApp() {
 
   useEffect(() => {
     if (!auth || auth.type !== "annotator" || view !== "annotation" || !caseData || submitted) return;
-    if (!dirtyRef.current) return;
-    const version = dirtyVersionRef.current;
-    const timer = setTimeout(async () => {
-      try {
-        setDraftStatus("saving");
-        const res = await api(`/api/cases/${caseData.id}/draft`, { method: "PUT", body: { ...caseData, annotation_editor_version: 2 } });
-        if (dirtyVersionRef.current === version) {
-          dirtyRef.current = false;
-          setDraftStatus("saved");
-          setDraftLoadedAt(res.saved_at || new Date().toISOString());
-        }
-        setBackendOk(true);
-      } catch {
-        setDraftStatus("error");
-        setBackendOk(false);
+    const flush = () => { draftStoreRef.current.flush(auth, caseData.id).catch(() => {}); };
+    const timer = setTimeout(flush, 900);
+    const retry = setInterval(flush, 10000);
+    const hidden = () => { if (document.visibilityState === "hidden") flush(); };
+    const warnUnsaved = (event) => {
+      if (draftStoreRef.current.read(auth, caseData.id)?.durable === false) {
+        event.preventDefault();
+        event.returnValue = "";
       }
-    }, 900);
-    return () => clearTimeout(timer);
+    };
+    window.addEventListener("online", flush);
+    window.addEventListener("beforeunload", warnUnsaved);
+    document.addEventListener("visibilitychange", hidden);
+    return () => {
+      clearTimeout(timer);
+      clearInterval(retry);
+      window.removeEventListener("online", flush);
+      window.removeEventListener("beforeunload", warnUnsaved);
+      document.removeEventListener("visibilitychange", hidden);
+    };
   }, [caseData, auth, view, submitted]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* -------------------- submit -------------------- */
 
   const submitCase = async () => {
-    if (!caseData) return;
+    if (!caseData || submittingRef.current || leaving) return;
+    if (addingType || editingId || editingTitle) {
+      setSubmitError("Hãy Lưu hoặc Huỷ mục đang chỉnh sửa trước khi nộp bài. Nội dung đang nhập vẫn được lưu nháp.");
+      return;
+    }
+    submittingRef.current = true;
     setSubmitting(true);
     setSubmitError("");
     setSubmitMessage("");
     try {
+      // Finish all queued draft writes before the submit endpoint deletes the
+      // draft, so an older autosave cannot recreate it after submission.
+      if (auth?.type === "annotator") await draftStoreRef.current.flush(auth, caseData.id);
       await api("/api/submit", {
         method: "POST",
         body: {
@@ -2069,7 +2245,10 @@ export default function LegalAnnotationApp() {
           submitted_at: new Date().toISOString(),
         },
       });
-      dirtyRef.current = false;
+      if (auth?.type === "annotator") {
+        draftStoreRef.current.clear(auth, caseData.id);
+        draftStoreRef.current.forget(auth);
+      }
       setDraftStatus("idle");
       setDraftLoadedAt(null);
       setSubmitted(true);
@@ -2079,6 +2258,7 @@ export default function LegalAnnotationApp() {
     } catch (e) {
       setSubmitError(e.message || "Không thể gửi kết quả.");
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };
@@ -2142,12 +2322,12 @@ export default function LegalAnnotationApp() {
   const autoAssign = async (scope) => {
     try {
       const capabilities = await api("/");
-      if (!capabilities.scoped_auto_assign) {
-        throw new Error("Hãy triển khai backend mới trên Render trước khi phân công theo bộ lọc.");
+      if (!capabilities.selective_auto_assign) {
+        throw new Error("Hãy triển khai backend mới trên Render trước khi phân công cho annotator được chọn.");
       }
       const res = await api("/api/cases/auto-assign", { method: "POST", body: scope });
       const group = scope.type === "expert" ? "Expert" : scope.type === "self" ? "Self" : "khớp bộ lọc";
-      setFlash(`Đã thêm ${res.assigned} lượt phân công cho nhóm ${group} (${res.total_open} case đang mở). Bấm lại để thêm annotator khác.`);
+      setFlash(`Đã phân công ${res.assigned} case chưa được giao thuộc nhóm ${group} cho ${scope.annotator_ids.length} annotator được chọn. Các phân công trước đó được giữ nguyên.`);
       await loadAdminData();
     } catch (e) {
       setFlash(e.message || "Phân công thất bại.");
@@ -2254,10 +2434,6 @@ export default function LegalAnnotationApp() {
     }
   };
 
-  const importPrototype = async () => {
-    await importCorpus(INITIAL_CASES);
-  };
-
   const downloadBlob = (text, filename, type) => {
     const blob = new Blob([text], { type });
     const url = URL.createObjectURL(blob);
@@ -2340,7 +2516,7 @@ export default function LegalAnnotationApp() {
   /* -------------------- screens -------------------- */
 
   if (!auth) {
-    return <LoginScreen onLogin={handleLogin} offline={!backendOk} />;
+    return <LoginScreen onLogin={handleLogin} offline={!backendOk} notice={flash} />;
   }
 
   if (view === "annotation" && caseData) {
@@ -2364,15 +2540,15 @@ export default function LegalAnnotationApp() {
                     <input
                       autoFocus
                       value={titleDraft}
-                      onChange={(e) => setTitleDraft(e.target.value)}
+                      onChange={(e) => { setTitleDraft(e.target.value); stageEditor({ editingTitle: true, titleDraft: e.target.value, tab }); }}
                       onBlur={commitTitle}
-                      onKeyDown={(e) => { if (e.key === "Enter") commitTitle(); if (e.key === "Escape") setEditingTitle(false); }}
+                      onKeyDown={(e) => { if (e.key === "Enter") commitTitle(); if (e.key === "Escape") { setEditingTitle(false); stageEditor({ editingTitle: false, titleDraft: "" }); } }}
                       style={{ ...inputStyle, width: 260, padding: "4px 7px", fontSize: 12 }}
                     />
                   ) : (
                     <>
                       <span style={{ fontSize: 12, color: T.inkSoft }}>{caseData.title}</span>
-                      <IconBtn size={23} title="Sửa tên case" onClick={() => { setTitleDraft(caseData.title || `Case ${caseData.id}`); setEditingTitle(true); }}>
+                      <IconBtn size={23} title="Sửa tên case" onClick={() => { const title = caseData.title || `Case ${caseData.id}`; setTitleDraft(title); setEditingTitle(true); stageEditor({ editingTitle: true, titleDraft: title, tab }); }}>
                         <Pencil size={12} />
                       </IconBtn>
                     </>
@@ -2393,11 +2569,14 @@ export default function LegalAnnotationApp() {
               </div>
 
               {auth?.type === "annotator" && (
-                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, fontWeight: 600, color: T.inkSoft }}>
+                <div role="status" aria-live="polite" style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, fontWeight: 600, color: T.inkSoft }}>
                   {draftStatus === "saving" && <><Loader2 size={13} className="spin" /> Đang lưu nháp…</>}
-                  {draftStatus === "saved" && <><CircleCheck size={13} color="#3D6944" /> Đã lưu nháp</>}
-                  {draftStatus === "error" && <span style={{ color: T.danger }}>Lỗi lưu nháp</span>}
+                  {draftStatus === "saved" && <><CircleCheck size={13} color="#3D6944" /> Đã lưu nháp trên máy chủ{draftLoadedAt ? ` · ${new Date(draftLoadedAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}` : ""}</>}
+                  {draftStatus === "local" && <span>Đã lưu trên trình duyệt · chờ đồng bộ</span>}
+                  {draftStatus === "volatile" && <span style={{ color: T.danger }}>Không lưu được trên trình duyệt · đang chờ máy chủ</span>}
+                  {draftStatus === "error" && <span style={{ color: T.danger }}>Chưa đồng bộ máy chủ · nháp đang được giữ trên trình duyệt</span>}
                   {draftStatus === "idle" && draftLoadedAt && <><FolderOpen size={13} color={T.gold} /> Tiếp tục từ nháp</>}
+                  {draftStatus === "idle" && !draftLoadedAt && <span>Tự động lưu nháp đang bật</span>}
                 </div>
               )}
 
@@ -2423,14 +2602,14 @@ export default function LegalAnnotationApp() {
           }}
         >
           {helpOpen && <HelpPanel tab={tab} onClose={() => setHelpOpen(false)} />}
-          <div style={{ width: `${leftWidth}%`, overflowY: "auto", padding: "16px 16px 40px" }}>
+          <div inert={submitting || leaving} style={{ width: `${leftWidth}%`, overflowY: "auto", padding: "16px 16px 40px" }}>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 14, borderBottom: `1px solid ${T.line}`, paddingBottom: 2 }}>
               {TABS.map((t) => {
                 const Icon = t.icon;
                 const active = tab === t.key;
                 return (
                   <button
-                    key={t.key} onClick={() => { setTab(t.key); setAddingType(null); setEditingId(null); }}
+                    key={t.key} onClick={() => setTab(t.key)}
                     style={{
                       display: "flex", alignItems: "center", gap: 6, padding: "7px 11px",
                       fontSize: 12.5, fontWeight: 600, border: "none", cursor: "pointer",
@@ -2453,7 +2632,7 @@ export default function LegalAnnotationApp() {
             {tab === "claims" && (
               <div>
                 <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-                  <button onClick={() => setAddingType("claim")} style={{ ...btnGhostStyle, display: "inline-flex", alignItems: "center", gap: 5 }}><Plus size={13} /> Thêm claim</button>
+                  <button onClick={() => beginEditor("claim")} style={{ ...btnGhostStyle, display: "inline-flex", alignItems: "center", gap: 5 }}><Plus size={13} /> Thêm claim</button>
                 </div>
                 {sortedUnits.filter((u) => u.type !== "request").length === 0 && !addingType && (
                   <p style={{ fontSize: 12.5, color: T.inkSoft, background: T.paperDim, borderRadius: 8, padding: "10px 12px", lineHeight: 1.55, margin: "0 0 12px" }}>
@@ -2461,7 +2640,7 @@ export default function LegalAnnotationApp() {
                   </p>
                 )}
                 {addingType === "claim" && (
-                  <UnitForm parties={caseData.parties || []} initial={{ type: "claim", order: nextOrder(caseData.units) }} onSave={saveNewUnit} onCancel={() => setAddingType(null)} />
+                  <UnitForm parties={caseData.parties || []} initial={{ type: "claim", order: nextOrder(caseData.units), ...editorState.form }} onSave={saveNewUnit} onCancel={closeEditor} onDraftChange={stageForm} />
                 )}
                 {sortedUnits.filter((u) => u.type !== "request").map((u) => (
                   <UnitCard
@@ -2470,9 +2649,10 @@ export default function LegalAnnotationApp() {
                     parties={caseData.parties || []}
                     editing={editingId === u.id}
                     onConfirm={() => toggleConfirm(u.id, "units")}
-                    onEditStart={() => setEditingId(u.id)}
+                    onEditStart={() => beginEditor("claim", u)}
+                    draftInitial={editorState.form} onDraftChange={stageForm}
                     onEditSave={(data) => saveEditUnit(u.id, data)}
-                    onEditCancel={() => setEditingId(null)}
+                    onEditCancel={closeEditor}
                     onDelete={() => deleteUnit(u.id)}
                   />
                 ))}
@@ -2482,7 +2662,7 @@ export default function LegalAnnotationApp() {
             {tab === "requests" && (
               <div>
                 <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-                  <button onClick={() => setAddingType("request")} style={{ ...btnGhostStyle, display: "inline-flex", alignItems: "center", gap: 5 }}><Plus size={13} /> Thêm request</button>
+                  <button onClick={() => beginEditor("request")} style={{ ...btnGhostStyle, display: "inline-flex", alignItems: "center", gap: 5 }}><Plus size={13} /> Thêm request</button>
                 </div>
                 {sortedUnits.filter((u) => u.type === "request").length === 0 && !addingType && (
                   <p style={{ fontSize: 12.5, color: T.inkSoft, background: T.paperDim, borderRadius: 8, padding: "10px 12px", lineHeight: 1.55, margin: "0 0 12px" }}>
@@ -2490,7 +2670,7 @@ export default function LegalAnnotationApp() {
                   </p>
                 )}
                 {addingType === "request" && (
-                  <UnitForm parties={caseData.parties || []} initial={{ type: "request", order: nextOrder(caseData.units) }} onSave={saveNewUnit} onCancel={() => setAddingType(null)} />
+                  <UnitForm parties={caseData.parties || []} initial={{ type: "request", order: nextOrder(caseData.units), ...editorState.form }} onSave={saveNewUnit} onCancel={closeEditor} onDraftChange={stageForm} />
                 )}
                 {sortedUnits.filter((u) => u.type === "request").map((u) => (
                   <UnitCard
@@ -2499,9 +2679,10 @@ export default function LegalAnnotationApp() {
                     parties={caseData.parties || []}
                     editing={editingId === u.id}
                     onConfirm={() => toggleConfirm(u.id, "units")}
-                    onEditStart={() => setEditingId(u.id)}
+                    onEditStart={() => beginEditor("request", u)}
+                    draftInitial={editorState.form} onDraftChange={stageForm}
                     onEditSave={(data) => saveEditUnit(u.id, data)}
-                    onEditCancel={() => setEditingId(null)}
+                    onEditCancel={closeEditor}
                     onDelete={() => deleteUnit(u.id)}
                   />
                 ))}
@@ -2510,22 +2691,23 @@ export default function LegalAnnotationApp() {
 
             {tab === "reasoning" && (
               <div>
-                <button onClick={() => setAddingType("reasoning")} style={{ ...btnGhostStyle, display: "inline-flex", alignItems: "center", gap: 5, marginBottom: 12 }}><Plus size={13} /> Thêm reasoning</button>
+                <button onClick={() => beginEditor("reasoning")} style={{ ...btnGhostStyle, display: "inline-flex", alignItems: "center", gap: 5, marginBottom: 12 }}><Plus size={13} /> Thêm reasoning</button>
                 {(caseData.reasoning || []).length === 0 && !addingType && (
                   <p style={{ fontSize: 12.5, color: T.inkSoft, background: T.paperDim, borderRadius: 8, padding: "10px 12px", lineHeight: 1.55, margin: "0 0 12px" }}>
                     Chưa có Reasoning. Bấm <strong>'Thêm reasoning'</strong> và nhập nhận định, lập luận của Toà án.
                   </p>
                 )}
                 {addingType === "reasoning" && (
-                  <ReasonDecisionForm kind="reasoning" initial={{ order: nextOrder(caseData.reasoning || []) }} onSave={(d) => saveNewSimple("reasoning", d)} onCancel={() => setAddingType(null)} />
+                  <ReasonDecisionForm kind="reasoning" initial={{ order: nextOrder(caseData.reasoning || []), ...editorState.form }} onSave={(d) => saveNewSimple("reasoning", d)} onCancel={closeEditor} onDraftChange={stageForm} />
                 )}
                 {[...(caseData.reasoning || [])].sort((a, b) => a.order - b.order).map((r) => (
                   <SimpleCard key={r.id} item={r} kind="reasoning"
                     editing={editingId === r.id}
                     onConfirm={() => toggleConfirm(r.id, "reasoning")}
-                    onEditStart={() => setEditingId(r.id)}
+                    onEditStart={() => beginEditor("reasoning", r)}
+                    draftInitial={editorState.form} onDraftChange={stageForm}
                     onEditSave={(d) => saveEditSimple("reasoning", r.id, d)}
-                    onEditCancel={() => setEditingId(null)}
+                    onEditCancel={closeEditor}
                     onDelete={() => deleteSimple("reasoning", r.id)}
                   />
                 ))}
@@ -2534,22 +2716,23 @@ export default function LegalAnnotationApp() {
 
             {tab === "decisions" && (
               <div>
-                <button onClick={() => setAddingType("decision")} style={{ ...btnGhostStyle, display: "inline-flex", alignItems: "center", gap: 5, marginBottom: 12 }}><Plus size={13} /> Thêm decision</button>
+                <button onClick={() => beginEditor("decision")} style={{ ...btnGhostStyle, display: "inline-flex", alignItems: "center", gap: 5, marginBottom: 12 }}><Plus size={13} /> Thêm decision</button>
                 {(caseData.decisions || []).length === 0 && !addingType && (
                   <p style={{ fontSize: 12.5, color: T.inkSoft, background: T.paperDim, borderRadius: 8, padding: "10px 12px", lineHeight: 1.55, margin: "0 0 12px" }}>
                     Chưa có Decision. Bấm <strong>'Thêm decision'</strong> và nhập quyết định cuối cùng của Toà án.
                   </p>
                 )}
                 {addingType === "decision" && (
-                  <ReasonDecisionForm kind="decision" initial={{ order: nextOrder(caseData.decisions || []) }} onSave={(d) => saveNewSimple("decisions", d)} onCancel={() => setAddingType(null)} />
+                  <ReasonDecisionForm kind="decision" initial={{ order: nextOrder(caseData.decisions || []), ...editorState.form }} onSave={(d) => saveNewSimple("decisions", d)} onCancel={closeEditor} onDraftChange={stageForm} />
                 )}
                 {[...(caseData.decisions || [])].sort((a, b) => a.order - b.order).map((d) => (
                   <SimpleCard key={d.id} item={d} kind="decision"
                     editing={editingId === d.id}
                     onConfirm={() => toggleConfirm(d.id, "decisions")}
-                    onEditStart={() => setEditingId(d.id)}
+                    onEditStart={() => beginEditor("decision", d)}
+                    draftInitial={editorState.form} onDraftChange={stageForm}
                     onEditSave={(data) => saveEditSimple("decisions", d.id, data)}
-                    onEditCancel={() => setEditingId(null)}
+                    onEditCancel={closeEditor}
                     onDelete={() => deleteSimple("decisions", d.id)}
                   />
                 ))}
@@ -2613,7 +2796,6 @@ export default function LegalAnnotationApp() {
           onAutoAssign={autoAssign}
           onClearAssignments={clearAllAssignments}
           onImportFile={importFromFile}
-          onImportPrototype={importPrototype}
           importMessage={importMessage}
           onExport={exportSubmissions}
           onCreateAnnotator={createAnnotator}
@@ -2628,7 +2810,7 @@ export default function LegalAnnotationApp() {
         />
       ) : (
         <AnnotatorDashboard
-          cases={myCases}
+          cases={myCases.map((c) => ({ ...c, has_draft: c.has_draft || !!draftStoreRef.current.read(auth, c.case_id) }))}
           stats={myStats}
           onOpen={openCase}
           onRefresh={refresh}
