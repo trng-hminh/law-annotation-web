@@ -111,14 +111,18 @@ function PartyTag({ id, parties, size = "sm" }) {
     <span
       style={{
         display: "inline-flex", alignItems: "center", gap: 5,
+        maxWidth: "100%", minWidth: 0, boxSizing: "border-box",
         padding: size === "sm" ? "2px 8px" : "3px 10px",
         borderRadius: 20, background: style.tint, color: style.deep,
         fontSize: size === "sm" ? 11.5 : 12.5, fontWeight: 600,
-        border: `1px solid ${style.base}33`, whiteSpace: "nowrap",
+        border: `1px solid ${style.base}33`, whiteSpace: "normal",
+        overflowWrap: "anywhere", lineHeight: 1.4,
       }}
     >
-      <span style={{ width: 6, height: 6, borderRadius: "50%", background: style.base }} />
-      {p.name} <span style={{ opacity: 0.75, fontWeight: 500 }}>· {p.role}</span>
+      <span style={{ width: 6, height: 6, flexShrink: 0, borderRadius: "50%", background: style.base }} />
+      <span style={{ minWidth: 0 }}>
+        {p.name} <span style={{ opacity: 0.75, fontWeight: 500 }}>· {p.role}</span>
+      </span>
     </span>
   );
 }
@@ -2531,10 +2535,10 @@ export default function LegalAnnotationApp() {
       >
         <div style={{ padding: "12px 18px", borderBottom: `1px solid ${T.line}`, background: T.paperCard }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, maxWidth: "100%", flex: "1 1 420px" }}>
               <IconBtn size={26} title="Về danh sách" onClick={backToDashboard}><LayoutDashboard size={15} /></IconBtn>
-              <div>
-                <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap", overflowWrap: "anywhere" }}>
                   <span style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 700 }}>Case {caseData.id}</span>
                   {editingTitle ? (
                     <input
@@ -2554,13 +2558,13 @@ export default function LegalAnnotationApp() {
                     </>
                   )}
                 </div>
-                <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", gap: 6, marginTop: 4, minWidth: 0 }}>
                   {(caseData.parties || []).map((p) => <PartyTag key={p.id} id={p.id} parties={caseData.parties || []} size="sm" />)}
                 </div>
               </div>
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap", minWidth: 0, maxWidth: "100%" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <div style={{ width: 110, height: 6, background: T.paperDim, borderRadius: 4, overflow: "hidden" }}>
                   <div style={{ width: `${totalCount ? (confirmedCount / totalCount) * 100 : 0}%`, height: "100%", background: T.gold }} />
