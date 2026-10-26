@@ -717,6 +717,60 @@ class ApiIntegrationTests(unittest.TestCase):
         self._assert_status(self.client.post("/api/cases/auto-assign", headers=admin), 200)
         self.assertEqual(main.storage.read_assignments(), {"expert": [annotator["id"]], "self": [annotator["id"]]})
 
+    def test_admin_drafts_notes_and_request_spans_survive_login_and_submission(self):
+        self.assertTrue(self.client.get("/").json()["admin_drafts"])
+        self._import_cases({"id": "admin-work", "type": "expert", "units": [],
+                            "legal_provisions": [{"provision_id": "L1", "content": "Hidden law metadata"}]})
+        admin = self._auth(self.admin_token)
+        annotator = self._create_annotator()
+        self._assign("admin-work", annotator["id"])
+        ann = self._auth(self._login_annotator())
+        other = self._assert_status(self.client.post("/api/admins", headers=admin,
+            json={"username": "second-admin", "name": "Second", "password": "second-password"}), 200)
+        token = self._assert_status(self.client.post("/api/auth/admin", json={"username": "second-admin", "password": "second-password"}), 200).json()["token"]
+        other_admin = self._auth(token)
+        payload = {"id": "admin-work", "annotation_editor_version": 2,
+                   "notes": "Case có điểm đặc biệt", "units": [
+                       {"id": "C1", "type": "claim", "assertedBy": ["P2"], "asserted_by": ["P2"], "text": "Edited actor"},
+                       {"id": "R1", "type": "request", "assertedBy": ["P1"], "requested_by": ["P1"], "text": "Request",
+                        "modification_spans": [{"text": "Bổ sung yêu cầu"}]}],
+                   "reasoning": [], "decisions": [],
+                   "_editor_state": {"tab": "requests", "addingType": "request", "form": {"text": "Unfinished", "modification_spans": [{"text": "Still editing"}]}}}
+        path = "/api/cases/admin-work/draft"
+        self._assert_status(self.client.put(path, headers=admin, json=payload), 200)
+        # Pausing is a draft write, never a submission or completion.
+        self.assertEqual(main._registry_by_id()["admin-work"]["status"], "open")
+        self.assertEqual(main.storage.list_submissions(), [])
+        self._assert_status(self.client.get(path, headers=ann), 404)
+        self._assert_status(self.client.get(path, headers=other_admin), 404)
+        self._assert_status(self.client.get(path), 401)
+        fresh_admin = self._auth(self._login_admin())
+        restored = self._assert_status(self.client.get(path, headers=fresh_admin), 200).json()
+        for key in ("units", "notes", "_editor_state"):
+            self.assertEqual(restored[key], payload[key])
+        self.assertNotIn("legal_provisions", restored)
+        self._assert_status(self.client.put(path, headers=ann, json={**payload, "notes": "Annotator's own note"}), 200)
+        self._assert_status(self.client.put(path, headers=other_admin, json={**payload, "notes": "Other admin note"}), 200)
+        for bad in (None, {}, "x" * 20001):
+            self._assert_status(self.client.put(path, headers=admin, json={**payload, "notes": bad}), 400)
+        self._assert_status(self.client.post("/api/submit", headers=admin, json={**payload, "case_id": "admin-work"}), 200)
+        self._assert_status(self.client.get(path, headers=admin), 404)
+        self.assertEqual(self.client.get(path, headers=ann).json()["notes"], "Annotator's own note")
+        self.assertEqual(self.client.get(path, headers=other_admin).json()["notes"], "Other admin note")
+        own = self._assert_status(self.client.get("/api/cases/admin-work/submission", headers=fresh_admin), 200).json()
+        self.assertEqual(own["notes"], payload["notes"])
+        self.assertEqual(own["units"], payload["units"])
+        self._assert_status(self.client.get("/api/cases/admin-work/submission", headers=other_admin), 404)
+        self._assert_status(self.client.get("/api/cases/admin-work/submission", headers=ann), 404)
+        exported = self.client.get("/api/export/submissions", headers=admin).json()["submissions"][0]
+        self.assertEqual(exported["units"][1]["modification_spans"], [{"text": "Bổ sung yêu cầu"}])
+        self.assertEqual(exported["notes"], payload["notes"])
+        self.assertEqual(exported["legal_provisions"][0]["provision_id"], "L1")
+        csv_rows = list(csv.DictReader(io.StringIO(self.client.get("/api/export/submissions.csv", headers=admin).text.lstrip("\ufeff"))))
+        self.assertEqual(csv_rows[0]["notes"], payload["notes"])
+        self._assert_status(self.client.delete(path, headers=other_admin), 200)
+        self._assert_status(self.client.get(path, headers=ann), 200)
+
     def test_drafts_survive_a_new_login_and_are_visible_only_to_their_owner(self):
         self._import_cases({"id": "resume", "type": "expert", "units": []})
         owner = self._create_annotator("Owner")

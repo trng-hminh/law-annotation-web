@@ -176,9 +176,12 @@ function UnitForm({ initial, parties, onSave, onCancel, onDraftChange }) {
   const [type, setType] = useState(initial?.type || "claim");
   const [assertedBy, setAssertedBy] = useState(initial?.assertedBy || []);
   const [text, setText] = useState(initial?.text || "");
+  const [modificationSpans, setModificationSpans] = useState(initial?.modification_spans || []);
+  const [error, setError] = useState("");
   const order = initial?.order ?? 1;
 
-  const stage = (patch) => onDraftChange?.({ type, assertedBy, text, order, ...patch });
+  const stage = (patch) => onDraftChange?.({ type, assertedBy, text, order, modification_spans: modificationSpans, ...patch });
+  const changeSpans = (spans) => { setModificationSpans(spans); stage({ modification_spans: spans }); };
   const toggleParty = (id) => {
     const next = assertedBy.includes(id) ? assertedBy.filter((x) => x !== id) : [...assertedBy, id];
     setAssertedBy(next);
@@ -200,19 +203,20 @@ function UnitForm({ initial, parties, onSave, onCancel, onDraftChange }) {
         </div>
       </div>
 
-      <label style={labelStyle}>{type === "request" ? "requested_by" : "asserted_by"} (chọn một hoặc nhiều party)</label>
+      <label style={labelStyle}>{type === "request" ? "requested_by" : "asserted_by"} — Bên đưa ra nội dung (chọn một hoặc nhiều đương sự)</label>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
         {parties.map((p) => {
           const active = assertedBy.includes(p.id);
           const style = PARTY_STYLE[sideOf(p.id)];
           return (
             <button
-              key={p.id} onClick={() => toggleParty(p.id)}
+              key={p.id} type="button" aria-pressed={active} onClick={() => toggleParty(p.id)}
               style={{
                 padding: "5px 11px", borderRadius: 20, cursor: "pointer", fontSize: 12, fontWeight: 600,
                 border: `1.5px solid ${style.base}`,
                 background: active ? style.base : "transparent",
                 color: active ? "#fff" : style.deep,
+                maxWidth: "100%", overflowWrap: "anywhere",
               }}
             >
               {p.name} · {p.role}
@@ -223,14 +227,42 @@ function UnitForm({ initial, parties, onSave, onCancel, onDraftChange }) {
 
       <label style={labelStyle}>Nội dung</label>
       <textarea
+        aria-label="Nội dung annotation"
         value={text} onChange={(e) => { setText(e.target.value); stage({ text: e.target.value }); }}
         style={{ ...inputStyle, minHeight: 90, resize: "vertical", lineHeight: 1.6 }}
       />
 
+      {type === "request" && (
+        <fieldset style={{ margin: "12px 0", padding: 12, border: `1px solid ${T.line}`, borderRadius: 8 }}>
+          <legend style={labelStyle}>Modification spans — Đoạn sửa đổi yêu cầu</legend>
+          <p style={{ fontSize: 12, color: T.inkSoft }}>Trích các đoạn thay đổi, bổ sung hoặc rút yêu cầu. Để trống nếu không có.</p>
+          {modificationSpans.map((span, index) => (
+            <div key={index} style={{ marginBottom: 10 }}>
+              <textarea aria-label={`Modification span ${index + 1}`} value={modificationText(span)}
+                onChange={(e) => changeSpans(modificationSpans.map((item, i) => i !== index ? item : (
+                  typeof item === "object" && item !== null
+                    ? { ...item, text: e.target.value, ...(item.span ? { span: { ...item.span, text: e.target.value } } : {}) }
+                    : { text: e.target.value }
+                )))} style={{ ...inputStyle, minHeight: 70, resize: "vertical" }} />
+              <button type="button" onClick={() => changeSpans(modificationSpans.filter((_, i) => i !== index))} style={btnGhostStyle}>Xoá đoạn {index + 1}</button>
+            </div>
+          ))}
+          <button type="button" onClick={() => changeSpans([...modificationSpans, { text: "" }])} style={btnGhostStyle}>Thêm modification span</button>
+        </fieldset>
+      )}
+      {error && <p role="alert" style={{ color: T.danger, fontSize: 12 }}>{error}</p>}
+
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 10 }}>
         <button onClick={onCancel} style={btnGhostStyle}>Huỷ</button>
         <button
-          onClick={() => text.trim() && assertedBy.length > 0 && onSave({ type, assertedBy, text: text.trim(), order })}
+          onClick={() => {
+            if (!text.trim() || !assertedBy.length) { setError("Hãy nhập nội dung và chọn ít nhất một đương sự trước khi lưu."); return; }
+            if (type === "request" && modificationSpans.some((span) => !modificationText(span).trim())) {
+              setError("Hãy nhập nội dung hoặc xoá đoạn sửa đổi đang để trống."); return;
+            }
+            onSave({ type, assertedBy, [type === "request" ? "requested_by" : "asserted_by"]: assertedBy,
+              text: text.trim(), order, ...(type === "request" ? { modification_spans: modificationSpans } : {}) });
+          }}
           style={btnPrimaryStyle}
         >
           Lưu
@@ -301,6 +333,11 @@ function UnitCard({ unit, parties, editing, onConfirm, onEditStart, onEditSave, 
           margin: "0 0 8px", fontSize: isRequest ? 14 : 13.5, lineHeight: 1.65,
           color: T.ink, fontWeight: isRequest ? 500 : 400,
         }}>{unit.text}</p>
+
+        <button type="button" onClick={onEditStart} style={{ ...btnGhostStyle, fontSize: 11, marginBottom: 8 }}>
+          Sửa {isRequest ? "requested_by / modification spans" : "asserted_by"}
+        </button>
+        {isRequest && <ModificationSpans spans={unit.modification_spans} />}
 
         <div style={{ textAlign: "right" }}><ConfirmToggle status={unit.status} onClick={onConfirm} /></div>
       </div>
@@ -672,6 +709,15 @@ const normalizeOutcome = (outcome) => ({
 }[String(outcome || "").toUpperCase()] || null);
 
 const normalizeText = (item) => item?.text ?? item?.span?.text ?? "";
+const modificationText = (span) => typeof span === "string" ? span : normalizeText(span);
+
+function ModificationSpans({ spans = [] }) {
+  if (!spans.length) return null;
+  return <div style={{ margin: "8px 0", padding: 10, background: T.paperDim, borderRadius: 8 }}>
+    <div style={labelStyle}>Modification spans</div>
+    {spans.map((span, index) => <p key={index} style={{ fontSize: 12.5, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{index + 1}. {modificationText(span)}</p>)}
+  </div>;
+}
 
 const normalizeCase = (source) => {
   if (!source) throw new Error("Case rỗng.");
@@ -685,7 +731,7 @@ const normalizeCase = (source) => {
       parties: source.parties || [],
       units: source.units.map((u) => ({
         ...u,
-        assertedBy: u.assertedBy || u.requestedBy || [],
+        assertedBy: u.assertedBy || u.requestedBy || u.asserted_by || u.requested_by || [],
         text: u.text || normalizeText(u),
       })),
       reasoning: source.reasoning || [],
@@ -713,6 +759,7 @@ const normalizeCase = (source) => {
   }));
 
   const requests = (source.requests || []).map((r) => ({
+    ...r,
     id: String(r.request_id),
     type: "request",
     order: Number(r.order) || 0,
@@ -971,6 +1018,7 @@ function ReadOnlyUnit({ unit, parties }) {
         </span>
       </div>
       <div style={{ fontSize: 12.5, lineHeight: 1.55, color: T.ink }}>{unit.text}</div>
+      {isRequest && <ModificationSpans spans={unit.modification_spans} />}
     </div>
   );
 }
@@ -1024,6 +1072,7 @@ function SubmissionsModal({ view, data, loading, error, onClose }) {
                 <span style={{ fontSize: 11.5, color: T.inkSoft, marginLeft: "auto" }}>Nộp {fmtTime(sub.submitted_at || sub.received_at)}</span>
               </div>
 
+              {sub.notes && <SubSection title="Ghi chú case"><div style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere", fontSize: 13 }}>{sub.notes}</div></SubSection>}
               {(sub.units || []).length > 0 && (
                 <SubSection title="Claims & Requests">
                   {sub.units.map((u) => <ReadOnlyUnit key={u.id} unit={u} parties={sub.parties || []} />)}
@@ -1500,6 +1549,7 @@ function AdminDashboard({
                       {c.status === "completed"
                         ? <span style={{ fontSize: 11, fontWeight: 700, color: "#3D6944", background: "#E9F2E7", padding: "2px 8px", borderRadius: 20 }}>Đã hoàn thành{c.completed_by ? ` · ${nameOf(c.completed_by)}` : ""}</span>
                         : <span style={{ fontSize: 11, fontWeight: 700, color: T.gold, background: T.goldTint, padding: "2px 8px", borderRadius: 20 }}>Mở</span>}
+                      {c.drafts?.some((d) => d.annotator_id === `admin:${currentUsername}`) && <span style={{ fontSize: 11, color: T.gold }}>Có nháp của tôi</span>}
                       <span style={{ fontSize: 12, color: T.inkSoft }}>{c.title}</span>
                       {c.type && <span style={{ fontSize: 11, color: T.inkSoft }}>{c.type === "expert" ? "Expert · tự gán nhãn" : "Self · có gợi ý"}</span>}
                     </div>
@@ -1940,11 +1990,9 @@ export default function LegalAnnotationApp() {
     setCaseData(null);
     caseDataRef.current = null;
     if (auth.type === "admin") loadAdminData();
-    else {
-      loadMyCases();
-      const last = draftStoreRef.current.last(auth);
-      if (last) openCase(last);
-    }
+    else loadMyCases();
+    const last = draftStoreRef.current.last(auth);
+    if (last) openCase(last);
   }, [auth?.type, auth?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* tự động cập nhật tiến độ cho admin (real-time) */
@@ -1984,7 +2032,7 @@ export default function LegalAnnotationApp() {
     let notice = "";
     let canLeave = true;
     try {
-      if (auth?.type === "annotator" && activeId) await draftStoreRef.current.flush(auth, activeId);
+      if (auth && activeId) await draftStoreRef.current.flush(auth, activeId);
     } catch {
       if (draftStoreRef.current.read(auth, activeId)?.durable === false) {
         canLeave = false;
@@ -2018,13 +2066,16 @@ export default function LegalAnnotationApp() {
       if (!capabilities.hidden_legal_provisions) {
         throw new Error("Hãy triển khai backend mới trên Render để ẩn Điều luật khỏi trình gán nhãn.");
       }
+      if (auth?.type === "admin" && !capabilities.admin_drafts) {
+        throw new Error("Hãy triển khai backend hỗ trợ nháp admin trước khi mở trình gán nhãn.");
+      }
       const doc = await api(`/api/cases/${caseId}/doc`);
       let restoredDoc = doc;
       let savedAt = null;
       let wasSubmitted = false;
       let message = "";
-      const pending = auth?.type === "annotator" ? draftStoreRef.current.read(auth, caseId) : null;
-      if (auth?.type === "annotator") {
+      const pending = auth ? draftStoreRef.current.read(auth, caseId) : null;
+      if (auth) {
         let restored = false;
         try {
           const d = await api(`/api/cases/${caseId}/draft`);
@@ -2048,6 +2099,7 @@ export default function LegalAnnotationApp() {
               units: sub.units ?? [],
               reasoning: sub.reasoning ?? [],
               decisions: sub.decisions ?? [],
+              notes: sub.notes ?? "",
             };
             wasSubmitted = true;
             message = sub.legacy_suggestions_filtered ? "Đã ẩn nội dung trùng gợi ý LLM trong bài nộp cũ; giữ lại các mục mới hoặc đã sửa." : "Đã tải lại bài nộp trước đó — bạn có thể chỉnh sửa và gửi lại.";
@@ -2073,7 +2125,7 @@ export default function LegalAnnotationApp() {
       setSubmitMessage(message);
       setDraftStatus(pending ? "local" : savedAt ? "saved" : "idle");
       setDraftLoadedAt(savedAt);
-      if (auth?.type === "annotator") draftStoreRef.current.remember(auth, caseId);
+      if (auth) draftStoreRef.current.remember(auth, caseId);
       setView("annotation");
     } catch (e) {
       if (openingVersion !== openVersionRef.current) return;
@@ -2081,13 +2133,18 @@ export default function LegalAnnotationApp() {
     }
   };
 
-  const backToDashboard = async () => {
+  const backToDashboard = async (paused = false) => {
     if (leaving || submittingRef.current) return;
     const activeId = caseDataRef.current?.id;
     setLeaving(true);
-    if (auth?.type === "annotator" && activeId) {
+    if (auth && activeId) {
       try { await draftStoreRef.current.flush(auth, activeId); }
       catch {
+        if (paused === true) {
+          setSubmitError("Chưa đồng bộ được nháp lên máy chủ. Hãy giữ case mở và thử Tạm dừng lại khi có kết nối.");
+          setLeaving(false);
+          return;
+        }
         if (draftStoreRef.current.read(auth, activeId)?.durable === false) {
           setSubmitError("Chưa lưu được nháp. Giữ case mở và kiểm tra kết nối trước khi rời trang.");
           setLeaving(false);
@@ -2097,6 +2154,9 @@ export default function LegalAnnotationApp() {
       }
       draftStoreRef.current.forget(auth);
     }
+    if (paused === true) setFlash(submitted
+      ? "Đã về danh sách. Bài nộp trước đó vẫn được giữ nguyên."
+      : "Đã tạm dừng và lưu nháp trên máy chủ. Mở lại case để tiếp tục; chưa nộp bài.");
     openVersionRef.current += 1;
     caseDataRef.current = null;
     setView("dashboard");
@@ -2112,11 +2172,18 @@ export default function LegalAnnotationApp() {
     if (!caseDataRef.current || submittingRef.current) return;
     const next = fn(caseDataRef.current);
     caseDataRef.current = next;
-    if (authRef.current?.type === "annotator") draftStoreRef.current.stage(authRef.current, next);
+    if (authRef.current) draftStoreRef.current.stage(authRef.current, next);
     setCaseData(next);
     setSubmitted(false);
     setSubmitMessage("");
+    setSubmitError("");
   }, []);
+
+  const pauseCase = async () => {
+    if (leaving || submittingRef.current) return;
+    if (!submitted) updateCase((c) => c);
+    await backToDashboard(true);
+  };
 
   const editorState = caseData?._editor_state || {};
   const stageEditor = (patch) => updateCase((c) => ({ ...c, _editor_state: { ...c._editor_state, ...patch } }));
@@ -2197,7 +2264,7 @@ export default function LegalAnnotationApp() {
   /* -------------------- autosave nháp (annotator) -------------------- */
 
   useEffect(() => {
-    if (!auth || auth.type !== "annotator" || view !== "annotation" || !caseData || submitted) return;
+    if (!auth || view !== "annotation" || !caseData || submitted) return;
     const flush = () => { draftStoreRef.current.flush(auth, caseData.id).catch(() => {}); };
     const timer = setTimeout(flush, 900);
     const retry = setInterval(flush, 10000);
@@ -2235,7 +2302,7 @@ export default function LegalAnnotationApp() {
     try {
       // Finish all queued draft writes before the submit endpoint deletes the
       // draft, so an older autosave cannot recreate it after submission.
-      if (auth?.type === "annotator") await draftStoreRef.current.flush(auth, caseData.id);
+      if (auth) await draftStoreRef.current.flush(auth, caseData.id);
       await api("/api/submit", {
         method: "POST",
         body: {
@@ -2245,11 +2312,12 @@ export default function LegalAnnotationApp() {
           units: caseData.units,
           reasoning: caseData.reasoning,
           decisions: caseData.decisions,
+          notes: caseData.notes || "",
           annotation_editor_version: 2,
           submitted_at: new Date().toISOString(),
         },
       });
-      if (auth?.type === "annotator") {
+      if (auth) {
         draftStoreRef.current.clear(auth, caseData.id);
         draftStoreRef.current.forget(auth);
       }
@@ -2572,7 +2640,7 @@ export default function LegalAnnotationApp() {
                 <span style={{ fontSize: 12, color: T.inkSoft, fontWeight: 600 }}>{confirmedCount}/{totalCount} đã xác nhận</span>
               </div>
 
-              {auth?.type === "annotator" && (
+              {auth && (
                 <div role="status" aria-live="polite" style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, fontWeight: 600, color: T.inkSoft }}>
                   {draftStatus === "saving" && <><Loader2 size={13} className="spin" /> Đang lưu nháp…</>}
                   {draftStatus === "saved" && <><CircleCheck size={13} color="#3D6944" /> Đã lưu nháp trên máy chủ{draftLoadedAt ? ` · ${new Date(draftLoadedAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}` : ""}</>}
@@ -2588,7 +2656,10 @@ export default function LegalAnnotationApp() {
               <IconBtn title="Đăng xuất" onClick={handleLogout}><LogOut size={14} /></IconBtn>
               <IconBtn title="Hướng dẫn" tone={helpOpen ? "gold" : "default"} onClick={() => setHelpOpen((v) => !v)}><CircleHelp size={15} /></IconBtn>
 
-              <button onClick={submitCase} disabled={submitting} style={btnPrimaryStyle}>
+              <button onClick={pauseCase} disabled={submitting || leaving} style={btnGhostStyle} title="Lưu nháp và về danh sách, không nộp bài">
+                {leaving ? "Đang lưu nháp…" : "Tạm dừng"}
+              </button>
+              <button onClick={submitCase} disabled={submitting || leaving} style={btnPrimaryStyle}>
                 {submitting ? "Đang gửi…" : submitted ? "Cập nhật bài nộp" : "Hoàn tất case"}
               </button>
             </div>
@@ -2614,6 +2685,14 @@ export default function LegalAnnotationApp() {
         >
           {helpOpen && <HelpPanel tab={tab} onClose={() => setHelpOpen(false)} />}
           <div inert={submitting || leaving} style={{ width: `${leftWidth}%`, overflowY: "auto", padding: "16px 16px 40px" }}>
+            <details style={{ marginBottom: 14, padding: 10, background: T.paperDim, borderRadius: 8 }}>
+              <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Ghi chú case{caseData.notes ? " · Đã có ghi chú" : ""}</summary>
+              <p style={{ fontSize: 12, color: T.inkSoft }}>Ghi chú riêng trong bài làm của bạn, tự động lưu nháp và được gửi cùng bài nộp cho admin.</p>
+              <textarea aria-label="Ghi chú case" value={caseData.notes || ""} maxLength={20000}
+                onChange={(e) => updateCase((c) => ({ ...c, notes: e.target.value }))}
+                placeholder="Điểm đặc biệt, nội dung chưa rõ hoặc điều cần lưu ý…"
+                style={{ ...inputStyle, minHeight: 90, resize: "vertical" }} />
+            </details>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 14, borderBottom: `1px solid ${T.line}`, paddingBottom: 2 }}>
               {TABS.map((t) => {
                 const Icon = t.icon;

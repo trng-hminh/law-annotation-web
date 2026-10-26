@@ -49,6 +49,26 @@ test("an in-flight save is serialized and cannot erase or overwrite a newer edit
   assert.equal(writes.length, 2);
 });
 
+test("admin recovery keeps notes, edited actors and request spans isolated by role", async () => {
+  const local = storage();
+  const admin = { ...auth, type: "admin" };
+  const payload = { ...doc("admin claim"), notes: "Case note", units: [
+    { id: "R1", type: "request", assertedBy: ["P2"], requested_by: ["P2"], text: "Request",
+      modification_spans: [{ text: "Modified request" }] }],
+    _editor_state: { tab: "requests", addingType: "request", form: { text: "Unfinished", modification_spans: [{ text: "Editing span" }] } } };
+  const first = createDraftStore({ storage: local, saveRemote: async () => ({}) });
+  first.stage(admin, payload);
+  let sent;
+  const restored = createDraftStore({ storage: local, saveRemote: async (_identity, body) => { sent = body; return { saved_at: "now" }; } });
+  assert.equal(restored.read(auth, "case-1"), null);
+  assert.equal(restored.last(admin), "case-1");
+  assert.equal(restored.read(admin, "case-1").payload.notes, payload.notes);
+  await restored.flush(admin, "case-1");
+  assert.deepEqual(sent.units, payload.units);
+  assert.deepEqual(sent._editor_state, payload._editor_state);
+  assert.equal(restored.read(admin, "case-1"), null);
+});
+
 test("a failed save survives refresh and retries successfully", async () => {
   const local = storage();
   const store = createDraftStore({ storage: local, saveRemote: async () => { throw new Error("offline"); } });

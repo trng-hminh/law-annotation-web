@@ -39,7 +39,7 @@ export function createDraftStore({ storage, saveRemote, onStatus = () => {}, now
     },
     clear: remove,
     stage(auth, doc) {
-      const payload = Object.fromEntries(["id", "title", "type", "parties", "units", "reasoning", "decisions", "_editor_state"]
+      const payload = Object.fromEntries(["id", "title", "type", "parties", "units", "reasoning", "decisions", "notes", "_editor_state"]
         .filter((field) => doc[field] !== undefined).map((field) => [field, doc[field]]));
       payload.annotation_editor_version = 2;
       const updatedAt = now();

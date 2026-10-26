@@ -249,7 +249,7 @@ model. Deploy both frontend and backend, then refresh existing browser tabs.
 
 ## Draft recovery
 
-Annotator changes and unfinished add/edit form inputs are backed up immediately
+Admin and annotator changes and unfinished add/edit form inputs are backed up immediately
 in this browser, separately for each account and case. The app synchronizes
 pending work to the backend after a short typing pause and retries failed saves
 when the connection returns. Returning to the case list or logging out waits
@@ -260,8 +260,27 @@ The case header distinguishes **saved in this browser**, **saving**, and
 **saved on the server**. Only a server-saved draft is available on another
 browser/device. Offline pending work requires the same browser until it syncs.
 Cases with drafts show **Có nháp / Tiếp tục nháp** on the annotator dashboard.
+Admins see **Có nháp của tôi** for their own drafts; each admin's draft and
+submission recovery is separate from other users. Deploy the backend with
+`admin_drafts: true` before using the updated admin editor.
+
+**Tạm dừng**, next to **Hoàn tất case**, saves the complete draft (including
+unfinished form inputs) to the server and returns to the dashboard. It does not
+submit or complete the case. If synchronization fails, the editor stays open
+with a warning so the user can retry. **Hoàn tất case** submits the annotations.
 Use **Lưu** to finish a form before submitting; unfinished input remains a draft
 and is not included in a completed submission.
+
+Claims expose **Sửa asserted_by**; requests expose **Sửa requested_by /
+modification spans**. Select one or more parties in the editor. A request can
+contain multiple editable `modification_spans` (text passages describing changes
+to the request); leave the list empty when none apply. These fields survive
+draft recovery and are included in submission JSON.
+
+**Ghi chú case** holds each user's own notes for the case (up to 20,000 characters).
+Notes autosave with the draft, appear in the admin submission viewer, and are
+included as `notes` in both submission JSON and CSV summary exports. They are
+not a shared note that another annotator can overwrite.
 
 The login page includes the external Google Docs annotation procedure beside
 the built-in workflow guide.

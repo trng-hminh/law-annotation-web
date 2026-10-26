@@ -681,6 +681,7 @@ def root():
         "scoped_auto_assign": True,
         "selective_auto_assign": True,
         "unique_case_registry": True,
+        "admin_drafts": True,
         "editable_legal_provisions": False,
         "hidden_legal_provisions": True,
         "storage": _STORAGE_NAME,
@@ -1409,14 +1410,33 @@ def get_case_pdf(case_id: str, request: Request):
     )
 
 
-# ------------------------------ drafts (annotator only) ------------------------------
+# ------------------------------ private drafts (admin + annotator) ------------------------------
+
+def _draft_owner(auth):
+    # Keep legacy annotator keys; admin keys cannot collide with annotator IDs.
+    return f"admin:{auth['id']}" if auth["type"] == "admin" else auth["id"]
+
+
+def _require_editor_case(request, case_id):
+    auth = _require_auth(request)
+    if storage.get_case_doc(case_id) is None:
+        raise HTTPException(status_code=404, detail="Không tìm thấy case.")
+    if auth["type"] == "annotator":
+        _require_annotator_case_assignment(auth["id"], case_id)
+    return auth
+
+
+def _validate_notes(payload):
+    notes = payload.get("notes", "")
+    if not isinstance(notes, str) or len(notes) > 20000:
+        raise HTTPException(status_code=400, detail="Ghi chú phải là văn bản tối đa 20.000 ký tự.")
+    payload["notes"] = notes
 
 @app.get("/api/cases/{case_id}/draft")
 def get_draft(case_id: str, request: Request):
-    auth = _require_annotator(request)
     case_id = _safe_id(case_id)
-    _require_annotator_case_assignment(auth["id"], case_id)
-    draft = storage.get_draft(auth["id"], case_id)
+    auth = _require_editor_case(request, case_id)
+    draft = storage.get_draft(_draft_owner(auth), case_id)
     if draft is None:
         raise HTTPException(status_code=404, detail="Chưa có nháp.")
     result = saved_annotation_view(storage.get_case_doc(case_id) or {}, draft)
@@ -1426,10 +1446,10 @@ def get_draft(case_id: str, request: Request):
 
 @app.put("/api/cases/{case_id}/draft")
 def save_draft(case_id: str, payload: dict, request: Request):
-    auth = _require_annotator(request)
     case_id = _safe_id(case_id)
-    _require_annotator_case_assignment(auth["id"], case_id)
+    auth = _require_editor_case(request, case_id)
     payload = dict(payload)
+    _validate_notes(payload)
     payload["id"] = case_id
     source = storage.get_case_doc(case_id) or {}
     if case_type(source.get("type")) and payload.get("annotation_editor_version") != ANNOTATION_EDITOR_VERSION:
@@ -1440,30 +1460,27 @@ def save_draft(case_id: str, payload: dict, request: Request):
     payload.pop("legacy_suggestions_filtered", None)
     for field in RAW_ANNOTATION_FIELDS:
         payload.pop(field, None)
-    saved_at = storage.save_draft(auth["id"], case_id, payload)
+    saved_at = storage.save_draft(_draft_owner(auth), case_id, payload)
     return {"success": True, "case_id": case_id, "saved_at": saved_at}
 
 
 @app.delete("/api/cases/{case_id}/draft")
 def delete_draft(case_id: str, request: Request):
-    auth = _require_annotator(request)
     case_id = _safe_id(case_id)
-    _require_annotator_case_assignment(auth["id"], case_id)
-    storage.delete_draft(auth["id"], case_id)
+    auth = _require_editor_case(request, case_id)
+    storage.delete_draft(_draft_owner(auth), case_id)
     return {"success": True}
 
 
 @app.get("/api/cases/{case_id}/submission")
 def get_my_submission(case_id: str, request: Request):
-    """Bài nộp gần nhất của chính annotator cho case này (để xem lại / sửa lại)."""
-    auth = _require_annotator(request)
+    """The signed-in editor's own submission, never another user's work."""
     case_id = _safe_id(case_id)
-    assignments = _norm_assignments(storage.read_assignments())
-    if auth["id"] not in assignments.get(case_id, []):
-        raise HTTPException(status_code=403, detail="Case này không được phân công cho bạn.")
+    auth = _require_editor_case(request, case_id)
     subs = [
         s for s in storage.list_submissions()
         if str(s.get("case_id")) == case_id and s.get("annotator_id") == auth["id"]
+        and s.get("submitter_type", "annotator" if re.fullmatch(r"A\d+", str(s.get("annotator_id", ""))) else "admin") == auth["type"]
     ]
     if not subs:
         raise HTTPException(status_code=404, detail="Chưa có bài nộp.")
@@ -1502,6 +1519,8 @@ def submit_case(payload: dict, request: Request):
     # body. This keeps FileStorage's submission index aligned with MongoStorage.
     payload = dict(payload)
     payload["case_id"] = case_id
+    _validate_notes(payload)
+    payload["submitter_type"] = auth["type"]
     if case_type(source.get("type")) and payload.get("annotation_editor_version") != ANNOTATION_EDITOR_VERSION:
         raise HTTPException(status_code=409, detail="Hãy tải lại trang để dùng trình gán nhãn mới.")
     payload["type"] = source.get("type")
@@ -1544,7 +1563,7 @@ def submit_case(payload: dict, request: Request):
         if all(aid in submitted_ids for aid in assigned_ids):
             _set_case_status(case_id, "completed", completed_by=annotator_id)
 
-    storage.delete_draft(annotator_id, case_id)
+    storage.delete_draft(_draft_owner(auth), case_id)
 
     final_status = _registry_by_id().get(case_id, {}).get("status", "open")
     return {
@@ -1613,7 +1632,7 @@ def export_submissions_csv(request: Request, type: str | None = None):
     writer.writerow([
         "case_id", "title", "annotator_id", "annotator_name",
         "submitted_at", "received_at", "file",
-        "num_units", "num_confirmed", "outcomes", "num_reasoning", "num_decisions", "type", "num_legal_provisions",
+        "num_units", "num_confirmed", "outcomes", "num_reasoning", "num_decisions", "type", "num_legal_provisions", "notes",
     ])
     for s in subs:
         units = s.get("units") or []
@@ -1636,6 +1655,7 @@ def export_submissions_csv(request: Request, type: str | None = None):
             len(decisions),
             _safe_csv_cell(s.get("type")),
             len(s.get("legal_provisions") or []),
+            _safe_csv_cell(s.get("notes")),
         ])
 
     content = "\ufeff" + buf.getvalue()  # BOM để Excel đọc tiếng Việt đúng
