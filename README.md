@@ -177,6 +177,46 @@ The corpus, PDFs, and backups are excluded from Git.
 
 ## Download completed annotations
 
+### Repair duplicate case registry entries
+
+Deploy the updated backend first. Its case list and auto-assignment operate on
+unique case IDs, even before legacy MongoDB rows are repaired. Imports and case
+status changes now update individual records; they no longer delete and reinsert
+the entire registry. `/` reports `unique_case_registry: true` on this version.
+
+Inspect the actual MongoDB registry from the repository root:
+
+```bash
+backend/.venv/bin/python backend/repair_case_registry.py
+```
+
+The script uses `MONGODB_URI` if configured; otherwise it prompts for the URI
+without displaying it. Use the same connection and database as Render. If the
+URI includes a database name, that name takes precedence, matching the backend.
+Inspection is read-only and reports raw rows versus unique case IDs.
+
+Before applying, pause the Render backend service (and any import scripts or
+other database writers). Keep writes paused until verification finishes:
+
+```bash
+backend/.venv/bin/python backend/repair_case_registry.py --apply --maintenance-confirmed
+```
+
+This writes a private Extended JSON backup under `backups/`, consolidates only
+identical registry copies into records keyed by case ID, then creates a unique
+`case_id` index and verifies the result. It does not touch PDFs, source documents,
+drafts, submissions, or assignments. If duplicate metadata conflicts, it stops
+without choosing which copy to discard; inspect the listed IDs before retrying.
+Retain the backup: it contains all original registry fields and MongoDB IDs for
+recovery. Do not delete or re-import the entire corpus to repair duplicates.
+
+Resume the updated backend, then refresh the dashboard. If earlier auto-assignment
+added unwanted recipients, review and remove those recipients individually;
+the repair deliberately preserves assignments because it cannot distinguish
+intentional manual assignments from earlier unintended ones.
+
+### Export submissions
+
 The admin **Tất cả nhóm / Self / Expert** selector also filters the case list.
 Use **Chỉ chưa phân công** to toggle the unassigned-only view, combined with the
 group, search, and status filters. **Phân công** opens a recipient picker: select

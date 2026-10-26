@@ -45,6 +45,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from case_schema import (normalize_case, case_type, saved_annotation_view,
                          ANNOTATION_FIELDS, RAW_ANNOTATION_FIELDS, ANNOTATION_EDITOR_VERSION)
+from case_registry import unique_cases
 
 
 def _safe_id(value):
@@ -127,10 +128,24 @@ class FileStorage:
         _write_json_file(self.admins_file, admins)
 
     def read_cases(self):
-        return _read_json_file(self.cases_file, [])
+        return unique_cases(_read_json_file(self.cases_file, []))
 
     def save_cases(self, cases):
-        _write_json_file(self.cases_file, cases)
+        _write_json_file(self.cases_file, unique_cases(cases))
+
+    def update_case(self, case_id, fields, *, unset=(), create=False):
+        cases = self.read_cases()
+        row = next((c for c in cases if c["case_id"] == case_id), None)
+        if row is None:
+            if not create:
+                return False
+            row = {"case_id": case_id, "status": "open"}
+            cases.append(row)
+        row.update(fields)
+        for key in unset:
+            row.pop(key, None)
+        self.save_cases(cases)
+        return True
 
     def read_assignments(self):
         return _read_json_file(self.assignments_file, {})
@@ -285,12 +300,34 @@ class MongoStorage:
             self.db.admins.insert_many([dict(a) for a in admins])
 
     def read_cases(self):
-        return [{k: v for k, v in c.items() if k != "_id"} for c in self.db.cases.find({})]
+        return unique_cases(self.db.cases.find({}))
 
     def save_cases(self, cases):
-        self.db.cases.delete_many({})
-        if cases:
-            self.db.cases.insert_many([dict(c) for c in cases])
+        # Stable _id makes repeated/concurrent writes target the same record.
+        # Never delete/reinsert the collection: that duplicates and loses cases.
+        for row in unique_cases(cases):
+            self.db.cases.replace_one({"_id": row["case_id"]}, dict(row, _id=row["case_id"]), upsert=True)
+
+    def update_case(self, case_id, fields, *, unset=(), create=False):
+        from pymongo.errors import DuplicateKeyError
+
+        # Seed a canonical record from legacy metadata before applying a narrow
+        # update. Old ObjectId copies are retained until the backed-up repair.
+        existing = next((c for c in self.read_cases() if c["case_id"] == case_id), None)
+        if existing is None and not create:
+            return False
+        seed = existing or {"case_id": case_id, "status": "open"}
+        try:
+            self.db.cases.update_one({"_id": case_id}, {"$setOnInsert": seed}, upsert=True)
+        except DuplicateKeyError:
+            # Another request may have seeded this exact ID concurrently.
+            if self.db.cases.find_one({"_id": case_id}) is None:
+                raise
+        update = {"$set": fields}
+        if unset:
+            update["$unset"] = {key: "" for key in unset}
+        self.db.cases.update_one({"_id": case_id}, update)
+        return True
 
     def read_assignments(self):
         doc = self.db.assignments.find_one({"_id": "map"})
@@ -602,18 +639,10 @@ def _require_annotator_case_assignment(annotator_id, case_id):
 
 
 def _set_case_status(case_id, status, completed_by=None):
-    registry = storage.read_cases()
-    for c in registry:
-        if c["case_id"] == case_id:
-            c["status"] = status
-            if status == "completed":
-                c["completed_at"] = datetime.now().isoformat()
-                c["completed_by"] = completed_by
-            else:
-                c.pop("completed_at", None)
-                c.pop("completed_by", None)
-            break
-    storage.save_cases(registry)
+    fields = {"status": status}
+    if status == "completed":
+        fields.update(completed_at=datetime.now(timezone.utc).isoformat(), completed_by=completed_by)
+    return storage.update_case(case_id, fields, unset=() if status == "completed" else ("completed_at", "completed_by"))
 
 
 try:
@@ -651,6 +680,7 @@ def root():
         "corpus_schema_version": 3,
         "scoped_auto_assign": True,
         "selective_auto_assign": True,
+        "unique_case_registry": True,
         "editable_legal_provisions": False,
         "hidden_legal_provisions": True,
         "storage": _STORAGE_NAME,
@@ -952,23 +982,21 @@ def import_cases(payload: dict, request: Request):
                 doc[field] = previous_doc[field]
         storage.save_case_doc(cid, doc)
         existing = by_id.get(cid, {})
-        by_id[cid] = {
-            "case_id": cid,
+        fields = {
             "title": doc.get("title") or existing.get("title") or f"Case {cid}",
-            "status": existing.get("status", "open"),
             "type": doc.get("type", existing.get("type")),
         }
+        storage.update_case(cid, fields, create=True)
+        by_id[cid] = {**existing, **fields, "case_id": cid}
         if case_type(doc.get("type")):
             overrides[cid] = doc["type"] == "self"
         if existing.get("status") == "completed":
             by_id[cid]["completed_at"] = existing.get("completed_at")
             by_id[cid]["completed_by"] = existing.get("completed_by")
         imported += 1
-    result = sorted(by_id.values(), key=lambda x: x["case_id"])
-    storage.save_cases(result)
     cfg["suggestion_case_overrides"] = overrides
     storage.save_config(cfg)
-    return {"imported": imported, "skipped": skipped, "total_cases": len(result)}
+    return {"imported": imported, "skipped": skipped, "total_cases": len(storage.read_cases())}
 
 
 # ------------------------------ assignment ------------------------------
@@ -1016,18 +1044,8 @@ def clear_all_assignments(request: Request):
 def reopen_case(case_id: str, request: Request):
     _require_admin(request)
     case_id = _safe_id(case_id)
-    registry = storage.read_cases()
-    found = False
-    for c in registry:
-        if c["case_id"] == case_id:
-            c["status"] = "open"
-            c.pop("completed_at", None)
-            c.pop("completed_by", None)
-            found = True
-            break
-    if not found:
+    if not _set_case_status(case_id, "open"):
         raise HTTPException(status_code=404, detail="Không tìm thấy case.")
-    storage.save_cases(registry)
     return {"success": True, "case_id": case_id, "status": "open"}
 
 
@@ -1070,12 +1088,12 @@ def auto_assign(request: Request, payload: dict | None = None):
         if selected_ids - {c["case_id"] for c in registry}:
             raise HTTPException(status_code=400, detail="Danh sách chứa case không tồn tại. Hãy làm mới danh sách.")
 
-    all_open_cases = [c["case_id"] for c in registry if c.get("status") != "completed"]
+    all_open_cases = {c["case_id"] for c in registry if c.get("status") != "completed"}
     open_cases = sorted(
-        c["case_id"] for c in registry if c.get("status") != "completed"
+        {c["case_id"] for c in registry if c.get("status") != "completed"
         and (selected_ids is None or c["case_id"] in selected_ids)
         and (mode is None or c.get("type") == mode)
-        and (not unassigned_only or not assignments.get(c["case_id"]))
+        and (not unassigned_only or not assignments.get(c["case_id"]))}
     )
 
     def workload_of(aid):

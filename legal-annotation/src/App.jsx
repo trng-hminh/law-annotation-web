@@ -2329,6 +2329,9 @@ export default function LegalAnnotationApp() {
       if (!capabilities.selective_auto_assign) {
         throw new Error("Hãy triển khai backend mới trên Render trước khi phân công cho annotator được chọn.");
       }
+      if (!capabilities.unique_case_registry) {
+        throw new Error("Hãy triển khai bản sửa case trùng trên Render trước khi phân công tự động.");
+      }
       const res = await api("/api/cases/auto-assign", { method: "POST", body: scope });
       const group = scope.type === "expert" ? "Expert" : scope.type === "self" ? "Self" : "khớp bộ lọc";
       setFlash(`Đã phân công ${res.assigned} case chưa được giao thuộc nhóm ${group} cho ${scope.annotator_ids.length} annotator được chọn. Các phân công trước đó được giữ nguyên.`);

@@ -682,6 +682,31 @@ class ApiIntegrationTests(unittest.TestCase):
             json={"case_ids": ["manual"], "annotator_ids": [first["id"]]}), 200)
         self.assertEqual(main.storage.read_assignments()["manual"], [special["id"], first["id"]])
 
+    def test_duplicate_registry_rows_are_shown_and_assigned_once(self):
+        self._import_cases({"id": "10025", "type": "self", "units": []})
+        row = main.storage.read_cases()[0]
+        # Simulate the old broken registry without passing through the new writer.
+        main._write_json_file(main.storage.cases_file, [dict(row) for _ in range(4)])
+        first = self._create_annotator("First")
+        second = self._create_annotator("Second")
+        admin = self._auth(self.admin_token)
+        self.assertEqual(len(self.client.get("/api/cases", headers=admin).json()), 1)
+        scope = {"case_ids": ["10025"] * 4, "annotator_ids": [first["id"], second["id"]], "unassigned_only": True}
+        result = self._assert_status(self.client.post("/api/cases/auto-assign", headers=admin, json=scope), 200).json()
+        self.assertEqual(result["assigned"], 1)
+        self.assertEqual(result["total_open"], 1)
+        self.assertEqual(len(main.storage.read_assignments()["10025"]), 1)
+        self.assertEqual(self.client.post("/api/cases/auto-assign", headers=admin, json=scope).json()["assigned"], 0)
+        # A re-import changes metadata, not completed status or another case.
+        main._set_case_status("10025", "completed", first["id"])
+        self._import_cases({"id": "10025", "title": "Updated title", "units": []},
+                           {"id": "other", "units": []})
+        self.assertEqual(main._registry_by_id()["10025"]["status"], "completed")
+        self.assertEqual(main._registry_by_id()["10025"]["completed_by"], first["id"])
+        self._assert_status(self.client.post("/api/cases/10025/reopen", headers=admin), 200)
+        self.assertNotIn("completed_by", main._registry_by_id()["10025"])
+        self.assertEqual(len(main.storage.read_cases()), 2)
+
     def test_auto_assignment_group_only_and_legacy_unscoped_requests(self):
         self._import_cases({"id": "expert", "type": "expert", "units": []},
                            {"id": "self", "type": "self", "units": []})
