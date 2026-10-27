@@ -771,6 +771,34 @@ class ApiIntegrationTests(unittest.TestCase):
         self._assert_status(self.client.delete(path, headers=other_admin), 200)
         self._assert_status(self.client.get(path, headers=ann), 200)
 
+    def test_corrected_and_added_parties_survive_drafts_submissions_and_export(self):
+        source_parties = [{"id": "P1", "party_id": "P1", "name": "Original", "role": "Nguyên đơn", "procedural_role": "PLAINTIFF"}]
+        self._import_cases({"id": "parties", "type": "expert", "units": [], "parties": source_parties})
+        first = self._create_annotator("First")
+        second = self._create_annotator("Second")
+        for person in (first, second):
+            self._assign("parties", person["id"])
+        auth = self._auth(self._login_annotator("First"))
+        corrected = [{**source_parties[0], "name": "Corrected", "role": "Bị đơn", "procedural_role": "DEFENDANT"},
+                     {"id": "person-1", "party_id": "person-1", "name": "New person", "role": "Đương sự liên quan", "procedural_role": "RELATED_PARTY"}]
+        payload = {"id": "parties", "annotation_editor_version": 2, "parties": corrected,
+                   "units": [{"id": "C1", "type": "claim", "text": "Human claim", "assertedBy": ["P1"], "asserted_by": ["P1"]},
+                             {"id": "R1", "type": "request", "text": "Human request", "assertedBy": ["person-1"], "requested_by": ["person-1"]}],
+                   "reasoning": [], "decisions": []}
+        self._assert_status(self.client.put("/api/cases/parties/draft", headers=auth, json=payload), 200)
+        fresh = self._auth(self._login_annotator("First"))
+        self.assertEqual(self.client.get("/api/cases/parties/draft", headers=fresh).json()["parties"], corrected)
+        self._assert_status(self.client.post("/api/submit", headers=fresh, json={**payload, "case_id": "parties"}), 200)
+        own = self.client.get("/api/cases/parties/submission", headers=fresh).json()
+        self.assertEqual(own["parties"], corrected)
+        self.assertEqual(own["units"], payload["units"])
+        exported = self.client.get("/api/export/submissions", headers=self._auth(self.admin_token)).json()["submissions"][0]
+        self.assertEqual(exported["parties"], corrected)
+        # The correction is private to this user's work, not a rewrite of source or others' work.
+        second_auth = self._auth(self._login_annotator("Second"))
+        self.assertEqual(self.client.get("/api/cases/parties/doc", headers=second_auth).json()["parties"], source_parties)
+        self.assertEqual(main.storage.get_case_doc("parties")["parties"], source_parties)
+
     def test_drafts_survive_a_new_login_and_are_visible_only_to_their_owner(self):
         self._import_cases({"id": "resume", "type": "expert", "units": []})
         owner = self._create_annotator("Owner")

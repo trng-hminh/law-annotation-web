@@ -286,3 +286,23 @@ The login page includes the external Google Docs annotation procedure beside
 the built-in workflow guide.
 
 Frontend draft recovery tests: `cd legal-annotation && npm test`.
+
+## Correct parties and missing people
+
+In the case header, choose **Sửa đương sự / người liên quan**. In the left panel,
+edit names and procedural roles or choose **Thêm người / đương sự**. Supported
+roles include plaintiff, defendant, related party, witness, representative, and
+other/unknown. Party IDs stay fixed when roles change; all existing Claims and
+Requests retain their links, and their tags, colours, and actor choices update
+immediately. Colours follow the selected role, not the ID prefix.
+
+Changes autosave with the current admin/annotator's draft, survive **Tạm dừng**
+and login recovery, and are included in the submission's `parties` and JSON
+exports. They do not overwrite the imported source or another user's work.
+The admin submission viewer displays the complete corrected roster, including
+people not yet referenced by an annotation.
+
+Remove unused people with **Xoá người**. For a person referenced by a saved or
+unfinished annotation, first change its `asserted_by` / `requested_by` choices
+(or cancel the unfinished form); deletion is blocked until those references
+are removed. Complete the names of newly added people before submitting.

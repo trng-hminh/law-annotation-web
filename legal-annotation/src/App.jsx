@@ -1,5 +1,6 @@
 import React, { useState, useRef, useMemo, useCallback, useEffect } from "react";
 import { createDraftStore } from "./draftStore.js";
+import { PARTY_ROLES, partyRole, actorIds, partyUseCount, editParty, addParty, removeParty, partyValidation } from "./parties.js";
 import {
   ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Plus, Pencil, Trash2, Link2,
   X, GripVertical, ScrollText, Gavel, ListChecks,
@@ -37,9 +38,8 @@ async function saveDraftRemote(identity, payload) {
    DESIGN TOKENS
    Ink/paper palette borrowed from Vietnamese case-file registers: a deep
    ink-teal for structure, warm paper for the reading surface, and two
-   adversarial hues (teal = nguyên đơn / cool, rust = bị đơn / warm) that
-   never get reused for anything else in the UI, so color always means
-   "which party" and nothing more.
+   role hues (teal = nguyên đơn, rust = bị đơn, purple = related party,
+   grey = other people). Role metadata, never an ID prefix, determines colour.
 ------------------------------------------------------------------------- */
 const T = {
   ink: "#1C2624",
@@ -57,8 +57,10 @@ const T = {
 const PARTY_STYLE = {
   P: { base: "#276767", deep: "#153F3F", tint: "#E4F0EC" },
   D: { base: "#B0552B", deep: "#7E3A1B", tint: "#FBECE0" },
+  R: { base: "#76619A", deep: "#51406E", tint: "#F0EAF7" },
+  N: { base: "#64727B", deep: "#3F4E58", tint: "#EBEFF2" },
 };
-const sideOf = (id) => (id?.[0] === "P" ? "P" : "D");
+const partyStyle = (party) => PARTY_STYLE[partyRole(party).style];
 
 const OUTCOME_LABEL = {
   accepted: "Chấp nhận",
@@ -105,10 +107,10 @@ function updateAtOrder(list, id, patch) {
 
 function PartyTag({ id, parties, size = "sm" }) {
   const p = parties.find((x) => x.id === id);
-  if (!p) return null;
-  const style = PARTY_STYLE[sideOf(id)];
+  const style = partyStyle(p);
   return (
     <span
+      title={`Mã người: ${id}`}
       style={{
         display: "inline-flex", alignItems: "center", gap: 5,
         maxWidth: "100%", minWidth: 0, boxSizing: "border-box",
@@ -121,9 +123,45 @@ function PartyTag({ id, parties, size = "sm" }) {
     >
       <span style={{ width: 6, height: 6, flexShrink: 0, borderRadius: "50%", background: style.base }} />
       <span style={{ minWidth: 0 }}>
-        {p.name} <span style={{ opacity: 0.75, fontWeight: 500 }}>· {p.role}</span>
+        {p ? (p.name || "Chưa nhập tên") : `Không tìm thấy đương sự (${id})`} <span style={{ opacity: 0.75, fontWeight: 500 }}>· {partyRole(p).label}</span>
       </span>
     </span>
+  );
+}
+
+function PartyEditor({ doc, updateCase, editorRef }) {
+  return (
+    <details ref={editorRef} style={{ marginBottom: 14, padding: 10, background: T.paperDim, borderRadius: 8 }}>
+      <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Đương sự và người liên quan ({doc.parties?.length || 0})</summary>
+      <p style={{ fontSize: 12, color: T.inkSoft }}>
+        Sửa tên, vai trò hoặc thêm người còn thiếu. Thay đổi tự lưu trong bài làm của bạn và cập nhật ngay các lựa chọn asserted_by / requested_by.
+      </p>
+      {(doc.parties || []).map((party) => {
+        const role = partyRole(party);
+        const uses = partyUseCount(doc, party.id);
+        return (
+          <fieldset key={party.id} style={{ margin: "10px 0", padding: 10, border: `1px solid ${T.lineStrong}`, borderRadius: 8, minWidth: 0 }}>
+            <legend style={{ fontSize: 11, color: T.inkSoft }}>Mã người: {party.id}</legend>
+            <label style={labelStyle} htmlFor={`party-name-${party.id}`}>Tên người / tổ chức</label>
+            <input id={`party-name-${party.id}`} aria-label={`Tên người ${party.id}`} value={party.name || ""}
+              placeholder="Nhập tên đúng theo tài liệu…" style={inputStyle}
+              onChange={(e) => updateCase((c) => editParty(c, party.id, { name: e.target.value }))} />
+            <label style={{ ...labelStyle, marginTop: 8 }} htmlFor={`party-role-${party.id}`}>Vai trò trong vụ án</label>
+            <select id={`party-role-${party.id}`} aria-label={`Vai trò ${party.id}`} value={role.value} style={inputStyle}
+              onChange={(e) => updateCase((c) => editParty(c, party.id, { role: e.target.value }))}>
+              {!PARTY_ROLES.some((item) => item.value === role.value) && <option value={role.value}>{role.label}</option>}
+              {PARTY_ROLES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+            </select>
+            <div style={{ marginTop: 8, fontSize: 12, color: T.inkSoft }}>
+              <button type="button" disabled={uses > 0} onClick={() => updateCase((c) => removeParty(c, party.id))}
+                style={{ ...btnGhostStyle, color: T.danger }} aria-label={`Xoá người ${party.id}`}>Xoá người</button>
+              {uses > 0 && <p style={{ margin: "6px 0 0" }}>Đang được tham chiếu trong annotation hoặc ô nhập. Đổi người tại asserted_by / requested_by trước khi xoá.</p>}
+            </div>
+          </fieldset>
+        );
+      })}
+      <button type="button" style={btnGhostStyle} onClick={() => updateCase(addParty)}>Thêm người / đương sự</button>
+    </details>
   );
 }
 
@@ -174,7 +212,7 @@ function ConfirmToggle({ status, onClick }) {
 
 function UnitForm({ initial, parties, onSave, onCancel, onDraftChange }) {
   const [type, setType] = useState(initial?.type || "claim");
-  const [assertedBy, setAssertedBy] = useState(initial?.assertedBy || []);
+  const [assertedBy, setAssertedBy] = useState(actorIds(initial));
   const [text, setText] = useState(initial?.text || "");
   const [modificationSpans, setModificationSpans] = useState(initial?.modification_spans || []);
   const [error, setError] = useState("");
@@ -207,7 +245,7 @@ function UnitForm({ initial, parties, onSave, onCancel, onDraftChange }) {
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
         {parties.map((p) => {
           const active = assertedBy.includes(p.id);
-          const style = PARTY_STYLE[sideOf(p.id)];
+          const style = partyStyle(p);
           return (
             <button
               key={p.id} type="button" aria-pressed={active} onClick={() => toggleParty(p.id)}
@@ -219,11 +257,17 @@ function UnitForm({ initial, parties, onSave, onCancel, onDraftChange }) {
                 maxWidth: "100%", overflowWrap: "anywhere",
               }}
             >
-              {p.name} · {p.role}
+              {p.name || "Chưa nhập tên"} · {partyRole(p).label} ({p.id})
             </button>
           );
         })}
       </div>
+
+      {assertedBy.filter((id) => !parties.some((party) => party.id === id)).map((id) => (
+        <button key={id} type="button" onClick={() => toggleParty(id)} style={{ ...btnGhostStyle, color: T.danger }}>
+          Bỏ tham chiếu không tồn tại: {id}
+        </button>
+      ))}
 
       <label style={labelStyle}>Nội dung</label>
       <textarea
@@ -257,6 +301,9 @@ function UnitForm({ initial, parties, onSave, onCancel, onDraftChange }) {
         <button
           onClick={() => {
             if (!text.trim() || !assertedBy.length) { setError("Hãy nhập nội dung và chọn ít nhất một đương sự trước khi lưu."); return; }
+            if (assertedBy.some((id) => !parties.some((party) => party.id === id && party.name?.trim()))) {
+              setError("Hãy chọn người có tên hợp lệ trong danh sách đương sự."); return;
+            }
             if (type === "request" && modificationSpans.some((span) => !modificationText(span).trim())) {
               setError("Hãy nhập nội dung hoặc xoá đoạn sửa đổi đang để trống."); return;
             }
@@ -291,7 +338,7 @@ function ReasonDecisionForm({ initial, onSave, onCancel, kind, onDraftChange }) 
 
 function UnitCard({ unit, parties, editing, onConfirm, onEditStart, onEditSave, onEditCancel, onDelete, draftInitial, onDraftChange }) {
   const primaryParty = unit.assertedBy?.[0];
-  const style = PARTY_STYLE[sideOf(primaryParty)];
+  const style = partyStyle(parties.find((party) => party.id === primaryParty));
   const isRequest = unit.type === "request";
 
   if (editing) {
@@ -1072,6 +1119,11 @@ function SubmissionsModal({ view, data, loading, error, onClose }) {
                 <span style={{ fontSize: 11.5, color: T.inkSoft, marginLeft: "auto" }}>Nộp {fmtTime(sub.submitted_at || sub.received_at)}</span>
               </div>
 
+              {(sub.parties || []).length > 0 && <SubSection title="Đương sự và người liên quan">
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {sub.parties.map((party) => <PartyTag key={party.id} id={party.id} parties={sub.parties} />)}
+                </div>
+              </SubSection>}
               {sub.notes && <SubSection title="Ghi chú case"><div style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere", fontSize: 13 }}>{sub.notes}</div></SubSection>}
               {(sub.units || []).length > 0 && (
                 <SubSection title="Claims & Requests">
@@ -1857,6 +1909,7 @@ export default function LegalAnnotationApp() {
   const [view, setView] = useState("dashboard"); // "dashboard" | "annotation"
 
   const [caseData, setCaseData] = useState(null);
+  const partyEditorRef = useRef(null);
   const [tab, setTab] = useState("units");
   const [leftWidth, setLeftWidth] = useState(50);
   const draggingRef = useRef(false);
@@ -2291,6 +2344,12 @@ export default function LegalAnnotationApp() {
 
   const submitCase = async () => {
     if (!caseData || submittingRef.current || leaving) return;
+    const partyError = partyValidation(caseData);
+    if (partyError) {
+      setSubmitError(partyError);
+      if (partyEditorRef.current) { partyEditorRef.current.open = true; partyEditorRef.current.scrollIntoView({ block: "nearest" }); }
+      return;
+    }
     if (addingType || editingId || editingTitle) {
       setSubmitError("Hãy Lưu hoặc Huỷ mục đang chỉnh sửa trước khi nộp bài. Nội dung đang nhập vẫn được lưu nháp.");
       return;
@@ -2664,6 +2723,10 @@ export default function LegalAnnotationApp() {
               </button>
             </div>
           </div>
+          <button type="button" disabled={submitting || leaving} style={{ ...btnGhostStyle, marginTop: 8, fontSize: 12 }}
+            onClick={() => {
+              if (partyEditorRef.current) { partyEditorRef.current.open = true; partyEditorRef.current.scrollIntoView({ block: "nearest" }); }
+            }}>Sửa đương sự / người liên quan</button>
           <div aria-label="Đương sự trong vụ án" style={{
             display: "flex", flexWrap: "wrap", alignItems: "flex-start", alignContent: "flex-start",
             gap: 6, marginTop: 8, width: "100%", minWidth: 0, maxWidth: "100%",
@@ -2685,6 +2748,7 @@ export default function LegalAnnotationApp() {
         >
           {helpOpen && <HelpPanel tab={tab} onClose={() => setHelpOpen(false)} />}
           <div inert={submitting || leaving} style={{ width: `${leftWidth}%`, overflowY: "auto", padding: "16px 16px 40px" }}>
+            <PartyEditor doc={caseData} updateCase={updateCase} editorRef={partyEditorRef} />
             <details style={{ marginBottom: 14, padding: 10, background: T.paperDim, borderRadius: 8 }}>
               <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Ghi chú case{caseData.notes ? " · Đã có ghi chú" : ""}</summary>
               <p style={{ fontSize: 12, color: T.inkSoft }}>Ghi chú riêng trong bài làm của bạn, tự động lưu nháp và được gửi cùng bài nộp cho admin.</p>
