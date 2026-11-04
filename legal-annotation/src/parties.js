@@ -21,7 +21,7 @@ export function actorIds(unit) {
 
 export function partyUseCount(doc, id) {
   const saved = (doc.units || []).filter((unit) => actorIds(unit).includes(id)).length;
-  return saved + (actorIds(doc._editor_state?.form).includes(id) ? 1 : 0);
+  return saved + (actorIds(doc._editor_state?.form).includes(id) ? 1 : 0) + (actorIds(doc._editor_state?.picker?.form).includes(id) ? 1 : 0);
 }
 
 export function editParty(doc, id, patch) {
@@ -35,7 +35,7 @@ export function editParty(doc, id, patch) {
 
 export function addParty(doc) {
   const used = new Set((doc.parties || []).map((party) => party.id));
-  for (const unit of [...(doc.units || []), doc._editor_state?.form]) {
+  for (const unit of [...(doc.units || []), doc._editor_state?.form, doc._editor_state?.picker?.form]) {
     for (const id of actorIds(unit)) used.add(id);
   }
   let index = 1;

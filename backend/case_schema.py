@@ -1,9 +1,10 @@
 """Normalize imported LLM cases while retaining source metadata and law text."""
 from copy import deepcopy
+from annotation_graph import internal_graph, normalize_outcome
 
 ANNOTATION_FIELDS = ("units", "reasoning", "decisions")
 RAW_ANNOTATION_FIELDS = ("claims", "requests", "reasonings", "request_outcomes",
-                         "request_decision_links", "request_reasoning_links")
+                         "request_decision_links", "request_reasoning_links", "opinions", "premises", "legacy_units")
 ANNOTATION_EDITOR_VERSION = 2
 
 
@@ -67,6 +68,21 @@ def case_type(value):
     return {"self": "self", "self_annotate": "self", "expert": "expert"}.get(value)
 
 
+def _restore_source_outcomes(doc):
+    """Repair old import projections on read, not human drafts/submissions.
+
+    Early importers did not recognize PARTIALLY_ACCEPTED or DISCONTINUED.
+    The source request_outcomes is retained and can rebuild their null mirrors.
+    """
+    labels = {str(x.get("request_id")): x.get("outcome") for x in doc.get("request_outcomes", [])}
+    for unit in doc.get("units", []):
+        if unit.get("type") == "request":
+            outcome = normalize_outcome(unit.get("outcome")) or normalize_outcome(labels.get(str(unit.get("id"))))
+            if outcome is not None:
+                unit["outcome"] = outcome
+    return doc
+
+
 def normalize_case(source):
     doc = deepcopy(source)
     cid = str(doc.get("id") or doc.get("case_id") or "")
@@ -79,9 +95,14 @@ def normalize_case(source):
         doc["type"] = mode
     if "legal_provisions" in doc:
         validate_provisions(doc["legal_provisions"])
+    if doc.get("annotation_schema_version") == 3 or "opinions" in doc or "premises" in doc:
+        doc = internal_graph(doc)
+        doc["annotation_schema_version"] = 3
+        doc["parties"] = [dict(p, id=str(p.get("id", p.get("party_id", "")))) for p in doc.get("parties", [])]
+        return _restore_source_outcomes(doc)
     # Already-normalized app cases (including existing installations).
     if isinstance(doc.get("units"), list):
-        return doc
+        return _restore_source_outcomes(doc)
     if "case_id" not in source:
         return doc
 
@@ -97,13 +118,14 @@ def normalize_case(source):
                                        ("requests", "request", "request_id", "requested_by")):
         for item in doc.get(group, []):
             iid = str(item.get(id_key, ""))
-            actors = item.get(actor) or []
+            actors = item.get("asserted_by", item.get(actor)) or []
             unit = dict(item, id=iid, type=kind, text=text(item), status="unconfirmed",
                         assertedBy=[str(a) for a in actors] if isinstance(actors, list) else [str(actors)])
             if kind == "request":
                 outcome = next((x.get("outcome") for x in doc.get("request_outcomes", [])
                                 if str(x.get("request_id")) == iid), None)
-                unit.update(outcome={"ACCEPTED": "accepted", "REJECTED": "rejected", "PARTIAL": "partial"}.get(str(outcome).upper()),
+                unit.update(request_status=item.get("status", "ACTIVE"),
+                            outcome=normalize_outcome(outcome),
                             linkedDecisions=[str(x["decision_id"]) for x in doc.get("request_decision_links", []) if str(x.get("request_id")) == iid],
                             linkedReasoning=[str(x["reasoning_id"]) for x in doc.get("request_reasoning_links", []) if str(x.get("request_id")) == iid],
                             linksConfirmed=False)

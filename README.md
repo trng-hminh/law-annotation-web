@@ -93,7 +93,7 @@ Run the isolated integration suite; it uses temporary local storage and does
 not contact Render or MongoDB:
 
 ```sh
-backend/.venv/bin/python -m unittest backend/test_api_integration.py
+backend/.venv/bin/python -m unittest backend/test_api_integration.py backend/test_case_registry.py backend/test_annotation_graph.py
 ```
 
 Before each release:
@@ -110,6 +110,93 @@ Before each release:
 Changing an admin password or annotator passcode now invalidates that account's
 existing sessions. Users will need to sign in again after a deployment that
 contains this change.
+
+## Request–Opinion–Premise editor (schema v3)
+
+The editor now follows **Requests | Opinions | Premises | Reasoning | Decisions | Links**.
+Requests are the main workspace. Each Request can reference shared Premises and
+Opinions; each Opinion can reference shared Premises. Editing a shared item
+updates every place that references its ID. Quotes are stored in full, including
+line breaks; shortened summaries are display-only.
+
+- **Requests:** create/edit the request and `asserted_by`, lifecycle status
+  (`ACTIVE`, `WITHDRAWN`, `PARTIALLY_WITHDRAWN`) and `modification_spans`. Use
+  **Chọn / thêm luận cứ** and **Chọn / thêm ý kiến** within the card.
+- **Pickers:** tick existing items or create an item with **Lưu & gắn** without
+  switching tabs. Premises default to matching at least one of the parent's
+  presenters. Change the presenter filter or search as needed. Already-linked
+  items remain visible so they can be unticked. Unticking does not delete them.
+- **Opinions:** independently edit/confirm opinions and attach premises.
+  **Đang gắn với** is read-only; Request–Opinion links are changed only in Requests.
+- **Premises:** a shared inventory with read-only **Đang hỗ trợ** relationships.
+  Unlinked premises are retained in drafts, submissions and the normal JSON export.
+- **Links:** retains both Request–Reasoning and Request–Decision links and Outcome,
+  including `DISCONTINUED`. Annotation confirmation is stored separately from
+  the Request's procedural lifecycle.
+- Self outcome suggestions recognize `ACCEPTED`, `PARTIALLY_ACCEPTED`, `REJECTED`
+  and `DISCONTINUED` (plus legacy `PARTIAL`). Old imported source mirrors that
+  lost a label are repaired on read when `request_outcomes` still contains it;
+  this does not rewrite the database. Existing human drafts are not overwritten.
+  For a blank draft outcome, Links offers **Dùng outcome gợi ý** only when Self
+  suggestions are enabled and the Request ID, quote and presenters still match
+  the source. Expert cases never receive this option.
+- Party corrections, case notes, draft autosave, **Tạm dừng**, expert blank mode,
+  and admin editing remain available. Inline picker forms also survive refresh
+  and pause/reopen. Finish or cancel the active form/picker before changing tabs.
+
+### Data and backwards compatibility
+
+New drafts/submissions use `annotation_schema_version: 3` and canonical
+`requests`, `opinions`, `premises`, `reasonings`, `decisions`,
+`request_reasoning_links`, `request_decision_links`, `request_outcomes` arrays.
+`premise_ids` and `opinion_ids` contain IDs, not embedded copies. Reverse links
+are derived, not separately stored. Span metadata, existing vote metadata, notes,
+parties and source `legal_provisions` are preserved. `annotation_status` records
+confirmation; Request `status` is the lifecycle. Editor-only `units` is a transient
+adapter, not a second authoritative copy in new saved/exported records.
+
+Old Claims are **not automatically relabelled**. The editor displays a review
+queue: choose Opinion or Premise for each old Claim, and keep each old Request
+as a Request or convert a response to Opinion. Unclassified Claims remain in
+`legacy_units` while drafting and block completion. Converted items retain
+`legacy_source` for audit. When a Request becomes an Opinion, its court links and
+Outcome are no longer active; they remain in the source snapshot, shown read-only
+for comparison. Attach the Opinion to the appropriate Request and review Links.
+
+Existing source records and other users' work are not bulk rewritten. Historical
+submissions keep their old format until their owner reviews and resubmits them;
+an export during rollout can therefore contain both legacy and v3 submissions.
+Do not re-import submissions as source data to perform a migration. Back up the
+database before rollout, and have annotators review their existing work in the
+new editor. Normal downloads still export **submitted work only**, not drafts.
+
+### Deployment order
+
+1. Deploy the backend changes to Render first; its root `/` response must include
+   `"annotation_schema_version": 3`.
+2. Deploy the frontend through the existing GitHub Pages workflow, then reload
+   open browser tabs. The new frontend refuses to open cases against an older
+   backend rather than saving a partial graph.
+3. Old clients cannot overwrite v3 source/work with legacy payloads. No MongoDB
+   collection reset or destructive migration is needed. Test using an authorized
+   test case before asking annotators to resume production work.
+
+### Separate publication copy, only after all annotation is finished
+
+Do **not** prune unused premises during annotation. Once the entire dataset is
+finished and reviewed, create a separate output file:
+
+```sh
+backend/.venv/bin/python backend/prepare_publication.py \
+  --input submissions.json --output publication.json \
+  --confirm-annotation-complete
+```
+
+This offline command validates v3 records, removes only premises not referenced
+by any Request or Opinion, and refuses to overwrite an existing output file.
+It never modifies the input, database, or normal export. Court links are retained;
+constructing prediction inputs with a deliberate target-leakage policy is a
+separate downstream task.
 
 ## Import grouped cases and provision details
 

@@ -17,6 +17,7 @@ import re
 import requests
 
 from case_schema import normalize_case
+from annotation_graph import validate_graph, canonical_graph
 from upload_pdfs import login
 
 
@@ -25,7 +26,11 @@ def load_corpus(path):
     raw = data if isinstance(data, list) else data.get("cases", [])
     if not isinstance(raw, list) or not raw:
         raise ValueError("Expected a non-empty case array or {cases: [...]}.")
+    for case in raw:
+        if case.get("annotation_schema_version") == 3 or "opinions" in case or "premises" in case:
+            validate_graph(case)
     cases = [normalize_case(case) for case in raw]
+    cases = [canonical_graph(case) if case.get("annotation_schema_version") == 3 else case for case in cases]
     ids = [case["id"] for case in cases]
     if any(not re.fullmatch(r"[A-Za-z0-9_-]+", cid) for cid in ids):
         raise ValueError("All cases must have a valid non-empty case ID.")
@@ -61,7 +66,8 @@ def main():
         response.raise_for_status()
         return response.json()
 
-    if api("GET", "/").get("corpus_schema_version", 0) < 3:
+    capabilities = api("GET", "/")
+    if capabilities.get("corpus_schema_version", 0) < 3 or (any(c.get("annotation_schema_version") == 3 for c in cases) and capabilities.get("annotation_schema_version") != 3):
         raise RuntimeError("Deploy the updated backend before importing; no cases have been changed.")
     registry = api("GET", "/api/cases")
     settings = api("GET", "/api/annotation-settings")

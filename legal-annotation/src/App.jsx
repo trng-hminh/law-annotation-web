@@ -1,6 +1,8 @@
 import React, { useState, useRef, useMemo, useCallback, useEffect } from "react";
 import { createDraftStore } from "./draftStore.js";
 import { PARTY_ROLES, partyRole, actorIds, partyUseCount, editParty, addParty, removeParty, partyValidation } from "./parties.js";
+import { normalizeGraph, serializeGraph, addGraphUnit, removeGraphUnit, nextUnitId, graphError, sourceOutcomeSuggestion } from "./annotationGraph.js";
+import GraphWorkspace from "./GraphWorkspace.jsx";
 import {
   ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Plus, Pencil, Trash2, Link2,
   X, GripVertical, ScrollText, Gavel, ListChecks,
@@ -66,6 +68,7 @@ const OUTCOME_LABEL = {
   accepted: "Chấp nhận",
   rejected: "Không chấp nhận",
   partial: "Chấp nhận một phần",
+  discontinued: "Đình chỉ",
 };
 
 /* ------------- sequential ordering (reasoning / decisions) -------------
@@ -210,15 +213,16 @@ function ConfirmToggle({ status, onClick }) {
 
 /* ---------------------------- unit form (add/edit) ---------------------------- */
 
-function UnitForm({ initial, parties, onSave, onCancel, onDraftChange }) {
-  const [type, setType] = useState(initial?.type || "claim");
+function UnitForm({ initial, parties, onSave, onCancel, onDraftChange, saveLabel = "Lưu" }) {
+  const [type, setType] = useState(initial?.type || "request");
   const [assertedBy, setAssertedBy] = useState(actorIds(initial));
   const [text, setText] = useState(initial?.text || "");
   const [modificationSpans, setModificationSpans] = useState(initial?.modification_spans || []);
   const [error, setError] = useState("");
+  const [requestStatus, setRequestStatus] = useState(initial?.request_status || "ACTIVE");
   const order = initial?.order ?? 1;
 
-  const stage = (patch) => onDraftChange?.({ type, assertedBy, text, order, modification_spans: modificationSpans, ...patch });
+  const stage = (patch) => onDraftChange?.({ type, assertedBy, text, order, request_status: requestStatus, modification_spans: modificationSpans, ...patch });
   const changeSpans = (spans) => { setModificationSpans(spans); stage({ modification_spans: spans }); };
   const toggleParty = (id) => {
     const next = assertedBy.includes(id) ? assertedBy.filter((x) => x !== id) : [...assertedBy, id];
@@ -235,13 +239,15 @@ function UnitForm({ initial, parties, onSave, onCancel, onDraftChange }) {
         <div>
           <label style={labelStyle}>Loại unit</label>
           <select value={type} onChange={(e) => { setType(e.target.value); stage({ type: e.target.value }); }} style={inputStyle} disabled={!!initial}>
-            <option value="claim">Claim</option>
+            {type === "claim" && <option value="claim">Claim cũ — cần phân loại</option>}
             <option value="request">Request</option>
+            <option value="opinion">Opinion</option>
+            <option value="premise">Premise</option>
           </select>
         </div>
       </div>
 
-      <label style={labelStyle}>{type === "request" ? "requested_by" : "asserted_by"} — Bên đưa ra nội dung (chọn một hoặc nhiều đương sự)</label>
+      <label style={labelStyle}>asserted_by — Người trình bày (chọn một hoặc nhiều người)</label>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
         {parties.map((p) => {
           const active = assertedBy.includes(p.id);
@@ -279,6 +285,12 @@ function UnitForm({ initial, parties, onSave, onCancel, onDraftChange }) {
       {type === "request" && (
         <fieldset style={{ margin: "12px 0", padding: 12, border: `1px solid ${T.line}`, borderRadius: 8 }}>
           <legend style={labelStyle}>Modification spans — Đoạn sửa đổi yêu cầu</legend>
+          <label style={labelStyle}>Trạng thái yêu cầu</label>
+          <select aria-label="Trạng thái yêu cầu" value={requestStatus} style={inputStyle} onChange={(e) => { setRequestStatus(e.target.value); stage({ request_status: e.target.value }); }}>
+            <option value="ACTIVE">ACTIVE — Còn yêu cầu</option>
+            <option value="WITHDRAWN">WITHDRAWN — Đã rút</option>
+            <option value="PARTIALLY_WITHDRAWN">PARTIALLY_WITHDRAWN — Rút một phần</option>
+          </select>
           <p style={{ fontSize: 12, color: T.inkSoft }}>Trích các đoạn thay đổi, bổ sung hoặc rút yêu cầu. Để trống nếu không có.</p>
           {modificationSpans.map((span, index) => (
             <div key={index} style={{ marginBottom: 10 }}>
@@ -307,12 +319,12 @@ function UnitForm({ initial, parties, onSave, onCancel, onDraftChange }) {
             if (type === "request" && modificationSpans.some((span) => !modificationText(span).trim())) {
               setError("Hãy nhập nội dung hoặc xoá đoạn sửa đổi đang để trống."); return;
             }
-            onSave({ type, assertedBy, [type === "request" ? "requested_by" : "asserted_by"]: assertedBy,
-              text: text.trim(), order, ...(type === "request" ? { modification_spans: modificationSpans } : {}) });
+            onSave({ type, assertedBy, asserted_by: assertedBy,
+              text, order, ...(type === "request" ? { modification_spans: modificationSpans, request_status: requestStatus } : {}) });
           }}
           style={btnPrimaryStyle}
         >
-          Lưu
+          {saveLabel}
         </button>
       </div>
     </div>
@@ -328,7 +340,7 @@ function ReasonDecisionForm({ initial, onSave, onCancel, kind, onDraftChange }) 
       <textarea value={text} onChange={(e) => { setText(e.target.value); onDraftChange?.({ text: e.target.value, order }); }} style={{ ...inputStyle, minHeight: 90, resize: "vertical", lineHeight: 1.6 }} />
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 10 }}>
         <button onClick={onCancel} style={btnGhostStyle}>Huỷ</button>
-        <button onClick={() => text.trim() && onSave({ text: text.trim(), order })} style={btnPrimaryStyle}>Lưu</button>
+        <button onClick={() => text.trim() && onSave({ text, order })} style={btnPrimaryStyle}>Lưu</button>
       </div>
     </div>
   );
@@ -361,7 +373,7 @@ function UnitCard({ unit, parties, editing, onConfirm, onEditStart, onEditSave, 
             <span style={{
               fontSize: 10.5, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase",
               color: isRequest ? T.gold : T.inkSoft,
-            }}>{isRequest ? "Request" : "Claim"}</span>
+            }}>{unit.type}</span>
             {unit.assertedBy?.map((id) => <PartyTag key={id} id={id} parties={parties} />)}
             {isRequest && unit.outcome && (
               <span style={{
@@ -382,7 +394,7 @@ function UnitCard({ unit, parties, editing, onConfirm, onEditStart, onEditSave, 
         }}>{unit.text}</p>
 
         <button type="button" onClick={onEditStart} style={{ ...btnGhostStyle, fontSize: 11, marginBottom: 8 }}>
-          Sửa {isRequest ? "requested_by / modification spans" : "asserted_by"}
+          Sửa {isRequest ? "asserted_by / modification spans" : "asserted_by"}
         </button>
         {isRequest && <ModificationSpans spans={unit.modification_spans} />}
 
@@ -423,7 +435,7 @@ function SimpleCard({ item, kind, editing, onConfirm, onEditStart, onEditSave, o
 
 /* ---------------------------- links tab ---------------------------- */
 
-function LinksTab({ caseData, updateCase }) {
+function LinksTab({ caseData, updateCase, suggestionSource }) {
   const requests = caseData.units.filter((u) => u.type === "request");
   const [expanded, setExpanded] = useState(() => new Set());
 
@@ -456,6 +468,7 @@ function LinksTab({ caseData, updateCase }) {
     <div>
       {requests.map((req) => {
         const isOpen = expanded.has(req.id);
+        const suggestedOutcome = sourceOutcomeSuggestion(suggestionSource, req);
         return (
           <div key={req.id} style={{
             background: T.paperCard, border: `1px solid ${T.line}`, borderRadius: 10,
@@ -514,6 +527,7 @@ function LinksTab({ caseData, updateCase }) {
                   <option value="accepted">Chấp nhận</option>
                   <option value="rejected">Không chấp nhận</option>
                   <option value="partial">Chấp nhận một phần</option>
+                  <option value="discontinued">Đình chỉ</option>
                 </select>
               </div>
               <button
@@ -532,6 +546,12 @@ function LinksTab({ caseData, updateCase }) {
             </div>
 
             {/* toggleable expansion bar */}
+            {suggestedOutcome && <div style={{ marginTop: 10, fontSize: 12, color: T.inkSoft }}>
+              Nháp hiện chưa chọn outcome; nguồn Self có nhãn gợi ý.{' '}
+              <button type="button" style={btnGhostStyle} onClick={() => patchRequest(req.id, { outcome: suggestedOutcome, linksConfirmed: false })}>
+                Dùng outcome gợi ý: {OUTCOME_LABEL[suggestedOutcome]}
+              </button>
+            </div>}
             <button
               onClick={() => toggleExpanded(req.id)}
               style={{
@@ -743,18 +763,6 @@ const checkRowStyle = { display: "flex", alignItems: "center", gap: 6, fontSize:
 
 /* ---------------------------- data normalization ---------------------------- */
 
-const normalizePartyRole = (role) => ({
-  PLAINTIFF: "Nguyên đơn",
-  DEFENDANT: "Bị đơn",
-  RELATED_PARTY: "Đương sự liên quan",
-}[role] || role || "Đương sự");
-
-const normalizeOutcome = (outcome) => ({
-  ACCEPTED: "accepted",
-  REJECTED: "rejected",
-  PARTIAL: "partial",
-}[String(outcome || "").toUpperCase()] || null);
-
 const normalizeText = (item) => item?.text ?? item?.span?.text ?? "";
 const modificationText = (span) => typeof span === "string" ? span : normalizeText(span);
 
@@ -766,90 +774,7 @@ function ModificationSpans({ spans = [] }) {
   </div>;
 }
 
-const normalizeCase = (source) => {
-  if (!source) throw new Error("Case rỗng.");
-
-  // Internal app schema
-  if (source.id != null && Array.isArray(source.units)) {
-    return {
-      ...source,
-      id: String(source.id),
-      title: source.title || `Case ${source.id}`,
-      parties: source.parties || [],
-      units: source.units.map((u) => ({
-        ...u,
-        assertedBy: u.assertedBy || u.requestedBy || u.asserted_by || u.requested_by || [],
-        text: u.text || normalizeText(u),
-      })),
-      reasoning: source.reasoning || [],
-      decisions: source.decisions || [],
-    };
-  }
-
-  // Raw prototype schema
-  if (source.case_id == null) throw new Error("Không nhận diện được schema case.");
-
-  const parties = (source.parties || []).map((p) => ({
-    id: String(p.party_id),
-    name: p.name,
-    role: normalizePartyRole(p.procedural_role),
-  }));
-
-  const claims = (source.claims || []).map((c) => ({
-    id: String(c.claim_id),
-    type: "claim",
-    order: Number(c.order) || 0,
-    assertedBy: Array.isArray(c.asserted_by) ? c.asserted_by.map(String) : (c.asserted_by ? [String(c.asserted_by)] : []),
-    text: normalizeText(c),
-    status: "unconfirmed",
-    section: c.section || "content",
-  }));
-
-  const requests = (source.requests || []).map((r) => ({
-    ...r,
-    id: String(r.request_id),
-    type: "request",
-    order: Number(r.order) || 0,
-    assertedBy: Array.isArray(r.requested_by) ? r.requested_by.map(String) : (r.requested_by ? [String(r.requested_by)] : []),
-    text: normalizeText(r),
-    status: "unconfirmed",
-    section: r.section || "content",
-    outcome: normalizeOutcome((source.request_outcomes || []).find((x) => x.request_id === r.request_id)?.outcome),
-    linkedDecisions: (source.request_decision_links || [])
-      .filter((x) => x.request_id === r.request_id)
-      .map((x) => String(x.decision_id)),
-    linkedReasoning: (source.request_reasoning_links || [])
-      .filter((x) => x.request_id === r.request_id)
-      .map((x) => String(x.reasoning_id)),
-    linksConfirmed: false,
-  }));
-
-  const reasoning = (source.reasonings || []).map((r) => ({
-    id: String(r.reasoning_id),
-    order: Number(r.order) || 0,
-    text: normalizeText(r),
-    status: "unconfirmed",
-    section: r.section || "assessment",
-  }));
-
-  const decisions = (source.decisions || []).map((d) => ({
-    id: String(d.decision_id),
-    order: Number(d.order) || 0,
-    text: normalizeText(d),
-    status: "unconfirmed",
-    section: d.section || "decision",
-  }));
-
-  return {
-    ...source,
-    id: String(source.case_id),
-    title: source.title || `Case ${source.case_id}`,
-    parties,
-    units: [...claims, ...requests],
-    reasoning,
-    decisions,
-  };
-};
+const normalizeCase = normalizeGraph;
 
 const normalizeCasesPayload = (payload) => {
   const list = Array.isArray(payload)
@@ -857,7 +782,14 @@ const normalizeCasesPayload = (payload) => {
     : Array.isArray(payload?.cases)
       ? payload.cases
       : [payload];
-  return list.map(normalizeCase);
+  return list.map((source) => {
+    if (source.annotation_schema_version === 3 || "opinions" in source || "premises" in source) {
+      const canonical = { ...source };
+      for (const key of ["units", "reasoning", "claims"]) delete canonical[key];
+      return normalizeCase(canonical, { sourceSuggestions: true });
+    }
+    return normalizeCase(source, { sourceSuggestions: true });
+  });
 };
 
 
@@ -870,7 +802,7 @@ const HELP_OVERVIEW = {
   steps: [
     {
       title: "1. Phân đoạn",
-      text: "Tách bản án thành Claims (tình tiết), Requests (yêu cầu), Reasoning (nhận định) và Decisions (quyết định) trong từng tab tương ứng: bấm 'Thêm…', nhập nội dung trích nguyên văn từ bản án (khung PDF bên phải) rồi bấm 'Lưu'.",
+      text: "Bắt đầu với Requests (yêu cầu), gắn Opinions (ý kiến) và Premises (luận cứ) theo từng yêu cầu. Trích nguyên văn đủ ngữ cảnh, chọn người trình bày; không tự viết luận điểm ngầm. Reasoning và Decisions dành cho nhận định, quyết định của Toà án.",
     },
     {
       title: "2. Xác nhận từng mục",
@@ -882,33 +814,26 @@ const HELP_OVERVIEW = {
     },
     {
       title: "4. Hoàn tất case",
-      text: "Khi đã xử lý xong cả 4 tab và xác nhận đầy đủ, bấm nút 'Hoàn tất case' ở góc trên bên phải để nộp bài. Bạn vẫn có thể mở lại để chỉnh sửa và gửi lại.",
+      text: "Rà soát đủ 6 tab và phân loại xong dữ liệu cũ, rồi bấm 'Hoàn tất case' để nộp bài. Tạm dừng chỉ lưu nháp; JSON tải về chứa bài đã nộp. Premises chưa gắn vẫn được giữ.",
     },
   ],
 };
 
 const HELP_TABS = {
-  claims: {
-    title: "Phân đoạn Claim",
-    intro: "Claim là tình tiết, sự kiện, lời trình bày của đương sự (thuộc phần nội dung vụ án).",
-    steps: [
-      "Bấm nút 'Thêm claim' ở đầu tab.",
-      "Chọn bên khởi xướng (Nguyên đơn / Bị đơn / Đương sự liên quan).",
-      "Nhập nội dung trích nguyên văn từ bản án ở khung PDF bên phải.",
-      "Bấm 'Lưu' để thêm claim vào danh sách.",
-      "Rà soát kỹ từng claim, rồi bấm 'Xác nhận' trên card để đánh dấu đã duyệt (thanh tiến độ phía trên sẽ tăng).",
-    ],
-  },
   requests: {
-    title: "Phân đoạn Request",
-    intro: "Request là yêu cầu khởi kiện / yêu cầu cụ thể của đương sự.",
-    steps: [
-      "Bấm nút 'Thêm request' ở đầu tab.",
-      "Chọn một hoặc nhiều bên yêu cầu (Nguyên đơn / Bị đơn / Đương sự liên quan).",
-      "Nhập nội dung yêu cầu khởi kiện từ bản án.",
-      "Bấm 'Lưu' để thêm request vào danh sách.",
-      "Rà soát kỹ từng request, rồi bấm 'Xác nhận' trên card để đánh dấu đã duyệt.",
-    ],
+    title: "Requests — yêu cầu và các nội dung hỗ trợ",
+    intro: "Trích nguyên văn yêu cầu, chọn asserted_by và trạng thái ACTIVE / WITHDRAWN / PARTIALLY_WITHDRAWN.",
+    steps: ["Thêm yêu cầu; giữ nguyên văn và modification spans.", "Trong card Request, chọn/thêm luận cứ và ý kiến.", "Tick mục có sẵn hoặc tạo mới rồi Lưu & gắn; liên kết chỉ dùng ID, không nhân bản.", "Rà soát Claims/Requests cũ ở khung dữ liệu cũ trước khi hoàn tất.", "Trong Links, giữ đầy đủ Reasoning, Decision và Outcome cho mỗi Request."],
+  },
+  opinions: {
+    title: "Opinions — ý kiến phản hồi",
+    intro: "Ý kiến của bên khác đối với Request; không tự viết lại luận điểm ngầm.",
+    steps: ["Thêm/sửa/xác nhận ý kiến và người trình bày.", "Chọn/thêm Premises ngay trong Opinion.", "Đang gắn với là chỉ đọc; gắn/gỡ Opinion với Request chỉ tại Requests.", "Một Opinion có thể dùng cho nhiều Requests; sửa nội dung sẽ cập nhật mọi nơi."],
+  },
+  premises: {
+    title: "Premises — kho luận cứ dùng chung",
+    intro: "Trích nguyên văn tình tiết, lý do, căn cứ hoặc chứng cứ hỗ trợ Request/Opinion.",
+    steps: ["Thêm/sửa/xác nhận luận cứ với người trình bày.", "Đang hỗ trợ được suy ra từ liên kết, chỉ đọc.", "Gắn/gỡ tại Request hoặc Opinion tương ứng.", "Luận cứ chưa gắn vẫn được lưu, không tự xoá trong quá trình annotate."],
   },
   reasoning: {
     title: "Phân đoạn Reasoning",
@@ -1055,7 +980,7 @@ function ReadOnlyUnit({ unit, parties }) {
     <div style={{ background: T.paperCard, border: `1px solid ${T.line}`, borderRadius: 8, padding: "8px 10px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 4 }}>
         <span style={{ fontFamily: "ui-monospace, Menlo, monospace", fontSize: 11, fontWeight: 700, color: T.ink, background: T.paperDim, padding: "1px 6px", borderRadius: 4 }}>{unit.id}</span>
-        <span style={{ fontSize: 10.5, fontWeight: 700, color: isRequest ? T.gold : T.inkSoft, textTransform: "uppercase", letterSpacing: 0.3 }}>{isRequest ? "Request" : "Claim"}</span>
+        <span style={{ fontSize: 10.5, fontWeight: 700, color: isRequest ? T.gold : T.inkSoft, textTransform: "uppercase", letterSpacing: 0.3 }}>{unit.type}</span>
         {unit.assertedBy?.map((id) => <PartyTag key={id} id={id} parties={parties} />)}
         {isRequest && unit.outcome && (
           <span style={{ fontSize: 10.5, fontWeight: 700, color: "#3D6944", background: "#E9F2E7", padding: "1px 7px", borderRadius: 10 }}>{OUTCOME_LABEL[unit.outcome] || unit.outcome}</span>
@@ -1066,6 +991,9 @@ function ReadOnlyUnit({ unit, parties }) {
       </div>
       <div style={{ fontSize: 12.5, lineHeight: 1.55, color: T.ink }}>{unit.text}</div>
       {isRequest && <ModificationSpans spans={unit.modification_spans} />}
+      {isRequest && <p>Trạng thái: {unit.request_status || "ACTIVE"} · Reasoning: {(unit.linkedReasoning || []).join(", ") || "—"} · Decisions: {(unit.linkedDecisions || []).join(", ") || "—"}</p>}
+      {!!unit.premise_ids?.length && <p>Premises: {unit.premise_ids.join(", ")}</p>}
+      {!!unit.opinion_ids?.length && <p>Opinions: {unit.opinion_ids.join(", ")}</p>}
     </div>
   );
 }
@@ -1126,7 +1054,7 @@ function SubmissionsModal({ view, data, loading, error, onClose }) {
               </SubSection>}
               {sub.notes && <SubSection title="Ghi chú case"><div style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere", fontSize: 13 }}>{sub.notes}</div></SubSection>}
               {(sub.units || []).length > 0 && (
-                <SubSection title="Claims & Requests">
+                <SubSection title="Requests · Opinions · Premises (và mục cũ chưa phân loại)">
                   {sub.units.map((u) => <ReadOnlyUnit key={u.id} unit={u} parties={sub.parties || []} />)}
                 </SubSection>
               )}
@@ -1909,8 +1837,9 @@ export default function LegalAnnotationApp() {
   const [view, setView] = useState("dashboard"); // "dashboard" | "annotation"
 
   const [caseData, setCaseData] = useState(null);
+  const [suggestionSource, setSuggestionSource] = useState(null);
   const partyEditorRef = useRef(null);
-  const [tab, setTab] = useState("units");
+  const [tab, setTab] = useState("requests");
   const [leftWidth, setLeftWidth] = useState(50);
   const draggingRef = useRef(false);
   const containerRef = useRef(null);
@@ -2116,6 +2045,9 @@ export default function LegalAnnotationApp() {
     const openingVersion = ++openVersionRef.current;
     try {
       const capabilities = await api("/");
+      if (capabilities.annotation_schema_version !== 3) {
+        throw new Error("Hãy triển khai backend Request–Opinion–Premise trên Render trước khi dùng giao diện mới.");
+      }
       if (!capabilities.hidden_legal_provisions) {
         throw new Error("Hãy triển khai backend mới trên Render để ẩn Điều luật khỏi trình gán nhãn.");
       }
@@ -2134,7 +2066,7 @@ export default function LegalAnnotationApp() {
           const d = await api(`/api/cases/${caseId}/draft`);
           if (d?.saved_at) {
             const { saved_at, ...clean } = d;
-            restoredDoc = { ...doc, ...clean, type: doc.type };
+            restoredDoc = { ...normalizeGraph(clean), id: String(caseId), title: clean.title || doc.title, parties: clean.parties ?? doc.parties, type: doc.type };
             if (d.legacy_suggestions_filtered) message = "Đã ẩn nội dung trùng gợi ý LLM trong nháp cũ; giữ lại các mục mới hoặc đã sửa.";
             savedAt = saved_at;
             restored = true;
@@ -2145,15 +2077,7 @@ export default function LegalAnnotationApp() {
         if (!restored && !pending) {
           try {
             const sub = await api(`/api/cases/${caseId}/submission`);
-            restoredDoc = {
-              ...doc,
-              title: sub.title || doc.title,
-              parties: sub.parties ?? doc.parties ?? [],
-              units: sub.units ?? [],
-              reasoning: sub.reasoning ?? [],
-              decisions: sub.decisions ?? [],
-              notes: sub.notes ?? "",
-            };
+            restoredDoc = { ...normalizeGraph(sub), id: String(caseId), title: sub.title || doc.title, type: doc.type, parties: sub.parties ?? doc.parties ?? [] };
             wasSubmitted = true;
             message = sub.legacy_suggestions_filtered ? "Đã ẩn nội dung trùng gợi ý LLM trong bài nộp cũ; giữ lại các mục mới hoặc đã sửa." : "Đã tải lại bài nộp trước đó — bạn có thể chỉnh sửa và gửi lại.";
           } catch (e) { if (e.status !== 404) throw e; }
@@ -2161,14 +2085,17 @@ export default function LegalAnnotationApp() {
       }
       if (openingVersion !== openVersionRef.current) return;
       if (pending) {
-        restoredDoc = { ...doc, ...pending.payload, type: doc.type };
+        restoredDoc = { ...normalizeGraph(pending.payload), id: String(caseId), title: pending.payload.title || doc.title, parties: pending.payload.parties ?? doc.parties, type: doc.type };
         savedAt = pending.updatedAt;
         message = "Đã khôi phục nháp trên trình duyệt; đang chờ đồng bộ với máy chủ.";
       }
+      // Saved canonical arrays must replace source suggestions, never merge with stale units.
+      restoredDoc = normalizeGraph(restoredDoc);
+      setSuggestionSource(doc.type === "self" ? normalizeGraph(doc) : null);
       const editor = restoredDoc._editor_state || {};
       caseDataRef.current = restoredDoc;
       setCaseData(restoredDoc);
-      setTab(editor.tab || "claims");
+      setTab(editor.tab || "requests");
       setEditingId(editor.editingId || null);
       setAddingType(editor.addingType || null);
       setEditingTitle(!!editor.editingTitle);
@@ -2241,7 +2168,7 @@ export default function LegalAnnotationApp() {
   const editorState = caseData?._editor_state || {};
   const stageEditor = (patch) => updateCase((c) => ({ ...c, _editor_state: { ...c._editor_state, ...patch } }));
   const beginEditor = (kind, item = null) => {
-    if (addingType || editingId) {
+    if (addingType || editingId || editorState.picker) {
       setSubmitError("Hãy Lưu hoặc Huỷ mục đang chỉnh sửa trước khi mở mục khác.");
       return;
     }
@@ -2266,27 +2193,18 @@ export default function LegalAnnotationApp() {
   };
 
   const saveNewUnit = (data) => {
-    const prefix = data.type === "claim" ? "C" : "R";
-    const existingIds = caseData.units.filter((u) => u.id.startsWith(prefix)).map((u) => parseInt(u.id.slice(1)) || 0);
-    const nextNum = (existingIds.length ? Math.max(...existingIds) : 0) + 1;
-    const newUnit = { id: `${prefix}${nextNum}`, status: "unconfirmed", ...data };
-    if (data.type === "request") {
-      newUnit.outcome = null;
-      newUnit.linkedDecisions = [];
-      newUnit.linkedReasoning = [];
-      newUnit.linksConfirmed = false;
-    }
-    updateCase((c) => ({ ...c, units: insertAtOrder(c.units, newUnit, newUnit.order), _editor_state: finishedEditor(c) }));
+    updateCase((c) => ({ ...addGraphUnit(c, data), _editor_state: finishedEditor(c) }));
     setAddingType(null);
   };
 
   const saveEditUnit = (id, data) => {
-    updateCase((c) => ({ ...c, units: updateAtOrder(c.units, id, data), _editor_state: finishedEditor(c) }));
+    updateCase((c) => ({ ...c, units: updateAtOrder(c.units, id, { ...data, status: "unconfirmed" }), _editor_state: finishedEditor(c) }));
     setEditingId(null);
   };
 
   const deleteUnit = (id) => {
-    updateCase((c) => ({ ...c, units: deleteAtOrder(c.units, id) }));
+    if (addingType || editingId || editorState.picker) { setSubmitError("Hãy Lưu/Huỷ ô nhập hoặc đóng hộp chọn trước khi xoá."); return; }
+    updateCase((c) => removeGraphUnit(c, id));
   };
 
   const commitTitle = () => {
@@ -2296,22 +2214,21 @@ export default function LegalAnnotationApp() {
   };
 
   const saveNewSimple = (kind, data) => {
-    const prefix = kind === "reasoning" ? "RE" : "DE";
-    const list = caseData[kind];
-    const existingIds = list.map((u) => parseInt(u.id.replace(prefix, "")) || 0);
-    const nextNum = (existingIds.length ? Math.max(...existingIds) : 0) + 1;
-    const item = { id: `${prefix}${nextNum}`, status: "unconfirmed", ...data };
+    const item = { id: nextUnitId(caseData, kind), status: "unconfirmed", ...data };
     updateCase((c) => ({ ...c, [kind]: insertAtOrder(c[kind], item, item.order), _editor_state: finishedEditor(c) }));
     setAddingType(null);
   };
 
   const saveEditSimple = (kind, id, data) => {
-    updateCase((c) => ({ ...c, [kind]: updateAtOrder(c[kind], id, data), _editor_state: finishedEditor(c) }));
+    updateCase((c) => ({ ...c, [kind]: updateAtOrder(c[kind], id, { ...data, status: "unconfirmed" }), _editor_state: finishedEditor(c) }));
     setEditingId(null);
   };
 
   const deleteSimple = (kind, id) => {
-    updateCase((c) => ({ ...c, [kind]: deleteAtOrder(c[kind], id) }));
+    updateCase((c) => ({ ...c, [kind]: deleteAtOrder(c[kind], id), units: c.units.map((u) => {
+      const key = kind === "reasoning" ? "linkedReasoning" : "linkedDecisions";
+      return u[key]?.includes(id) ? { ...u, [key]: u[key].filter((x) => x !== id), linksConfirmed: false } : u;
+    }) }));
   };
 
   /* -------------------- autosave nháp (annotator) -------------------- */
@@ -2344,13 +2261,15 @@ export default function LegalAnnotationApp() {
 
   const submitCase = async () => {
     if (!caseData || submittingRef.current || leaving) return;
+    const schemaError = graphError(caseData);
+    if (schemaError) { setSubmitError(schemaError); setTab("requests"); return; }
     const partyError = partyValidation(caseData);
     if (partyError) {
       setSubmitError(partyError);
       if (partyEditorRef.current) { partyEditorRef.current.open = true; partyEditorRef.current.scrollIntoView({ block: "nearest" }); }
       return;
     }
-    if (addingType || editingId || editingTitle) {
+    if (addingType || editingId || editingTitle || editorState.picker) {
       setSubmitError("Hãy Lưu hoặc Huỷ mục đang chỉnh sửa trước khi nộp bài. Nội dung đang nhập vẫn được lưu nháp.");
       return;
     }
@@ -2365,12 +2284,7 @@ export default function LegalAnnotationApp() {
       await api("/api/submit", {
         method: "POST",
         body: {
-          case_id: caseData.id,
-          title: caseData.title,
-          parties: caseData.parties,
-          units: caseData.units,
-          reasoning: caseData.reasoning,
-          decisions: caseData.decisions,
+          ...serializeGraph(caseData),
           notes: caseData.notes || "",
           annotation_editor_version: 2,
           submitted_at: new Date().toISOString(),
@@ -2475,7 +2389,7 @@ export default function LegalAnnotationApp() {
     setSubmissionsData([]);
     try {
       const res = await api(`/api/cases/${caseId}/submissions`);
-      setSubmissionsData(res.submissions || []);
+      setSubmissionsData((res.submissions || []).map(normalizeGraph));
     } catch (e) {
       setSubmissionsError(e.message || "Không tải được bài nộp.");
     } finally {
@@ -2561,7 +2475,7 @@ export default function LegalAnnotationApp() {
     if (!file) return;
     try {
       const text = await file.text();
-      const imported = normalizeCasesPayload(JSON.parse(text));
+      const imported = normalizeCasesPayload(JSON.parse(text)).map(serializeGraph);
       await importCorpus(imported);
     } catch (err) {
       setImportMessage(`Không đọc được file: ${err.message}`);
@@ -2616,11 +2530,6 @@ export default function LegalAnnotationApp() {
   const confirmedCount = allTrackedUnits.filter((u) => u.status === "confirmed").length;
   const totalCount = allTrackedUnits.length;
 
-  const sortedUnits = useMemo(
-    () => caseData ? [...caseData.units].sort((a, b) => a.order - b.order) : [],
-    [caseData]
-  );
-
   const onDividerDown = () => { draggingRef.current = true; };
   const onMouseMove = (e) => {
     if (!draggingRef.current || !containerRef.current) return;
@@ -2632,8 +2541,9 @@ export default function LegalAnnotationApp() {
   const onMouseUp = () => { draggingRef.current = false; };
 
   const TABS = caseData ? [
-    { key: "claims", label: "Claims", count: caseData.units.filter((u) => u.type !== "request").length, icon: ListChecks },
     { key: "requests", label: "Requests", count: caseData.units.filter((u) => u.type === "request").length, icon: ClipboardList },
+    { key: "opinions", label: "Opinions", count: caseData.units.filter((u) => u.type === "opinion").length, icon: ListChecks },
+    { key: "premises", label: "Premises", count: caseData.units.filter((u) => u.type === "premise").length, icon: ListChecks },
     { key: "reasoning", label: "Reasoning", count: caseData.reasoning.length, icon: Scale },
     { key: "decisions", label: "Decisions", count: caseData.decisions.length, icon: Gavel },
     { key: "links", label: "Links", count: caseData.units.filter((u) => u.type === "request" && ((u.linkedDecisions?.length || 0) + (u.linkedReasoning?.length || 0) > 0)).length, icon: Link2 },
@@ -2763,7 +2673,10 @@ export default function LegalAnnotationApp() {
                 const active = tab === t.key;
                 return (
                   <button
-                    key={t.key} onClick={() => setTab(t.key)}
+                    key={t.key} onClick={() => {
+                      if (addingType || editingId || editorState.picker) { setSubmitError("Hãy Lưu/Huỷ ô nhập hoặc bấm Xong trong hộp chọn trước khi chuyển tab."); return; }
+                      setTab(t.key); stageEditor({ tab: t.key });
+                    }}
                     style={{
                       display: "flex", alignItems: "center", gap: 6, padding: "7px 11px",
                       fontSize: 12.5, fontWeight: 600, border: "none", cursor: "pointer",
@@ -2783,65 +2696,13 @@ export default function LegalAnnotationApp() {
               })}
             </div>
 
-            {tab === "claims" && (
-              <div>
-                <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-                  <button onClick={() => beginEditor("claim")} style={{ ...btnGhostStyle, display: "inline-flex", alignItems: "center", gap: 5 }}><Plus size={13} /> Thêm claim</button>
-                </div>
-                {sortedUnits.filter((u) => u.type !== "request").length === 0 && !addingType && (
-                  <p style={{ fontSize: 12.5, color: T.inkSoft, background: T.paperDim, borderRadius: 8, padding: "10px 12px", lineHeight: 1.55, margin: "0 0 12px" }}>
-                    Chưa có Claim. Bấm <strong>'Thêm claim'</strong> và trích tình tiết, sự kiện từ bản án ở khung bên phải.
-                  </p>
-                )}
-                {addingType === "claim" && (
-                  <UnitForm parties={caseData.parties || []} initial={{ type: "claim", order: nextOrder(caseData.units), ...editorState.form }} onSave={saveNewUnit} onCancel={closeEditor} onDraftChange={stageForm} />
-                )}
-                {sortedUnits.filter((u) => u.type !== "request").map((u) => (
-                  <UnitCard
-                    key={u.id}
-                    unit={u}
-                    parties={caseData.parties || []}
-                    editing={editingId === u.id}
-                    onConfirm={() => toggleConfirm(u.id, "units")}
-                    onEditStart={() => beginEditor("claim", u)}
-                    draftInitial={editorState.form} onDraftChange={stageForm}
-                    onEditSave={(data) => saveEditUnit(u.id, data)}
-                    onEditCancel={closeEditor}
-                    onDelete={() => deleteUnit(u.id)}
-                  />
-                ))}
-              </div>
-            )}
-
-            {tab === "requests" && (
-              <div>
-                <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-                  <button onClick={() => beginEditor("request")} style={{ ...btnGhostStyle, display: "inline-flex", alignItems: "center", gap: 5 }}><Plus size={13} /> Thêm request</button>
-                </div>
-                {sortedUnits.filter((u) => u.type === "request").length === 0 && !addingType && (
-                  <p style={{ fontSize: 12.5, color: T.inkSoft, background: T.paperDim, borderRadius: 8, padding: "10px 12px", lineHeight: 1.55, margin: "0 0 12px" }}>
-                    Chưa có Request. Bấm <strong>'Thêm request'</strong> và nhập yêu cầu khởi kiện của đương sự.
-                  </p>
-                )}
-                {addingType === "request" && (
-                  <UnitForm parties={caseData.parties || []} initial={{ type: "request", order: nextOrder(caseData.units), ...editorState.form }} onSave={saveNewUnit} onCancel={closeEditor} onDraftChange={stageForm} />
-                )}
-                {sortedUnits.filter((u) => u.type === "request").map((u) => (
-                  <UnitCard
-                    key={u.id}
-                    unit={u}
-                    parties={caseData.parties || []}
-                    editing={editingId === u.id}
-                    onConfirm={() => toggleConfirm(u.id, "units")}
-                    onEditStart={() => beginEditor("request", u)}
-                    draftInitial={editorState.form} onDraftChange={stageForm}
-                    onEditSave={(data) => saveEditUnit(u.id, data)}
-                    onEditCancel={closeEditor}
-                    onDelete={() => deleteUnit(u.id)}
-                  />
-                ))}
-              </div>
-            )}
+            {["requests", "opinions", "premises"].includes(tab) && <GraphWorkspace
+              doc={caseData} tab={tab} updateCase={updateCase} UnitForm={UnitForm} UnitCard={UnitCard}
+              beginEditor={beginEditor} closeEditor={closeEditor} stageForm={stageForm} saveNewUnit={saveNewUnit}
+              saveEditUnit={saveEditUnit} deleteUnit={deleteUnit} toggleConfirm={toggleConfirm}
+              addingType={addingType} editingId={editingId} editorState={editorState}
+              busyError={() => setSubmitError("Hãy Lưu hoặc Huỷ mục đang chỉnh sửa, hoặc bấm Xong trong hộp chọn trước khi mở mục khác.")}
+            />}
 
             {tab === "reasoning" && (
               <div>
@@ -2893,7 +2754,7 @@ export default function LegalAnnotationApp() {
               </div>
             )}
 
-            {tab === "links" && <LinksTab caseData={caseData} updateCase={updateCase} />}
+            {tab === "links" && <LinksTab caseData={caseData} updateCase={updateCase} suggestionSource={suggestionSource} />}
           </div>
 
           <div

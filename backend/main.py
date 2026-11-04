@@ -45,6 +45,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from case_schema import (normalize_case, case_type, saved_annotation_view,
                          ANNOTATION_FIELDS, RAW_ANNOTATION_FIELDS, ANNOTATION_EDITOR_VERSION)
+from annotation_graph import validate_graph, internal_graph, canonical_graph
 from case_registry import unique_cases
 
 
@@ -682,6 +683,7 @@ def root():
         "selective_auto_assign": True,
         "unique_case_registry": True,
         "admin_drafts": True,
+        "annotation_schema_version": 3,
         "editable_legal_provisions": False,
         "hidden_legal_provisions": True,
         "storage": _STORAGE_NAME,
@@ -954,8 +956,15 @@ def import_cases(payload: dict, request: Request):
         raise HTTPException(status_code=400, detail="Trường cases phải là một mảng JSON.")
     # Validate all entries before writing any documents.
     try:
+        docs = [{key: value for key, value in doc.items() if key not in ("units", "reasoning", "claims")}
+                if isinstance(doc, dict) and (doc.get("annotation_schema_version") == 3 or "opinions" in doc or "premises" in doc)
+                else doc for doc in docs]
+        for doc in docs:
+            if isinstance(doc, dict) and (doc.get("annotation_schema_version") == 3 or "opinions" in doc or "premises" in doc):
+                validate_graph(doc)
         docs = [normalize_case(doc) if isinstance(doc, dict) else doc for doc in docs]
-    except ValueError as exc:
+        docs = [canonical_graph(doc) if isinstance(doc, dict) and doc.get("annotation_schema_version") == 3 else doc for doc in docs]
+    except (ValueError, TypeError, KeyError) as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     registry = storage.read_cases()
     cfg = storage.read_config()
@@ -1432,6 +1441,26 @@ def _validate_notes(payload):
         raise HTTPException(status_code=400, detail="Ghi chú phải là văn bản tối đa 20.000 ký tự.")
     payload["notes"] = notes
 
+
+def _prepare_graph_payload(payload, source, previous=None, complete=False):
+    if payload.get("annotation_schema_version") not in (None, 3):
+        raise HTTPException(status_code=400, detail="Phiên bản cấu trúc annotation chưa được hỗ trợ.")
+    if payload.get("annotation_schema_version") == 3:
+        try:
+            validate_graph(payload, complete=complete)
+        except (ValueError, TypeError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        # Canonical arrays are authoritative; never keep stale editor mirrors.
+        for field in ("units", "reasoning", "claims"):
+            payload.pop(field, None)
+        if complete:
+            payload.pop("_editor_state", None)
+    else:
+        if source.get("annotation_schema_version") == 3 or (previous or {}).get("annotation_schema_version") == 3:
+            raise HTTPException(status_code=409, detail="Hãy tải lại trang: case đã dùng cấu trúc Request–Opinion–Premise.")
+        for field in RAW_ANNOTATION_FIELDS:
+            payload.pop(field, None)
+
 @app.get("/api/cases/{case_id}/draft")
 def get_draft(case_id: str, request: Request):
     case_id = _safe_id(case_id)
@@ -1458,8 +1487,10 @@ def save_draft(case_id: str, payload: dict, request: Request):
     payload["legal_provisions"] = source.get("legal_provisions", [])
     payload["annotation_editor_version"] = ANNOTATION_EDITOR_VERSION
     payload.pop("legacy_suggestions_filtered", None)
-    for field in RAW_ANNOTATION_FIELDS:
-        payload.pop(field, None)
+    previous = storage.get_draft(_draft_owner(auth), case_id)
+    if payload.get("annotation_schema_version") != 3 and not (previous or {}).get("annotation_schema_version") == 3:
+        previous = next((s for s in storage.list_submissions() if str(s.get("case_id")) == case_id and s.get("annotator_id") == auth["id"] and s.get("annotation_schema_version") == 3), previous)
+    _prepare_graph_payload(payload, source, previous)
     saved_at = storage.save_draft(_draft_owner(auth), case_id, payload)
     return {"success": True, "case_id": case_id, "saved_at": saved_at}
 
@@ -1527,8 +1558,10 @@ def submit_case(payload: dict, request: Request):
     payload["legal_provisions"] = source.get("legal_provisions", [])
     payload["annotation_editor_version"] = ANNOTATION_EDITOR_VERSION
     payload.pop("legacy_suggestions_filtered", None)
-    for field in RAW_ANNOTATION_FIELDS:
-        payload.pop(field, None)
+    existing = storage.list_submissions() if payload.get("annotation_schema_version") != 3 else []
+    own = next((s for s in existing if str(s.get("case_id")) == case_id and s.get("annotator_id") == auth["id"]), None)
+    draft = storage.get_draft(_draft_owner(auth), case_id)
+    _prepare_graph_payload(payload, source, draft if (draft or {}).get("annotation_schema_version") == 3 else own, complete=True)
 
     # annotators may only submit cases assigned to them; admin may submit any
     assigned_ids = []
@@ -1596,6 +1629,8 @@ def _exported_submissions(mode=None):
         if cid not in sources:
             sources[cid] = storage.get_case_doc(cid) or {}
         enriched = saved_annotation_view(sources[cid], submission)
+        if enriched.get("annotation_schema_version") == 3:
+            enriched = canonical_graph(enriched)
         # Provisions stay in exported case metadata, never in annotator responses.
         if "type" in sources[cid]:
             enriched["type"] = sources[cid]["type"]
@@ -1635,6 +1670,8 @@ def export_submissions_csv(request: Request, type: str | None = None):
         "num_units", "num_confirmed", "outcomes", "num_reasoning", "num_decisions", "type", "num_legal_provisions", "notes",
     ])
     for s in subs:
+        if s.get("annotation_schema_version") == 3:
+            s = internal_graph(s)
         units = s.get("units") or []
         reasoning = s.get("reasoning") or []
         decisions = s.get("decisions") or []

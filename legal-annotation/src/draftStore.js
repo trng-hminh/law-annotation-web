@@ -1,3 +1,5 @@
+import { serializeGraph } from './annotationGraph.js';
+
 // Pending browser backups are scoped to an account and case. Only annotation
 // data is kept here: no auth tokens, source-only suggestions, or law metadata.
 export function createDraftStore({ storage, saveRemote, onStatus = () => {}, now = () => new Date().toISOString() }) {
@@ -39,8 +41,9 @@ export function createDraftStore({ storage, saveRemote, onStatus = () => {}, now
     },
     clear: remove,
     stage(auth, doc) {
-      const payload = Object.fromEntries(["id", "title", "type", "parties", "units", "reasoning", "decisions", "notes", "_editor_state"]
+      let payload = Object.fromEntries(["id", "title", "type", "parties", "units", "reasoning", "decisions", "notes", "_editor_state", "annotation_schema_version", "request_reasoning_links", "request_decision_links", "request_outcomes"]
         .filter((field) => doc[field] !== undefined).map((field) => [field, doc[field]]));
+      if (doc.annotation_schema_version === 3) payload = serializeGraph(payload);
       payload.annotation_editor_version = 2;
       const updatedAt = now();
       const record = { revision: `${updatedAt}:${++revision}`, updatedAt, durable: true, payload: JSON.parse(JSON.stringify(payload)) };
