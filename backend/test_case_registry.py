@@ -8,7 +8,10 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
-from backend.test_api_integration import main
+try:
+    from backend.test_api_integration import main
+except ModuleNotFoundError:
+    from test_api_integration import main
 from case_registry import repair_plan, unique_cases
 from repair_case_registry import repair
 

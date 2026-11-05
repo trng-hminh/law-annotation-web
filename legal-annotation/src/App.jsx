@@ -494,7 +494,7 @@ function LinksTab({ caseData, updateCase, suggestionSource }) {
                       <input type="checkbox" checked={req.linkedDecisions?.includes(d.id) || false}
                         onChange={() => toggle(req, "decision", d.id)} />
                       <span style={{ fontFamily: "ui-monospace, monospace", fontWeight: 700, color: T.gold }}>{d.id}</span>
-                      <span style={{ color: T.inkSoft }}>{d.text.slice(0, 40)}…</span>
+                      <span style={{ color: T.inkSoft }}>{d.text.slice(0, 40)}{d.text.length > 40 ? "…" : ""}</span>
                     </label>
                   ))}
                 </div>
@@ -508,7 +508,7 @@ function LinksTab({ caseData, updateCase, suggestionSource }) {
                       <input type="checkbox" checked={req.linkedReasoning?.includes(r.id) || false}
                         onChange={() => toggle(req, "reasoning", r.id)} />
                       <span style={{ fontFamily: "ui-monospace, monospace", fontWeight: 700, color: "#5B6B93" }}>{r.id}</span>
-                      <span style={{ color: T.inkSoft }}>{r.text.slice(0, 40)}…</span>
+                      <span style={{ color: T.inkSoft }}>{r.text.slice(0, 40)}{r.text.length > 40 ? "…" : ""}</span>
                     </label>
                   ))}
                 </div>
@@ -605,7 +605,7 @@ function DocumentPanel({ caseData, auth }) {
     setLoading(true);
     setError(null);
 
-    fetch(`${API_BASE}/api/cases/${caseData.id}/pdf`, {
+    fetch(`${API_BASE}/api/cases/${encodeURIComponent(caseData.id)}/pdf`, {
       headers: auth?.token ? { Authorization: `Bearer ${auth.token}` } : {},
       cache: "no-store",
     })
@@ -629,7 +629,7 @@ function DocumentPanel({ caseData, auth }) {
       });
 
     return () => { cancelled = true; };
-  }, [caseData?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [caseData?.id, auth?.token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Cleanup blob URL on unmount
   useEffect(() => () => { if (prevUrl.current) URL.revokeObjectURL(prevUrl.current); }, []);
@@ -647,7 +647,7 @@ function DocumentPanel({ caseData, auth }) {
     try {
       const form = new FormData();
       form.append("file", file);
-      const res = await fetch(`${API_BASE}/api/cases/${caseData.id}/pdf`, {
+      const res = await fetch(`${API_BASE}/api/cases/${encodeURIComponent(caseData.id)}/pdf`, {
         method: "POST",
         headers: auth?.token ? { Authorization: `Bearer ${auth.token}` } : {},
         body: form,
@@ -657,7 +657,7 @@ function DocumentPanel({ caseData, auth }) {
         throw new Error(detail.detail || `HTTP ${res.status}`);
       }
       // Re-fetch the PDF after upload
-      const pdfRes = await fetch(`${API_BASE}/api/cases/${caseData.id}/pdf`, {
+      const pdfRes = await fetch(`${API_BASE}/api/cases/${encodeURIComponent(caseData.id)}/pdf`, {
         headers: auth?.token ? { Authorization: `Bearer ${auth.token}` } : {},
         cache: "no-store",
       });
@@ -810,7 +810,7 @@ const HELP_OVERVIEW = {
     },
     {
       title: "3. Ghép nối & gán Outcome",
-      text: "Trong tab Links, với mỗi Request hãy tích chọn các Reasoning và Decision làm căn cứ, chọn kết quả (Chấp nhận / Không chấp nhận / Chấp nhận một phần), rồi bấm 'Xác nhận links & outcome'.",
+      text: "Trong tab Links, với mỗi Request hãy tích chọn các Reasoning và Decision làm căn cứ, chọn kết quả (Chấp nhận / Không chấp nhận / Chấp nhận một phần / Đình chỉ), rồi bấm 'Xác nhận links & outcome'.",
     },
     {
       title: "4. Hoàn tất case",
@@ -862,7 +862,7 @@ const HELP_TABS = {
       "Chọn Request cần xử lý trong danh sách.",
       "Ở 'Liên kết Decision': tích chọn (các) quyết định tương ứng.",
       "Ở 'Liên kết Reasoning': tích chọn (các) nhận định làm căn cứ.",
-      "Ở 'Outcome': chọn 'Chấp nhận' / 'Không chấp nhận' / 'Chấp nhận một phần'.",
+      "Ở 'Outcome': chọn 'Chấp nhận' / 'Không chấp nhận' / 'Chấp nhận một phần' / 'Đình chỉ'.",
       "Bấm 'Xác nhận links & outcome' để chốt — nút sẽ chuyển sang màu xanh.",
     ],
   },
@@ -1225,7 +1225,7 @@ function AnnotatorDashboard({ cases, stats, onOpen, onRefresh, refreshing, flash
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return cases.filter((c) => !q || c.case_id.toLowerCase().includes(q) || c.title.toLowerCase().includes(q));
+    return cases.filter((c) => !q || String(c.case_id || "").toLowerCase().includes(q) || String(c.title || "").toLowerCase().includes(q));
   }, [cases, search]);
 
   const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
@@ -1344,10 +1344,13 @@ function AdminDashboard({
   const [newName, setNewName] = useState("");
   const [newPasscode, setNewPasscode] = useState("");
   const [createMsg, setCreateMsg] = useState("");
+  const [createError, setCreateError] = useState(false);
   const [resetPass, setResetPass] = useState({});
   const [adminUsername, setAdminUsername] = useState("");
   const [adminName, setAdminName] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
+  const [adminMsg, setAdminMsg] = useState("");
+  const [adminError, setAdminError] = useState(false);
   const [adminResetPass, setAdminResetPass] = useState({});
   const importRef = useRef(null);
 
@@ -1357,7 +1360,7 @@ function AdminDashboard({
     const q = search.trim().toLowerCase();
     return overview.filter((c) => {
       if (exportType && c.type !== exportType) return false;
-      if (q && !c.case_id.toLowerCase().includes(q) && !c.title.toLowerCase().includes(q)) return false;
+      if (q && !String(c.case_id || "").toLowerCase().includes(q) && !String(c.title || "").toLowerCase().includes(q)) return false;
       if (filter === "open" && c.status !== "open") return false;
       if (filter === "completed" && c.status !== "completed") return false;
       if (unassignedOnly && (c.assigned_to || []).length) return false;
@@ -1564,9 +1567,9 @@ function AdminDashboard({
                       <div>
                         <div style={{ fontSize: 10.5, fontWeight: 700, color: T.inkSoft, textTransform: "uppercase" }}>Đã gửi</div>
                         <div style={{ marginTop: 3 }}>
-                          {c.submissions.length === 0
+                          {(c.submissions || []).length === 0
                             ? <span style={{ color: T.inkSoft }}>Chưa có</span>
-                            : c.submissions.map((s) => s.annotator_name || nameOf(s.annotator_id)).join(", ")}
+                            : (c.submissions || []).map((s) => s.annotator_name || nameOf(s.annotator_id)).join(", ")}
                         </div>
                       </div>
                     </div>
@@ -1581,17 +1584,17 @@ function AdminDashboard({
                       style={{ ...btnGhostStyle, padding: "5px 12px", fontSize: 12 }}
                     >Gợi ý: {c.type === "expert" ? "Tắt (Expert)" : (c.show_suggestions ?? true) ? "Bật" : "Tắt"}</button>
                     <button onClick={() => onOpenCase(c.case_id)} style={{ ...btnPrimaryStyle, padding: "5px 12px", fontSize: 12 }}>Mở case</button>
-                    {c.submissions.length > 0 && (
+                    {(c.submissions || []).length > 0 && (
                       <button onClick={() => onViewSubmissions(c.case_id, c.title)} style={{ ...btnGhostStyle, padding: "4px 10px", fontSize: 11.5 }}>
-                        Xem bài nộp ({c.submissions.length})
+                        Xem bài nộp ({(c.submissions || []).length})
                       </button>
                     )}
                     {c.status === "completed" && (
                       <button onClick={() => onReopen(c.case_id)} style={{ ...btnGhostStyle, padding: "4px 10px", fontSize: 11.5 }}>Mở lại</button>
                     )}
-                    {c.submissions.length > 0 && (
+                    {(c.submissions || []).length > 0 && (
                       <button
-                        onClick={() => { if (window.confirm(`Xoá ${c.submissions.length} bài gửi của case ${c.case_id}? Case sẽ mở lại.`)) onDeleteSubmissions(c.case_id); }}
+                        onClick={() => { if (window.confirm(`Xoá ${(c.submissions || []).length} bài gửi của case ${c.case_id}? Case sẽ mở lại.`)) onDeleteSubmissions(c.case_id); }}
                         style={{ ...btnGhostStyle, padding: "4px 10px", fontSize: 11.5, color: T.danger, borderColor: T.danger + "66" }}
                       >
                         Xoá bài gửi
@@ -1630,9 +1633,11 @@ function AdminDashboard({
                 onClick={async () => {
                   try {
                     const a = await onCreateAnnotator(newName.trim(), newPasscode);
+                    setCreateError(false);
                     setCreateMsg(`Đã tạo ${a.name} — mã đăng nhập: ${a.passcode}. Gửi mã này cho luật sư.`);
                     setNewName(""); setNewPasscode("");
                   } catch (e) {
+                    setCreateError(true);
                     setCreateMsg(e.message || "Tạo annotator thất bại.");
                   }
                 }}
@@ -1642,7 +1647,7 @@ function AdminDashboard({
               </button>
             </div>
             {createMsg && (
-              <div style={{ marginTop: 8, fontSize: 12.5, color: "#3D6944", background: "#E9F2E7", padding: "8px 10px", borderRadius: 8 }}>{createMsg}</div>
+              <div style={{ marginTop: 8, fontSize: 12.5, color: createError ? T.danger : "#3D6944", background: createError ? "#F6E4E0" : "#E9F2E7", padding: "8px 10px", borderRadius: 8 }}>{createMsg}</div>
             )}
           </div>
 
@@ -1663,8 +1668,8 @@ function AdminDashboard({
                   />
                   <button
                     onClick={() => {
-                      const code = (resetPass[a.id] || "").trim();
-                      if (!code) { setCreateMsg("Nhập mã mới trước."); return; }
+                      const code = resetPass[a.id] || "";
+                      if (!code.trim()) { setCreateError(true); setCreateMsg("Nhập mã mới trước."); return; }
                       onResetPasscode(a.id, code);
                       setResetPass((p) => ({ ...p, [a.id]: "" }));
                     }}
@@ -1704,10 +1709,12 @@ function AdminDashboard({
                 onClick={async () => {
                   try {
                     const a = await onCreateAdmin(adminUsername.trim(), adminPassword, adminName.trim());
-                    setCreateMsg(`Đã tạo admin "${a.username}" (${a.name}).`);
+                    setAdminError(false);
+                    setAdminMsg(`Đã tạo admin "${a.username}" (${a.name}).`);
                     setAdminUsername(""); setAdminPassword(""); setAdminName("");
                   } catch (e) {
-                    setCreateMsg(e.message || "Tạo admin thất bại.");
+                    setAdminError(true);
+                    setAdminMsg(e.message || "Tạo admin thất bại.");
                   }
                 }}
                 style={btnPrimaryStyle}
@@ -1715,8 +1722,8 @@ function AdminDashboard({
                 Tạo admin
               </button>
             </div>
-            {createMsg && (
-              <div style={{ marginTop: 8, fontSize: 12.5, color: "#3D6944", background: "#E9F2E7", padding: "8px 10px", borderRadius: 8 }}>{createMsg}</div>
+            {adminMsg && (
+              <div style={{ marginTop: 8, fontSize: 12.5, color: adminError ? T.danger : "#3D6944", background: adminError ? "#F6E4E0" : "#E9F2E7", padding: "8px 10px", borderRadius: 8 }}>{adminMsg}</div>
             )}
           </div>
 
@@ -1740,8 +1747,8 @@ function AdminDashboard({
                     />
                     <button
                       onClick={() => {
-                        const pw = (adminResetPass[a.username] || "").trim();
-                        if (!pw) { setCreateMsg("Nhập mật khẩu mới trước."); return; }
+                        const pw = adminResetPass[a.username] || "";
+                        if (!pw.trim()) { setAdminError(true); setAdminMsg("Nhập mật khẩu mới trước."); return; }
                         onResetAdminPassword(a.username, pw);
                         setAdminResetPass((p) => ({ ...p, [a.username]: "" }));
                       }}
@@ -1841,6 +1848,7 @@ export default function LegalAnnotationApp() {
   const partyEditorRef = useRef(null);
   const [tab, setTab] = useState("requests");
   const [leftWidth, setLeftWidth] = useState(50);
+  const [dragging, setDragging] = useState(false);
   const draggingRef = useRef(false);
   const containerRef = useRef(null);
 
@@ -1850,6 +1858,8 @@ export default function LegalAnnotationApp() {
   const [titleDraft, setTitleDraft] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const submittedRef = useRef(false);
+  submittedRef.current = submitted;
   const [submitError, setSubmitError] = useState("");
   const [submitMessage, setSubmitMessage] = useState("");
   const [draftStatus, setDraftStatus] = useState("idle"); // idle | saving | saved | error
@@ -1979,10 +1989,10 @@ export default function LegalAnnotationApp() {
 
   /* tự động cập nhật tiến độ cho admin (real-time) */
   useEffect(() => {
-    if (!auth || auth.type !== "admin") return;
+    if (!auth || auth.type !== "admin" || view !== "dashboard") return;
     const id = setInterval(() => { loadAdminData(); }, 15000);
     return () => clearInterval(id);
-  }, [auth?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [auth?.id, view]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* hiển thị hướng dẫn lần đầu cho annotator (chỉ một lần) */
   useEffect(() => {
@@ -2054,36 +2064,51 @@ export default function LegalAnnotationApp() {
       if (auth?.type === "admin" && !capabilities.admin_drafts) {
         throw new Error("Hãy triển khai backend hỗ trợ nháp admin trước khi mở trình gán nhãn.");
       }
-      const doc = await api(`/api/cases/${caseId}/doc`);
+      const doc = await api(`/api/cases/${encodeURIComponent(caseId)}/doc`);
       let restoredDoc = doc;
       let savedAt = null;
       let wasSubmitted = false;
       let message = "";
-      const pending = auth ? draftStoreRef.current.read(auth, caseId) : null;
+      let pending = auth ? draftStoreRef.current.read(auth, caseId) : null;
+      const pendingAt = pending ? Date.parse(pending.updatedAt) : NaN;
+      const supersedesPending = (iso) => {
+        const t = Date.parse(iso);
+        return Number.isFinite(t) && Number.isFinite(pendingAt) && t > pendingAt;
+      };
+      let serverAt = null;
       if (auth) {
         let restored = false;
         try {
-          const d = await api(`/api/cases/${caseId}/draft`);
+          const d = await api(`/api/cases/${encodeURIComponent(caseId)}/draft`);
           if (d?.saved_at) {
             const { saved_at, ...clean } = d;
             restoredDoc = { ...normalizeGraph(clean), id: String(caseId), title: clean.title || doc.title, parties: clean.parties ?? doc.parties, type: doc.type };
             if (d.legacy_suggestions_filtered) message = "Đã ẩn nội dung trùng gợi ý LLM trong nháp cũ; giữ lại các mục mới hoặc đã sửa.";
             savedAt = saved_at;
+            serverAt = saved_at;
             restored = true;
           }
         } catch (e) {
           if (e.status !== 404 && !pending) throw new Error(`Không đọc được nháp đã lưu: ${e.message}`);
         }
-        if (!restored && !pending) {
+        if (!restored) {
           try {
-            const sub = await api(`/api/cases/${caseId}/submission`);
+            const sub = await api(`/api/cases/${encodeURIComponent(caseId)}/submission`);
             restoredDoc = { ...normalizeGraph(sub), id: String(caseId), title: sub.title || doc.title, type: doc.type, parties: sub.parties ?? doc.parties ?? [] };
             wasSubmitted = true;
+            serverAt = sub.submitted_at || sub.received_at || null;
             message = sub.legacy_suggestions_filtered ? "Đã ẩn nội dung trùng gợi ý LLM trong bài nộp cũ; giữ lại các mục mới hoặc đã sửa." : "Đã tải lại bài nộp trước đó — bạn có thể chỉnh sửa và gửi lại.";
-          } catch (e) { if (e.status !== 404) throw e; }
+          } catch (e) { if (e.status !== 404 && !pending) throw e; }
         }
       }
       if (openingVersion !== openVersionRef.current) return;
+      if (pending && serverAt && supersedesPending(serverAt)) {
+        draftStoreRef.current.clear(auth, caseId);
+        pending = null;
+        message = wasSubmitted
+          ? "Bài nộp trên máy chủ mới hơn nháp chưa đồng bộ trên trình duyệt này; đã tải bài nộp."
+          : "Nháp trên máy chủ mới hơn nháp chưa đồng bộ trên trình duyệt này; đã tải bản trên máy chủ.";
+      }
       if (pending) {
         restoredDoc = { ...normalizeGraph(pending.payload), id: String(caseId), title: pending.payload.title || doc.title, parties: pending.payload.parties ?? doc.parties, type: doc.type };
         savedAt = pending.updatedAt;
@@ -2100,7 +2125,9 @@ export default function LegalAnnotationApp() {
       setAddingType(editor.addingType || null);
       setEditingTitle(!!editor.editingTitle);
       setTitleDraft(editor.titleDraft || "");
-      setSubmitted(wasSubmitted && !pending);
+      const isSubmitted = wasSubmitted && !pending;
+      submittedRef.current = isSubmitted;
+      setSubmitted(isSubmitted);
       setSubmitError("");
       setSubmitMessage(message);
       setDraftStatus(pending ? "local" : savedAt ? "saved" : "idle");
@@ -2148,12 +2175,14 @@ export default function LegalAnnotationApp() {
 
   /* -------------------- annotation handlers (single case) -------------------- */
 
-  const updateCase = useCallback((fn) => {
+  const updateCase = useCallback((fn, { markDirty = true } = {}) => {
     if (!caseDataRef.current || submittingRef.current) return;
     const next = fn(caseDataRef.current);
     caseDataRef.current = next;
-    if (authRef.current) draftStoreRef.current.stage(authRef.current, next);
     setCaseData(next);
+    if (!markDirty && submittedRef.current) return;
+    if (authRef.current) draftStoreRef.current.stage(authRef.current, next);
+    submittedRef.current = false;
     setSubmitted(false);
     setSubmitMessage("");
     setSubmitError("");
@@ -2166,7 +2195,8 @@ export default function LegalAnnotationApp() {
   };
 
   const editorState = caseData?._editor_state || {};
-  const stageEditor = (patch) => updateCase((c) => ({ ...c, _editor_state: { ...c._editor_state, ...patch } }));
+  const stageEditor = (patch, { markDirty = false } = {}) =>
+    updateCase((c) => ({ ...c, _editor_state: { ...c._editor_state, ...patch } }), { markDirty });
   const beginEditor = (kind, item = null) => {
     if (addingType || editingId || editorState.picker) {
       setSubmitError("Hãy Lưu hoặc Huỷ mục đang chỉnh sửa trước khi mở mục khác.");
@@ -2182,7 +2212,7 @@ export default function LegalAnnotationApp() {
     setEditingId(null);
     stageEditor({ addingType: null, editingId: null, form: null });
   };
-  const stageForm = (form) => stageEditor({ form });
+  const stageForm = (form) => stageEditor({ form }, { markDirty: true });
   const finishedEditor = (c) => ({ ...c._editor_state, tab, addingType: null, editingId: null, form: null });
 
   const toggleConfirm = (id, group) => {
@@ -2209,13 +2239,16 @@ export default function LegalAnnotationApp() {
 
   const commitTitle = () => {
     const title = titleDraft.trim();
-    updateCase((c) => ({ ...c, ...(title ? { title } : {}), _editor_state: { ...c._editor_state, editingTitle: false, titleDraft: "" } }));
+    const changed = Boolean(title && title !== caseDataRef.current?.title);
+    updateCase((c) => ({ ...c, ...(title ? { title } : {}), _editor_state: { ...c._editor_state, editingTitle: false, titleDraft: "" } }), { markDirty: changed });
     setEditingTitle(false);
   };
 
   const saveNewSimple = (kind, data) => {
-    const item = { id: nextUnitId(caseData, kind), status: "unconfirmed", ...data };
-    updateCase((c) => ({ ...c, [kind]: insertAtOrder(c[kind], item, item.order), _editor_state: finishedEditor(c) }));
+    updateCase((c) => {
+      const item = { id: nextUnitId(c, kind), status: "unconfirmed", ...data };
+      return { ...c, [kind]: insertAtOrder(c[kind], item, item.order), _editor_state: finishedEditor(c) };
+    });
     setAddingType(null);
   };
 
@@ -2296,6 +2329,7 @@ export default function LegalAnnotationApp() {
       }
       setDraftStatus("idle");
       setDraftLoadedAt(null);
+      submittedRef.current = true;
       setSubmitted(true);
       setSubmitMessage(`Đã gửi bài nộp cho case ${caseData.id}. Bạn vẫn có thể chỉnh sửa và gửi lại.`);
       if (auth?.type === "annotator") loadMyCases();
@@ -2312,7 +2346,7 @@ export default function LegalAnnotationApp() {
 
   const assignCase = async (caseId, annotatorId, remove = false) => {
     try {
-      await api(`/api/cases/${caseId}/assign`, { method: "POST", body: { annotator_id: annotatorId || null, remove } });
+      await api(`/api/cases/${encodeURIComponent(caseId)}/assign`, { method: "POST", body: { annotator_id: annotatorId || null, remove } });
       loadAdminData();
     } catch (e) {
       setFlash(e.message || "Phân công thất bại.");
@@ -2322,7 +2356,7 @@ export default function LegalAnnotationApp() {
   const toggleSuggestions = async (enabled, caseId) => {
     setSuggestionsSaving(true);
     try {
-      await api(caseId ? `/api/cases/${caseId}/annotation-settings` : "/api/annotation-settings", {
+      await api(caseId ? `/api/cases/${encodeURIComponent(caseId)}/annotation-settings` : "/api/annotation-settings", {
         method: "PUT", body: { show_suggestions: enabled },
       });
       await loadAdminData();
@@ -2347,7 +2381,7 @@ export default function LegalAnnotationApp() {
 
   const reopenCase = async (caseId) => {
     try {
-      await api(`/api/cases/${caseId}/reopen`, { method: "POST" });
+      await api(`/api/cases/${encodeURIComponent(caseId)}/reopen`, { method: "POST" });
       loadAdminData();
     } catch (e) {
       setFlash(e.message || "Mở lại thất bại.");
@@ -2356,7 +2390,7 @@ export default function LegalAnnotationApp() {
 
   const deleteCaseSubmissions = async (caseId) => {
     try {
-      const res = await api(`/api/cases/${caseId}/submissions`, { method: "DELETE" });
+      const res = await api(`/api/cases/${encodeURIComponent(caseId)}/submissions`, { method: "DELETE" });
       setFlash(`Đã xoá ${res.deleted} bài gửi của case ${caseId} (case đã mở lại).`);
       loadAdminData();
     } catch (e) {
@@ -2388,8 +2422,8 @@ export default function LegalAnnotationApp() {
     setSubmissionsError("");
     setSubmissionsData([]);
     try {
-      const res = await api(`/api/cases/${caseId}/submissions`);
-      setSubmissionsData((res.submissions || []).map(normalizeGraph));
+      const res = await api(`/api/cases/${encodeURIComponent(caseId)}/submissions`);
+      setSubmissionsData((res.submissions || []).map((s) => normalizeGraph(s)));
     } catch (e) {
       setSubmissionsError(e.message || "Không tải được bài nộp.");
     } finally {
@@ -2411,7 +2445,7 @@ export default function LegalAnnotationApp() {
 
   const resetPasscode = async (annotatorId, newPasscode) => {
     try {
-      const a = await api(`/api/annotators/${annotatorId}`, { method: "PUT", body: { passcode: newPasscode } });
+      const a = await api(`/api/annotators/${encodeURIComponent(annotatorId)}`, { method: "PUT", body: { passcode: newPasscode } });
       setFlash(`Mã mới của ${a.name}: ${a.passcode} — hãy gửi cho luật sư.`);
       loadAdminData();
     } catch (e) {
@@ -2421,7 +2455,7 @@ export default function LegalAnnotationApp() {
 
   const deleteAnnotator = async (annotatorId) => {
     try {
-      await api(`/api/annotators/${annotatorId}`, { method: "DELETE" });
+      await api(`/api/annotators/${encodeURIComponent(annotatorId)}`, { method: "DELETE" });
       loadAdminData();
     } catch (e) {
       setFlash(e.message || "Xoá thất bại.");
@@ -2436,7 +2470,7 @@ export default function LegalAnnotationApp() {
 
   const resetAdminPassword = async (username, newPassword) => {
     try {
-      await api(`/api/admins/${username}`, { method: "PUT", body: { password: newPassword } });
+      await api(`/api/admins/${encodeURIComponent(username)}`, { method: "PUT", body: { password: newPassword } });
       loadAdminData();
     } catch (e) {
       setFlash(e.message || "Đổi mật khẩu thất bại.");
@@ -2445,7 +2479,7 @@ export default function LegalAnnotationApp() {
 
   const deleteAdmin = async (username) => {
     try {
-      await api(`/api/admins/${username}`, { method: "DELETE" });
+      await api(`/api/admins/${encodeURIComponent(username)}`, { method: "DELETE" });
       loadAdminData();
     } catch (e) {
       setFlash(e.message || "Xoá admin thất bại.");
@@ -2530,7 +2564,7 @@ export default function LegalAnnotationApp() {
   const confirmedCount = allTrackedUnits.filter((u) => u.status === "confirmed").length;
   const totalCount = allTrackedUnits.length;
 
-  const onDividerDown = () => { draggingRef.current = true; };
+  const onDividerDown = () => { draggingRef.current = true; setDragging(true); };
   const onMouseMove = (e) => {
     if (!draggingRef.current || !containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
@@ -2538,7 +2572,7 @@ export default function LegalAnnotationApp() {
     pct = Math.min(75, Math.max(28, pct));
     setLeftWidth(pct);
   };
-  const onMouseUp = () => { draggingRef.current = false; };
+  const onMouseUp = () => { if (draggingRef.current) { draggingRef.current = false; setDragging(false); } };
 
   const TABS = caseData ? [
     { key: "requests", label: "Requests", count: caseData.units.filter((u) => u.type === "request").length, icon: ClipboardList },
@@ -2584,7 +2618,7 @@ export default function LegalAnnotationApp() {
                     <input
                       autoFocus
                       value={titleDraft}
-                      onChange={(e) => { setTitleDraft(e.target.value); stageEditor({ editingTitle: true, titleDraft: e.target.value, tab }); }}
+                      onChange={(e) => { setTitleDraft(e.target.value); stageEditor({ editingTitle: true, titleDraft: e.target.value, tab }, { markDirty: true }); }}
                       onBlur={commitTitle}
                       onKeyDown={(e) => { if (e.key === "Enter") commitTitle(); if (e.key === "Escape") { setEditingTitle(false); stageEditor({ editingTitle: false, titleDraft: "" }); } }}
                       style={{ ...inputStyle, width: 260, padding: "4px 7px", fontSize: 12 }}
@@ -2768,7 +2802,7 @@ export default function LegalAnnotationApp() {
             <GripVertical size={13} color={T.lineStrong} />
           </div>
 
-          <div style={{ flex: `0 0 ${100 - leftWidth}%`, minWidth: 0, minHeight: 0, height: "100%", overflow: "hidden" }}>
+          <div style={{ flex: `0 0 ${100 - leftWidth}%`, minWidth: 0, minHeight: 0, height: "100%", overflow: "hidden", pointerEvents: dragging ? "none" : "auto" }}>
             <DocumentPanel caseData={caseData} auth={auth} />
           </div>
         </div>

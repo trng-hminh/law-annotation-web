@@ -234,12 +234,13 @@ class FileStorage:
             self.index_file.unlink()  # index tự dựng lại từ disk lần đọc sau
         return removed
 
-    def delete_submitter_submissions(self, case_id, submitter_id):
+    def delete_submitter_submissions(self, case_id, submitter_id, submitter_type=None):
         """Xoá bài nộp của MỘT người (annotator hoặc admin) cho một case."""
         removed = 0
         for f in list(self.submissions_dir.glob(f"case_{case_id}_*.json")):
             data = _read_json_file(f, {})
-            if data.get("annotator_id") == submitter_id:
+            inferred_type = data.get("submitter_type", "annotator" if re.fullmatch(r"A\d+", str(data.get("annotator_id", ""))) else "admin")
+            if data.get("annotator_id") == submitter_id and (submitter_type is None or inferred_type == submitter_type):
                 f.unlink()
                 removed += 1
         if removed and self.index_file.exists():
@@ -397,12 +398,15 @@ class MongoStorage:
         res = self.db.submissions.delete_many({"case_id": str(case_id)})
         return res.deleted_count
 
-    def delete_submitter_submissions(self, case_id, submitter_id):
+    def delete_submitter_submissions(self, case_id, submitter_id, submitter_type=None):
         """Xoá bài nộp của MỘT người (annotator hoặc admin) cho một case."""
-        res = self.db.submissions.delete_many({
+        query = {
             "case_id": str(case_id),
             "annotator_id": submitter_id,
-        })
+        }
+        if submitter_type is not None:
+            query["submitter_type"] = submitter_type
+        res = self.db.submissions.delete_many(query)
         return res.deleted_count
 
     def read_config(self):
@@ -1473,6 +1477,13 @@ def get_draft(case_id: str, request: Request):
     return result
 
 
+def _own_submission_match(submission, case_id, auth):
+    if str(submission.get("case_id")) != case_id or submission.get("annotator_id") != auth["id"]:
+        return False
+    inferred = submission.get("submitter_type", "annotator" if re.fullmatch(r"A\d+", str(submission.get("annotator_id", ""))) else "admin")
+    return inferred == auth["type"]
+
+
 @app.put("/api/cases/{case_id}/draft")
 def save_draft(case_id: str, payload: dict, request: Request):
     case_id = _safe_id(case_id)
@@ -1489,7 +1500,7 @@ def save_draft(case_id: str, payload: dict, request: Request):
     payload.pop("legacy_suggestions_filtered", None)
     previous = storage.get_draft(_draft_owner(auth), case_id)
     if payload.get("annotation_schema_version") != 3 and not (previous or {}).get("annotation_schema_version") == 3:
-        previous = next((s for s in storage.list_submissions() if str(s.get("case_id")) == case_id and s.get("annotator_id") == auth["id"] and s.get("annotation_schema_version") == 3), previous)
+        previous = next((s for s in storage.list_submissions() if _own_submission_match(s, case_id, auth) and s.get("annotation_schema_version") == 3), previous)
     _prepare_graph_payload(payload, source, previous)
     saved_at = storage.save_draft(_draft_owner(auth), case_id, payload)
     return {"success": True, "case_id": case_id, "saved_at": saved_at}
@@ -1510,8 +1521,7 @@ def get_my_submission(case_id: str, request: Request):
     auth = _require_editor_case(request, case_id)
     subs = [
         s for s in storage.list_submissions()
-        if str(s.get("case_id")) == case_id and s.get("annotator_id") == auth["id"]
-        and s.get("submitter_type", "annotator" if re.fullmatch(r"A\d+", str(s.get("annotator_id", ""))) else "admin") == auth["type"]
+        if _own_submission_match(s, case_id, auth)
     ]
     if not subs:
         raise HTTPException(status_code=404, detail="Chưa có bài nộp.")
@@ -1559,7 +1569,7 @@ def submit_case(payload: dict, request: Request):
     payload["annotation_editor_version"] = ANNOTATION_EDITOR_VERSION
     payload.pop("legacy_suggestions_filtered", None)
     existing = storage.list_submissions() if payload.get("annotation_schema_version") != 3 else []
-    own = next((s for s in existing if str(s.get("case_id")) == case_id and s.get("annotator_id") == auth["id"]), None)
+    own = next((s for s in existing if _own_submission_match(s, case_id, auth)), None)
     draft = storage.get_draft(_draft_owner(auth), case_id)
     _prepare_graph_payload(payload, source, draft if (draft or {}).get("annotation_schema_version") == 3 else own, complete=True)
 
@@ -1575,7 +1585,7 @@ def submit_case(payload: dict, request: Request):
     annotator_name = _admin_name(auth["id"]) if auth["type"] == "admin" else _annotator_name(auth["id"])
 
     # resubmit: thay thế bài nộp cũ của chính người này (tránh trùng lặp khi nộp lại)
-    storage.delete_submitter_submissions(case_id, annotator_id)
+    storage.delete_submitter_submissions(case_id, annotator_id, auth["type"])
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     filename = f"case_{case_id}_{timestamp}.json"
@@ -1658,9 +1668,6 @@ def export_submissions_csv(request: Request, type: str | None = None):
     _require_admin(request)
     subs = _exported_submissions(type)
     subs.sort(key=lambda s: (str(s.get("case_id", "")), str(s.get("submitted_at", "") or "")))
-
-    import csv
-    import io
 
     buf = io.StringIO()
     writer = csv.writer(buf)

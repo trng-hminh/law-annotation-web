@@ -15,7 +15,8 @@ export default function GraphWorkspace({ doc, tab, updateCase, UnitForm, UnitCar
   const graphEditing = editing && ['request', 'opinion', 'premise', 'claim'].includes(editing.type);
   const activePanel = useRef(null);
   useEffect(() => { activePanel.current?.scrollIntoView({ block: 'nearest' }); }, [picker?.parentId, picker?.type, editingId, addingType]);
-  const stagePicker = (patch) => updateCase((c) => ({ ...c, _editor_state: { ...c._editor_state, picker: { ...c._editor_state?.picker, ...patch } } }));
+  const stagePicker = (patch, { markDirty = false } = {}) =>
+    updateCase((c) => ({ ...c, _editor_state: { ...c._editor_state, picker: { ...c._editor_state?.picker, ...patch } } }), { markDirty });
   const openPicker = (parent, type) => {
     if (addingType || editingId || picker) { busyError(); return; }
     stagePicker({ parentId: parent.id, type, actorFilter: type === 'premise' ? actorIds(parent) : [], query: '', creating: false, form: null });
@@ -93,10 +94,10 @@ export default function GraphWorkspace({ doc, tab, updateCase, UnitForm, UnitCar
       </div>
       {picker.creating ? <UnitForm key={`${parent.id}-${picker.type}`} initial={{ type: picker.type, order: Math.max(0, ...doc.units.map((u) => u.order || 0)) + 1,
         assertedBy: picker.type === 'premise' ? actorIds(parent) : [], ...picker.form }} parties={doc.parties}
-        saveLabel="Lưu & gắn" onDraftChange={(form) => stagePicker({ form })} onCancel={() => stagePicker({ creating: false, form: null })}
+        saveLabel="Lưu & gắn" onDraftChange={(form) => stagePicker({ form }, { markDirty: true })} onCancel={() => stagePicker({ creating: false, form: null })}
         onSave={(data) => updateCase((c) => ({ ...addGraphUnit(c, data, parent.id), _editor_state: { ...c._editor_state, picker: { ...c._editor_state.picker, creating: false, form: null } } }))} />
         : <><button style={button} onClick={() => stagePicker({ creating: true, form: null })}>+ Tạo {labels[picker.type]} mới</button>
-          <button style={button} onClick={() => updateCase((c) => ({ ...c, _editor_state: { ...c._editor_state, picker: null } }))}>Xong</button></>}
+          <button style={button} onClick={() => updateCase((c) => ({ ...c, _editor_state: { ...c._editor_state, picker: null } }), { markDirty: false })}>Xong</button></>}
     </section>}
 
     {kind && !sorted.some((u) => u.type === kind) && <p>Chưa có {labels[kind]}. Thêm đoạn trích nguyên văn; không tự viết lại luận điểm ngầm.</p>}

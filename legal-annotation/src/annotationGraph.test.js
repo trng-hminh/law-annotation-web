@@ -47,7 +47,7 @@ test('inline create adds exactly one shared unit and attaches atomically', () =>
 });
 
 test('legacy semantics require human review; converting a request retains old links for audit', () => {
-  let doc = normalizeGraph({ id: 'legacy', units: [{ id: 'C1', type: 'claim', text: 'claim', assertedBy: ['P1'] }, { id: 'R1', type: 'request', text: 'response', assertedBy: ['P1'], linkedDecisions: ['DE1'], outcome: 'accepted', modification_spans: [{ text: 'old' }] }], reasoning: [], decisions: [{ id: 'DE1', text: 'decision' }] });
+  let doc = normalizeGraph({ id: 'legacy', units: [{ id: 'C1', type: 'claim', text: 'claim', assertedBy: ['P1'] }, { id: 'R1', type: 'request', text: 'response', assertedBy: ['P1'], linkedDecisions: ['DE1'], outcome: 'accepted', modification_spans: [{ text: 'old' }] }], reasoning: [], decisions: [{ id: 'DE1', text: 'decision' }], request_decision_links: [{ request_id: 1, decision_id: 'DE1', vote_count: 5 }] });
   assert.match(graphError(doc), /phân loại/);
   doc = classifyUnit(doc, 'C1', 'premise');
   doc = classifyUnit(doc, 'R1', 'opinion');

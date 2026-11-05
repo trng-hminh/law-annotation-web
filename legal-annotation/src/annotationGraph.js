@@ -48,8 +48,8 @@ export function normalizeGraph(source, { sourceSuggestions = false } = {}) {
       } : u.type === 'opinion' ? { premise_ids: ids(u.premise_ids) } : {}),
     };
   });
-  doc.reasoning = (doc.reasoning || doc.reasonings || []).map((x) => ({ ...x, id: String(x.id ?? x.reasoning_id), text: textOf(x), status: x.annotation_status || (['confirmed', 'unconfirmed'].includes(x.status) ? x.status : 'unconfirmed') }));
-  doc.decisions = (doc.decisions || []).map((x) => ({ ...x, id: String(x.id ?? x.decision_id), text: textOf(x), status: x.annotation_status || (['confirmed', 'unconfirmed'].includes(x.status) ? x.status : 'unconfirmed') }));
+  doc.reasoning = (doc.reasoning || doc.reasonings || []).map((x) => ({ ...x, id: String(x.id ?? x.reasoning_id), text: textOf(x), status: ['confirmed', 'unconfirmed'].includes(x.status) ? x.status : (x.annotation_status || 'unconfirmed') }));
+  doc.decisions = (doc.decisions || []).map((x) => ({ ...x, id: String(x.id ?? x.decision_id), text: textOf(x), status: ['confirmed', 'unconfirmed'].includes(x.status) ? x.status : (x.annotation_status || 'unconfirmed') }));
   doc.annotation_schema_version = 3;
   if (doc._editor_state?.tab === 'claims' || doc._editor_state?.tab === 'units') doc._editor_state.tab = 'requests';
   return doc;
@@ -121,9 +121,9 @@ export function classifyUnit(doc, id, type) {
   const original = doc.units.find((u) => u.id === id);
   if (!original) return doc;
   const newId = type === original.type ? id : nextUnitId(doc, type);
-  const archived = { ...original, request_reasoning_links: (doc.request_reasoning_links || []).filter((x) => x.request_id === id),
-    request_decision_links: (doc.request_decision_links || []).filter((x) => x.request_id === id),
-    request_outcomes: (doc.request_outcomes || []).filter((x) => x.request_id === id) };
+  const archived = { ...original, request_reasoning_links: (doc.request_reasoning_links || []).filter((x) => String(x.request_id) === id),
+    request_decision_links: (doc.request_decision_links || []).filter((x) => String(x.request_id) === id),
+    request_outcomes: (doc.request_outcomes || []).filter((x) => String(x.request_id) === id) };
   const converted = { ...original, id: newId, type, status: 'unconfirmed', needs_classification: false, legacy_source: original.legacy_source || archived };
   if (type !== 'request') for (const key of ['request_id', 'claim_id', 'request_status', 'modification_spans', 'opinion_ids', 'outcome', 'linkedReasoning', 'linkedDecisions', 'linksConfirmed']) delete converted[key];
   if (type === 'opinion') converted.premise_ids ||= [];
